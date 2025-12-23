@@ -101,7 +101,7 @@ flowchart TB
           FormVal["Recent Form 20%"]
           InjPen["Missed Time Penalty 15%"]
           Need["Position Need 10%"]
-          Scar["Position\nScarcity 5%"]
+          Scar["Position Scarcity 5%"]
           PosVal["Positional Value 5%"]
      end
 
