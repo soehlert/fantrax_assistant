@@ -71,14 +71,14 @@ Shows who's truly elite vs just "good" at their position
 ```mermaid
 flowchart TB
      %% Input data group
-     subgraph INPUT_DATA["INPUT DATA"]
+     subgraph INPUT_DATA["Player Evaluation Pipeline"]
           direction LR
           ADP["ADP Rankings"]
-          STATS["Current Season\nStats"]
-          INJ["Injuries &\nAFCON Status"]
-          FORM["Recent Form\n(30/60 days)"]
-          CONFIG["League\nConfiguration"]
-          DRAFTED["Drafted\nPlayers Set"]
+          STATS["Current Season Stats"]
+          INJ["Injuries & AFCON Status"]
+          FORM["Recent Form (30/60 days)"]
+          CONFIG["League Configuration"]
+          DRAFTED["Drafted Players Set"]
      end
 
      ADP --> GetAvailable
@@ -88,21 +88,21 @@ flowchart TB
      CONFIG --> GetAvailable
      DRAFTED --> GetAvailable
 
-     GetAvailable["Get Available Players\n(filter drafted)\nReturn: list of N"]
+     GetAvailable["Get Available Players (filter drafted) Return: list of N"]
 
-     GetAvailable --> EVAL["Evaluate Each Player\n(8 Factors)"]
+     GetAvailable --> EVAL["Evaluate Each Player (8 Factors)"]
 
      %% Factors group
      subgraph FACTORS["8 Scoring Factors"]
           direction LR
-          Base["Base Value\n30%"]
+          Base["Base Value 30%"]
           Club["Club Bonus"]
-          ADPVal["ADP Value\n7%"]
-          FormVal["Recent Form\n20%"]
-          InjPen["Missed Time\nPenalty\n15%"]
-          Need["Position Need\n10%"]
-          Scar["Position\nScarcity\n5%"]
-          PosVal["Positional\nValue\n5%"]
+          ADPVal["ADP Value 7%"]
+          FormVal["Recent Form 20%"]
+          InjPen["Missed Time\nPenalty 15%"]
+          Need["Position Need 10%"]
+          Scar["Position\nScarcity 5%"]
+          PosVal["Positional\nValue 5%"]
      end
 
      EVAL --> Base
@@ -123,7 +123,7 @@ flowchart TB
      Scar --> SumScores
      PosVal --> SumScores
 
-     SumScores["Sum All Scores\n(typically 60-90)"]
-     SumScores --> Sort["Sort by Total Score\n(descending)"]
-     Sort --> Return["Return Top N Players\n(user specified)"]
+     SumScores["Sum All Scores"]
+     SumScores --> Sort["Sort by Total Score (descending)"]
+     Sort --> Return["Return Top N Players (user specified)"]
 ```
