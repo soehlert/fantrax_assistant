@@ -68,55 +68,62 @@ If a forward averages 5 FP/G when forwards average 3.5 → he's 43% above averag
 Shows who's truly elite vs just "good" at their position
 
 
-┌────────────────────────────────────────────────────────────────┐
-│            Player Evaluation Pipeline                          |
-└────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+     %% Input data group
+     subgraph INPUT_DATA["INPUT DATA"]
+          direction LR
+          ADP["ADP Rankings"]
+          STATS["Current Season\nStats"]
+          INJ["Injuries &\nAFCON Status"]
+          FORM["Recent Form\n(30/60 days)"]
+          CONFIG["League\nConfiguration"]
+          DRAFTED["Drafted\nPlayers Set"]
+     end
 
-┌─────────────────────────── INPUT DATA ─────────────────────────┐
-│                                                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ ADP Rankings │  │ Current      │  │ Injuries &   │          │
-│  │              │  │ Season Stats │  │ AFCON Status │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-│                                                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ Recent Form  │  │ League       │  │ Drafted      │          │
-│  │ (30/60 days) │  │ Configuration│  │ Players Set  │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-                 ┌─────────────────────────┐
-                 │ Get Available Players   │
-                 │ (filter drafted)        │
-                 │ Return: list of N       │
-                 └─────────────────────────┘
-                               │
-                               ▼
-         ┌─────────────────────────────────────────┐
-         │  EVALUATE EACH PLAYER (8 FACTORS)       │
-         └─────────────────────────────────────────┘
-             │         │        │        │        │        │       │       │
-        ┌────▼──┐  ┌───▼──┐  ┌─▼──┐  ┌─▼──┐  ┌──▼─┐  ┌──▼──┐ ┌──▼──┐ ┌──▼──┐
-        │ Base  │  │ Club │  │ADP │  │Form│  │Inj.│  │Need │ │Scar.│ │Pos. │
-        │ Value │  │ Bonus│  │Val.│  │Val.│  │Pen.│  │Score│ │ Val.│ │ Val.│
-        │ 30%   │  │Extra │  │15% │  │20% │  │15% │  │10%  │ │ 5%  │ │ 5%  │
-        └────┬──┘  └───┬──┘  └─┬──┘  └─┬──┘  └──┬─┘  └──┬──┘ └──┬──┘ └──┬──┘
-             │         │       │       │        │       │       │       │
-             └─────────┴───────┴───────┴────────┴───────┴───────┴───────┘
-                                      │
-                            ┌─────────▼──────────────┐
-                            │   SUM ALL SCORES       │
-                            │   (typically 60-90)    │
-                            └────────────────────────┘
-                                      │
-                            ┌─────────▼──────────────┐
-                            │  SORT BY TOTAL SCORE   │
-                            │  (descending)          │
-                            └────────────────────────┘
-                                      │
-                            ┌─────────▼──────────────┐
-                            │  RETURN TOP N PLAYERS  │
-                            │  (user specified)      │
-                            └────────────────────────┘
+     ADP --> GetAvailable
+     STATS --> GetAvailable
+     INJ --> GetAvailable
+     FORM --> GetAvailable
+     CONFIG --> GetAvailable
+     DRAFTED --> GetAvailable
+
+     GetAvailable["Get Available Players\n(filter drafted)\nReturn: list of N"]
+
+     GetAvailable --> EVAL["Evaluate Each Player\n(8 Factors)"]
+
+     %% Factors group
+     subgraph FACTORS["8 Scoring Factors"]
+          direction LR
+          Base["Base Value\n30%"]
+          Club["Club Bonus"]
+          ADPVal["ADP Value\n7%"]
+          FormVal["Recent Form\n20%"]
+          InjPen["Missed Time\nPenalty\n15%"]
+          Need["Position Need\n10%"]
+          Scar["Position\nScarcity\n5%"]
+          PosVal["Positional\nValue\n5%"]
+     end
+
+     EVAL --> Base
+     EVAL --> Club
+     EVAL --> ADPVal
+     EVAL --> FormVal
+     EVAL --> InjPen
+     EVAL --> Need
+     EVAL --> Scar
+     EVAL --> PosVal
+
+     Base --> SumScores
+     Club --> SumScores
+     ADPVal --> SumScores
+     FormVal --> SumScores
+     InjPen --> SumScores
+     Need --> SumScores
+     Scar --> SumScores
+     PosVal --> SumScores
+
+     SumScores["Sum All Scores\n(typically 60-90)"]
+     SumScores --> Sort["Sort by Total Score\n(descending)"]
+     Sort --> Return["Return Top N Players\n(user specified)"]
+```
