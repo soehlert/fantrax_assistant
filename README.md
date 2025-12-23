@@ -90,7 +90,7 @@ flowchart TB
 
      GetAvailable["Get Available Players (filter drafted) Return: list of N"]
 
-     GetAvailable --> EVAL["Evaluate Each Player (8 Factors)"]
+     GetAvailable --> EVAL["Evaluate Each Player - Including team composition and needs)"]
 
      %% Factors group
      subgraph FACTORS["8 Scoring Factors"]
@@ -99,10 +99,10 @@ flowchart TB
           Club["Club Bonus"]
           ADPVal["ADP Value 7%"]
           FormVal["Recent Form 20%"]
-          InjPen["Missed Time\nPenalty 15%"]
+          InjPen["Missed Time Penalty 15%"]
           Need["Position Need 10%"]
           Scar["Position\nScarcity 5%"]
-          PosVal["Positional\nValue 5%"]
+          PosVal["Positional Value 5%"]
      end
 
      EVAL --> Base
