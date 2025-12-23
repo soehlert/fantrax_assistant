@@ -71,13 +71,17 @@ def search(player_name: str):
 
 @cli.command()
 @click.argument('num_suggestions', type=int, default=10)
+@click.option('--exclude-team', '-x', type=str, default=None, help='Exclude players from this team (e.g., MCI, ARS)')
 @click.option('--breakdown', '-b', is_flag=True, help='Show detailed score breakdown')
-def suggest(num_suggestions: int, breakdown: bool):
+def suggest(num_suggestions: int, breakdown: bool, exclude_team: str):
     """Get player recommendations."""
     config = DraftConfig()
     state = DraftState()
 
     console.print(f"\n[cyan]Top {num_suggestions} Recommendations[/cyan]\n")
+
+    if exclude_team:
+        console.print(f"[yellow]Excluding:[/yellow] {exclude_team.upper()}\n")
 
     with console.status("[bold cyan]Calculating..."):
         if not config.load_all_data():
@@ -85,7 +89,7 @@ def suggest(num_suggestions: int, breakdown: bool):
             return
 
     engine = PlayerRecommendationEngine(config, state.my_team, state.drafted_players)
-    recs = engine.get_recommendations(1, num_suggestions)
+    recs = engine.get_recommendations(1, num_suggestions, exclude_team=exclude_team)
 
     if breakdown:
         # Detailed breakdown view

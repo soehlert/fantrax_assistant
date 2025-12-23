@@ -374,9 +374,15 @@ class PlayerRecommendationEngine:
         }
 
 
-    def get_recommendations(self, current_round: int, n: int = 10) -> list[dict]:
+    def get_recommendations(self, current_round: int, n: int = 10, exclude_team: str = None) -> list[dict]:
         """Get top N player recommendations."""
         available = self.config.get_all_available_players(self.drafted_players)
+
+        # Filter team I don't want
+        if exclude_team:
+            exclude_team_upper = exclude_team.upper()
+            available = [p for p in available if p.get('team', '').upper() != exclude_team_upper]
+
 
         for player in available:
             player['recommendation_score'] = self.calculate_total_score(
