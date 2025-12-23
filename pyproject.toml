@@ -12,6 +12,6 @@ dependencies = [
 ]
 
 [project.scripts]
-draft = "fantrax_assistant.draft_assistant:cli"
+draft = "fantrax_assistant.draft:cli"
 scrape = "fantrax_assistant.scrapers.cli:scrape_cli"
 search = "fantrax_assistant.search:search"
