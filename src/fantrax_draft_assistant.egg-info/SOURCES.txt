@@ -2,6 +2,8 @@ README.md
 pyproject.toml
 src/__init__.py
 src/fantrax_assistant/__init__.py
+src/fantrax_assistant/colors.py
+src/fantrax_assistant/completion.py
 src/fantrax_assistant/config.py
 src/fantrax_assistant/draft.py
 src/fantrax_assistant/draft_state.py
