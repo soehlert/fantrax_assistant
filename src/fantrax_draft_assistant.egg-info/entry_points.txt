@@ -1,4 +1,4 @@
 [console_scripts]
-draft = fantrax_assistant.draft:cli
+draft = fantrax_assistant.draft:app
 scrape = fantrax_assistant.scrapers.cli:scrape_cli
 search = fantrax_assistant.search:search

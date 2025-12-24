@@ -1,6 +1,7 @@
 """Main draft assistant CLI."""
 
-import click
+from typing import Annotated
+import typer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -12,16 +13,33 @@ from .draft_state import DraftState
 from .suggest import PlayerRecommendationEngine
 
 console = Console()
+app = typer.Typer(help="Fantrax Draft Assistant")
 
 
-@click.group()
-def cli():
-    """Fantrax Draft Assistant."""
-    pass
+# Completion callbacks
+def complete_teams() -> list[str]:
+    """Complete team names."""
+    state = DraftState()
+    return list(state.teams.keys())
 
 
-@cli.command()
-@click.argument('player_name')
+def complete_positions() -> list[str]:
+    """Complete positions."""
+    return ['G', 'D', 'M', 'F']
+
+
+def complete_clubs() -> list[str]:
+    """Complete club names."""
+    config = DraftConfig()
+    if config.load_all_data():
+        clubs = {p.get('team', '') for p in config.rankings.get('rankings', [])}
+        return sorted(list(clubs))
+    return []
+
+
+# Commands
+
+@app.command()
 def search(player_name: str):
     """Search for a player."""
     config = DraftConfig()
@@ -69,13 +87,26 @@ def search(player_name: str):
     _display_player_details(config, selected)
 
 
-@cli.command()
-@click.argument('num_suggestions', type=int, default=10)
-@click.option('--show-team', '-t', type=str, default="Team 1", help='Team to get suggestions for')
-@click.option('--ignore-position', '-i', type=str, default=None, help='Ignore positions (comma-separated: G,D,M,F)')
-@click.option('--exclude-team', '-x', type=str, default=None, help='Exclude players from this team (e.g., MCI, ARS)')
-@click.option('--breakdown', '-b', is_flag=True, help='Show detailed score breakdown')
-def suggest(num_suggestions: int, team: str, exclude_team: str, ignore_position: str, breakdown: bool):
+@app.command()
+def suggest(
+    num_suggestions: Annotated[int, typer.Argument(help="Number of suggestions")] = 10,
+    team: Annotated[str, typer.Option(
+        "--team", "-t",
+        help="Team to get suggestions for"
+    )] = "Team 1",
+    ignore_position: Annotated[str | None, typer.Option(
+        "--ignore-position", "-i",
+        help="Ignore positions (comma-separated: G,D,M,F)"
+    )] = None,
+    exclude_team: Annotated[str | None, typer.Option(
+        "--exclude-team", "-x",
+        help="Exclude players from this club (e.g., MCI, ARS)"
+    )] = None,
+    breakdown: Annotated[bool, typer.Option(
+        "--breakdown", "-b",
+        help="Show detailed score breakdown"
+    )] = False,
+):
     """Get player recommendations."""
     config = DraftConfig()
     state = DraftState()
@@ -104,10 +135,8 @@ def suggest(num_suggestions: int, team: str, exclude_team: str, ignore_position:
             console.print(f"\n[bold cyan]{i}. {rec['player']}[/bold cyan] ({rec['position']}) - {rec['team']}")
             console.print(f"   ADP: {rec.get('adp', 0):.1f} | FP/G: {rec.get('fpg', 0):.2f}")
 
-            # Get breakdown
             breakdown_data = engine.get_score_breakdown(rec, 1)
 
-            # Create breakdown table
             breakdown_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
             breakdown_table.add_column("Component", style="dim")
             breakdown_table.add_column("Score", justify="right", style="white")
@@ -124,7 +153,6 @@ def suggest(num_suggestions: int, team: str, exclude_team: str, ignore_position:
 
             console.print(breakdown_table)
 
-            # Show injury/AFCON status
             injury = rec.get('injury', {})
             afcon = config.get_player_afcon_status(rec['player'])
 
@@ -166,13 +194,15 @@ def suggest(num_suggestions: int, team: str, exclude_team: str, ignore_position:
         console.print(f"\n[dim]Tip: Use --breakdown flag to see detailed scoring breakdown[/dim]")
 
 
-
-@cli.command()
-@click.argument('player_name')
-@click.option('--team', '-t', type=str, default=None, help='Team to add player to (defaults to your team)')
-def pick(player_name: str, team: str):
+@app.command()
+def pick(
+    player_name: str,
+    team: Annotated[str | None, typer.Option(
+        "--team", "-t",
+        help="Team to add player to (defaults to your team)"
+    )] = None,
+):
     """Add player to your team."""
-
     config = DraftConfig()
     state = DraftState()
 
@@ -192,19 +222,15 @@ def pick(player_name: str, team: str):
     console.print(f"[green]✓[/green] Added [bold]{player_adp['player']}[/bold] to [cyan]{team_name}[/cyan]")
 
     my_team = state.get_team(team_name)
-
-    # Display updated position breakdown
     _display_position_breakdown(config, my_team)
 
 
-@cli.command()
-@click.argument('player_name')
+@app.command()
 def drafted(player_name: str):
     """Mark player as drafted by opponent."""
     config = DraftConfig()
     state = DraftState()
 
-    # Load data and find exact player name for consistency
     if not config.load_all_data():
         console.print("[red]Failed to load data[/red]")
         return
@@ -215,16 +241,18 @@ def drafted(player_name: str):
         console.print(f"[red]✗[/red] Player not found")
         return
 
-    # Use the exact name from rankings to ensure consistency
     exact_name = player_adp['player']
     state.mark_drafted(exact_name)
     console.print(f"[green]✓[/green] Marked [bold]{exact_name}[/bold] as drafted")
 
 
-
-@cli.command()
-@click.option('--team', '-t', type=str, default="Team 1", help='Team name to view')
-def show_team(team: str):
+@app.command()
+def show_team(
+    team: Annotated[str, typer.Option(
+        "--team", "-t",
+        help="Team name to view"
+    )] = "Team 1",
+):
     """Show a team's roster."""
     config = DraftConfig()
     state = DraftState()
@@ -249,7 +277,6 @@ def show_team(team: str):
 
     console.print(table)
 
-    # Position breakdown
     if config.load_all_data() and config.league_config:
         roster_rules = config.league_config['roster_rules']
 
@@ -268,8 +295,7 @@ def show_team(team: str):
         console.print("\n", breakdown)
 
 
-
-@cli.command()
+@app.command()
 def reset():
     """Reset draft state."""
     if Confirm.ask("Reset everything?", default=False):
@@ -277,13 +303,17 @@ def reset():
         state.reset()
         console.print("[green]✓[/green] Reset complete")
 
-@cli.command()
-@click.option('--teams', '-t', type=str, default="My Team", help='Comma-separated team names (e.g., "My Team,Opponent 1,Opponent 2")')
-def init(teams: str):
+
+@app.command()
+def init(
+    teams: Annotated[str, typer.Option(
+        "--teams", "-t",
+        help='Comma-separated team names (e.g., "Sam,Scott,Hayden")'
+    )] = "My Team",
+):
     """Initialize draft with specified teams."""
     state = DraftState()
 
-    # Parse team names
     team_list = [t.strip() for t in teams.split(',')]
     state.teams = {team: [] for team in team_list}
     state.drafted_players = set()
@@ -294,6 +324,8 @@ def init(teams: str):
     for team_name in state.teams.keys():
         console.print(f"  [cyan]{team_name}[/cyan]")
 
+
+# Helper functions
 
 def _display_position_breakdown(config: DraftConfig, my_team: list):
     """Display position breakdown table."""
@@ -316,24 +348,22 @@ def _display_position_breakdown(config: DraftConfig, my_team: list):
 
     console.print("\n", breakdown)
 
+
 def _display_player_details(config: DraftConfig, player_adp: dict):
-    """Display detailed information for a single player including draft value breakdown."""
+    """Display detailed information for a single player."""
     from .draft_state import DraftState
     from .suggest import PlayerRecommendationEngine
 
     player_name = player_adp['player']
 
-    # Get player data
     stats = config.get_player_stats(player_name)
     injury = config.get_player_injury(player_name)
     afcon = config.get_player_afcon_status(player_name)
 
-    # Get positional rank
     state = DraftState()
     engine = PlayerRecommendationEngine(config, [], state.drafted_players)
     pos_rank = engine.get_positional_rank(player_name)
 
-    # Create header panel with positional rank
     pos_name = player_adp.get('position', '')
     pos_labels = {'G': 'Goalkeeper', 'D': 'Defender', 'M': 'Midfielder', 'F': 'Forward'}
     pos_label = pos_labels.get(pos_name, pos_name)
@@ -350,7 +380,7 @@ def _display_player_details(config: DraftConfig, player_adp: dict):
     )
     console.print(header)
 
-    # ADP & Rankings Table
+    # ADP Table
     adp_table = Table(title="Draft Information", box=box.SIMPLE, show_header=False)
     adp_table.add_column("Metric", style="cyan")
     adp_table.add_column("Value", style="white")
@@ -366,7 +396,7 @@ def _display_player_details(config: DraftConfig, player_adp: dict):
     console.print(adp_table)
     console.print()
 
-    # Current Season Stats
+    # Stats Table
     if stats:
         stats_table = Table(title="2024-25 Season Stats", box=box.SIMPLE)
         stats_table.add_column("Stat", style="cyan")
@@ -386,7 +416,7 @@ def _display_player_details(config: DraftConfig, player_adp: dict):
         console.print(stats_table)
         console.print()
 
-    # Calculate draft value breakdown
+    # Score Breakdown
     enriched_player = player_adp.copy()
     enriched_player['stats'] = stats
     enriched_player['injury'] = injury
@@ -405,11 +435,7 @@ def _display_player_details(config: DraftConfig, player_adp: dict):
     )
 
     if breakdown['club_bonus'] > 0:
-        breakdown_table.add_row(
-            "Club Bonus (Non-Top 8)",
-            "Goals ≥ 5",
-            f"{breakdown['club_bonus']:.2f}"
-        )
+        breakdown_table.add_row("Club Bonus (Non-Top 8)", "Goals ≥ 5", f"{breakdown['club_bonus']:.2f}")
 
     breakdown_table.add_row(
         "ADP Value",
@@ -417,41 +443,12 @@ def _display_player_details(config: DraftConfig, player_adp: dict):
         f"{breakdown['adp_value']:.2f}"
     )
 
-    breakdown_table.add_row(
-        "Recent Form",
-        f"{breakdown['form_matches']} matches × 0.20",
-        f"{breakdown['form_value']:.2f}"
-    )
-
-    breakdown_table.add_row(
-        "Health/Availability",
-        f"{breakdown['injury_status']} (× {breakdown['injury_multiplier']}) × 15",
-        f"{breakdown['injury_penalty']:.2f}"
-    )
-
-    breakdown_table.add_row(
-        "Position Need",
-        "Roster depth check",
-        f"{breakdown['position_need']:.2f}"
-    )
-
-    breakdown_table.add_row(
-        "Position Scarcity",
-        "Drop-off vs next tier",
-        f"{breakdown['scarcity']:.2f}"
-    )
-
-    breakdown_table.add_row(
-        "Positional Value",
-        "Points vs position avg",
-        f"{breakdown['positional_value']:.2f}"
-    )
-
-    breakdown_table.add_row(
-        "[bold]TOTAL SCORE[/bold]",
-        "",
-        f"[bold green]{breakdown['total']:.2f}[/bold green]"
-    )
+    breakdown_table.add_row("Recent Form", f"{breakdown['form_matches']} matches × 0.20", f"{breakdown['form_value']:.2f}")
+    breakdown_table.add_row("Health/Availability", f"{breakdown['injury_status']} (× {breakdown['injury_multiplier']}) × 15", f"{breakdown['injury_penalty']:.2f}")
+    breakdown_table.add_row("Position Need", "Roster depth check", f"{breakdown['position_need']:.2f}")
+    breakdown_table.add_row("Position Scarcity", "Drop-off vs next tier", f"{breakdown['scarcity']:.2f}")
+    breakdown_table.add_row("Positional Value", "Points vs position avg", f"{breakdown['positional_value']:.2f}")
+    breakdown_table.add_row("[bold]TOTAL SCORE[/bold]", "", f"[bold green]{breakdown['total']:.2f}[/bold green]")
 
     console.print(breakdown_table)
     console.print()
@@ -460,29 +457,16 @@ def _display_player_details(config: DraftConfig, player_adp: dict):
     injury_severity = injury.get('severity', 'Unknown')
 
     if injury_severity == 'Healthy':
-        injury_panel = Panel(
-            "[green]✓ Healthy[/green]",
-            title="Injury Status",
-            border_style="green",
-            box=box.ROUNDED
-        )
+        injury_panel = Panel("[green]✓ Healthy[/green]", title="Injury Status", border_style="green", box=box.ROUNDED)
     elif injury_severity in ['Questionable', 'Doubtful']:
         injury_panel = Panel(
-            f"[yellow]⚠ {injury_severity}[/yellow]\n"
-            f"Type: {injury.get('injury_type', 'Unknown')}\n"
-            f"Return: {injury.get('return_date', 'TBD')}",
-            title="Injury Status",
-            border_style="yellow",
-            box=box.ROUNDED
+            f"[yellow]⚠ {injury_severity}[/yellow]\nType: {injury.get('injury_type', 'Unknown')}\nReturn: {injury.get('return_date', 'TBD')}",
+            title="Injury Status", border_style="yellow", box=box.ROUNDED
         )
     else:
         injury_panel = Panel(
-            f"[red]✗ {injury_severity}[/red]\n"
-            f"Type: {injury.get('injury_type', 'Unknown')}\n"
-            f"Return: {injury.get('return_date', 'TBD')}",
-            title="Injury Status",
-            border_style="red",
-            box=box.ROUNDED
+            f"[red]✗ {injury_severity}[/red]\nType: {injury.get('injury_type', 'Unknown')}\nReturn: {injury.get('return_date', 'TBD')}",
+            title="Injury Status", border_style="red", box=box.ROUNDED
         )
 
     console.print(injury_panel)
@@ -490,16 +474,11 @@ def _display_player_details(config: DraftConfig, player_adp: dict):
     # AFCON Status
     if afcon.get('at_afcon'):
         afcon_panel = Panel(
-            f"[yellow]⚠ At AFCON 2025[/yellow]\n"
-            f"Country: {afcon.get('country', 'Unknown')}\n"
-            f"Unavailable: {afcon.get('start_date')} to {afcon.get('end_date')}\n"
-            f"[red]Will miss ~4-6 gameweeks[/red]",
-            title="AFCON Status",
-            border_style="yellow",
-            box=box.ROUNDED
+            f"[yellow]⚠ At AFCON 2025[/yellow]\nCountry: {afcon.get('country', 'Unknown')}\nUnavailable: {afcon.get('start_date')} to {afcon.get('end_date')}\n[red]Will miss ~4-6 gameweeks[/red]",
+            title="AFCON Status", border_style="yellow", box=box.ROUNDED
         )
         console.print(afcon_panel)
 
 
 if __name__ == "__main__":
-    cli()
+    app()
