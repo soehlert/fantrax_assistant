@@ -22,3 +22,5 @@ src/fantrax_draft_assistant.egg-info/dependency_links.txt
 src/fantrax_draft_assistant.egg-info/entry_points.txt
 src/fantrax_draft_assistant.egg-info/requires.txt
 src/fantrax_draft_assistant.egg-info/top_level.txt
+src/web/__init__.py
+src/web/main.py
