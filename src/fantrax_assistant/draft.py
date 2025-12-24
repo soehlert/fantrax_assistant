@@ -71,7 +71,7 @@ def search(player_name: str):
 
 @cli.command()
 @click.argument('num_suggestions', type=int, default=10)
-@click.option('--team', '-t', type=str, default="Team 1", help='Team to get suggestions for')
+@click.option('--show-team', '-t', type=str, default="Team 1", help='Team to get suggestions for')
 @click.option('--ignore-position', '-i', type=str, default=None, help='Ignore positions (comma-separated: G,D,M,F)')
 @click.option('--exclude-team', '-x', type=str, default=None, help='Exclude players from this team (e.g., MCI, ARS)')
 @click.option('--breakdown', '-b', is_flag=True, help='Show detailed score breakdown')
@@ -85,7 +85,6 @@ def suggest(num_suggestions: int, team: str, exclude_team: str, ignore_position:
     if exclude_team:
         console.print(f"[yellow]Excluding:[/yellow] {exclude_team.upper()}\n")
 
-    ignore_positions = None
     if ignore_position:
         ignore_positions = [p.strip().upper() for p in ignore_position.split(',')]
         console.print(f"[yellow]Ignoring positions:[/yellow] {', '.join(ignore_positions)}\n")
@@ -225,7 +224,7 @@ def drafted(player_name: str):
 
 @cli.command()
 @click.option('--team', '-t', type=str, default="Team 1", help='Team name to view')
-def team(team: str):
+def show_team(team: str):
     """Show a team's roster."""
     config = DraftConfig()
     state = DraftState()
