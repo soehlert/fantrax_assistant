@@ -1,16 +1,21 @@
 """Player search functionality for draft assistant."""
 
-import click
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
-from rich.prompt import Prompt
 from rich import box
+import typer
+import contextlib
+import io
+from typing import Annotated
+from rich.prompt import Prompt
 
 from .config import DraftConfig
+from .colors import COLORS
+
+app = typer.Typer()
 
 console = Console()
-
 
 def find_all_matches(config: DraftConfig, search_name: str) -> list[dict]:
     """Find all players matching the search name."""
@@ -52,7 +57,7 @@ def display_player_details(config: DraftConfig, player_adp: dict):
     console.print(header)
 
     # ADP & Rankings Table
-    adp_table = Table(title="Draft Information", box=box.SIMPLE, show_header=False)
+    adp_table = Table(title="Draft Information", box=box.SIMPLE, header_style=COLORS['header'], show_header=False)
     adp_table.add_column("Metric", style="cyan")
     adp_table.add_column("Value", style="white")
 
@@ -68,7 +73,7 @@ def display_player_details(config: DraftConfig, player_adp: dict):
 
     # Current Season Stats Table
     if stats:
-        stats_table = Table(title="2024-25 Season Stats", box=box.SIMPLE)
+        stats_table = Table(title="2024-25 Season Stats", header_style=COLORS['header'], box=box.SIMPLE)
         stats_table.add_column("Stat", style="cyan")
         stats_table.add_column("Value", justify="right", style="white")
 
@@ -132,11 +137,9 @@ def display_player_details(config: DraftConfig, player_adp: dict):
         )
         console.print(afcon_panel)
 
-
-
-@click.command()
-@click.argument('player_name')
-def search(player_name: str):
+@app.command()
+def search(player_name: Annotated[str, typer.Argument(help="Name of the player to search for")]):
+    """Search for a player and display their information."""
     """
     Search for a player and display their information.
 
@@ -167,12 +170,13 @@ def search(player_name: str):
     # Multiple matches - let user choose
     console.print(f"[yellow]Found {len(matches)} players matching '{player_name}':[/yellow]\n")
 
-    selection_table = Table(box=box.SIMPLE, show_header=True)
+    selection_table = Table(box=box.SIMPLE, show_header=True, header_style=COLORS['header'])
     selection_table.add_column("#", style="cyan", width=3)
     selection_table.add_column("Player", style="white")
     selection_table.add_column("Position", style="cyan", width=8)
     selection_table.add_column("Team", style="white", width=15)
     selection_table.add_column("ADP", justify="right", style="white", width=6)
+
 
     for i, match in enumerate(matches, 1):
         selection_table.add_row(
@@ -201,6 +205,5 @@ def search(player_name: str):
     except (ValueError, KeyboardInterrupt):
         console.print("\n[yellow]Search cancelled[/yellow]")
 
-
 if __name__ == "__main__":
-    search()
+    app()
