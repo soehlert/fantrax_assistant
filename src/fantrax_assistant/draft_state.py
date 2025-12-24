@@ -1,4 +1,4 @@
-"""Manage draft state (drafted players, my team)."""
+"""Manage draft state (teams, drafted players)."""
 
 import json
 from pathlib import Path
@@ -6,30 +6,34 @@ from datetime import datetime
 
 
 class DraftState:
-    """Manage draft state persistence."""
+    """Manage draft state persistence across multiple teams."""
 
     def __init__(self, state_file: str | Path = 'data/draft_state.json'):
+        self.teams: dict[str, list] = {}
+        self.my_team: str = "Team 1"
         self.state_file = Path(state_file)
         self.drafted_players: set[str] = set()
-        self.my_team: list[dict] = []
         self.load()
 
-    def load(self) -> bool:
-        """Load draft state from file."""
-        if not self.state_file.exists():
-            return False
-
+    def load(self):
+        """Load draft state from JSON."""
         try:
-            with self.state_file.open('r') as f:
-                data = json.load(f)
-
-            self.drafted_players = set(data.get('drafted_players', []))
-            self.my_team = data.get('my_team', [])
-
-            return True
+            if self.state_file.exists():
+                with self.state_file.open('r') as f:
+                    state = json.load(f)
+                    self.teams = {k: v for k, v in state.get('teams', {}).items()}
+                    self.my_team = state.get('my_team', "Team 1")
+                    self.drafted_players = set(state.get('drafted_players', []))
+            else:
+                # File doesn't exist (first run), create default
+                self.teams = {"Team 1": []}
+                self.my_team = "Team 1"
+                self.drafted_players = set()
         except Exception as e:
             print(f"Error loading draft state: {e}")
-            return False
+            self.teams = {"Team 1": []}
+            self.my_team = "Team 1"
+            self.drafted_players = set()
 
     def save(self) -> bool:
         """Save draft state to file."""
@@ -38,8 +42,9 @@ class DraftState:
 
             data = {
                 'last_updated': datetime.now().isoformat(),
+                'my_team': self.my_team,
                 'drafted_players': list(self.drafted_players),
-                'my_team': self.my_team
+                'teams': self.teams
             }
 
             with self.state_file.open('w') as f:
@@ -50,12 +55,15 @@ class DraftState:
             print(f"Error saving draft state: {e}")
             return False
 
-    def add_to_my_team(self, player: dict):
-        """Add player to my team."""
+    def add_to_team(self, player: dict, team_name: str = "Team 1"):
+        """Add player to specific team."""
+        if team_name not in self.teams:
+            self.teams[team_name] = []
+
         # Check if player already on team
         player_name = player.get('player')
-        if any(p['player'] == player_name for p in self.my_team):
-            print(f"Warning: {player_name} already on team")
+        if any(p['player'] == player_name for p in self.teams[team_name]):
+            print(f"Warning: {player_name} already on {team_name}")
             return
 
         # Ensure we save all necessary data
@@ -67,10 +75,17 @@ class DraftState:
             'fpts': player.get('fpts'),
             'fpg': player.get('fpg')
         }
-        self.my_team.append(player_data)
-        self.drafted_players.add(player['player'])
+        self.teams[team_name].append(player_data)
+        self.drafted_players.add(player_name)
         self.save()
 
+    def get_team(self, team_name: str) -> list:
+        """Get a specific team's roster."""
+        return self.teams.get(team_name, [])
+
+    def get_all_teams(self) -> dict:
+        """Get all teams."""
+        return self.teams
 
     def mark_drafted(self, player_name: str):
         """Mark player as drafted by opponent."""
@@ -79,6 +94,6 @@ class DraftState:
 
     def reset(self):
         """Reset draft state."""
+        self.teams = {"Team 1": []}
         self.drafted_players = set()
-        self.my_team = []
         self.save()

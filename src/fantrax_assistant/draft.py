@@ -71,9 +71,11 @@ def search(player_name: str):
 
 @cli.command()
 @click.argument('num_suggestions', type=int, default=10)
+@click.option('--team', '-t', type=str, default="Team 1", help='Team to get suggestions for')
+@click.option('--ignore-position', '-i', type=str, default=None, help='Ignore positions (comma-separated: G,D,M,F)')
 @click.option('--exclude-team', '-x', type=str, default=None, help='Exclude players from this team (e.g., MCI, ARS)')
 @click.option('--breakdown', '-b', is_flag=True, help='Show detailed score breakdown')
-def suggest(num_suggestions: int, breakdown: bool, exclude_team: str):
+def suggest(num_suggestions: int, team: str, exclude_team: str, ignore_position: str, breakdown: bool):
     """Get player recommendations."""
     config = DraftConfig()
     state = DraftState()
@@ -83,13 +85,19 @@ def suggest(num_suggestions: int, breakdown: bool, exclude_team: str):
     if exclude_team:
         console.print(f"[yellow]Excluding:[/yellow] {exclude_team.upper()}\n")
 
+    ignore_positions = None
+    if ignore_position:
+        ignore_positions = [p.strip().upper() for p in ignore_position.split(',')]
+        console.print(f"[yellow]Ignoring positions:[/yellow] {', '.join(ignore_positions)}\n")
+
     with console.status("[bold cyan]Calculating..."):
         if not config.load_all_data():
             console.print("[red]Failed to load data[/red]")
             return
 
-    engine = PlayerRecommendationEngine(config, state.my_team, state.drafted_players)
-    recs = engine.get_recommendations(1, num_suggestions, exclude_team=exclude_team)
+    team_roster = state.get_team(team)
+    engine = PlayerRecommendationEngine(config, team_roster, state.drafted_players)
+    recs = engine.get_recommendations(1, num_suggestions, exclude_team=exclude_team, ignore_position=ignore_position)
 
     if breakdown:
         # Detailed breakdown view
@@ -162,10 +170,14 @@ def suggest(num_suggestions: int, breakdown: bool, exclude_team: str):
 
 @cli.command()
 @click.argument('player_name')
-def pick(player_name: str):
+@click.option('--team', '-t', type=str, default=None, help='Team to add player to (defaults to your team)')
+def pick(player_name: str, team: str):
     """Add player to your team."""
+
     config = DraftConfig()
     state = DraftState()
+
+    team_name = team or state.my_team
 
     with console.status("[bold cyan]Loading..."):
         if not config.load_all_data():
@@ -177,10 +189,10 @@ def pick(player_name: str):
         console.print(f"[red]✗[/red] Player not found")
         return
 
-    state.add_to_my_team(player_adp)
-    console.print(f"[green]✓[/green] Added [bold]{player_adp['player']}[/bold] to your team")
+    state.add_to_team(player_adp, team_name)
+    console.print(f"[green]✓[/green] Added [bold]{player_adp['player']}[/bold] to [cyan]{team_name}[/cyan]")
 
-    my_team = state.my_team
+    my_team = state.get_team(team_name)
 
     # Display updated position breakdown
     _display_position_breakdown(config, my_team)
@@ -212,23 +224,27 @@ def drafted(player_name: str):
 
 
 @cli.command()
-def team():
-    """Show your team."""
+@click.option('--team', '-t', type=str, default="Team 1", help='Team name to view')
+def team(team: str):
+    """Show a team's roster."""
     config = DraftConfig()
     state = DraftState()
 
-    if not state.my_team:
-        console.print("[yellow]No players yet[/yellow]")
+    team_name = team or state.my_team
+    team_roster = state.get_team(team_name)
+
+    if not team_roster:
+        console.print(f"[yellow]No players on {team_name} yet[/yellow]")
         return
 
-    table = Table(title="My Team", box=box.ROUNDED)
+    table = Table(title=team, box=box.ROUNDED)
     table.add_column("#", width=3)
     table.add_column("Player", style="bold")
     table.add_column("Position")
     table.add_column("Team")
     table.add_column("ADP", justify="right")
 
-    for i, player in enumerate(state.my_team, 1):
+    for i, player in enumerate(team_roster, 1):
         table.add_row(str(i), player['player'], player['position'],
                      player['team'], f"{player['adp']:.1f}")
 
@@ -245,12 +261,13 @@ def team():
         breakdown.add_column("Need", justify="right")
 
         for pos, max_count in roster_rules.items():
-            current = sum(1 for p in state.my_team if pos in p.get('position', ''))
+            current = sum(1 for p in team_roster if pos in p.get('position', ''))
             need = max_count - current
             need_str = "[green]✓[/green]" if need == 0 else str(need)
             breakdown.add_row(pos, str(current), str(max_count), need_str)
 
         console.print("\n", breakdown)
+
 
 
 @cli.command()
@@ -260,6 +277,23 @@ def reset():
         state = DraftState()
         state.reset()
         console.print("[green]✓[/green] Reset complete")
+
+@cli.command()
+@click.option('--teams', '-t', type=str, default="My Team", help='Comma-separated team names (e.g., "My Team,Opponent 1,Opponent 2")')
+def init(teams: str):
+    """Initialize draft with specified teams."""
+    state = DraftState()
+
+    # Parse team names
+    team_list = [t.strip() for t in teams.split(',')]
+    state.teams = {team: [] for team in team_list}
+    state.drafted_players = set()
+    state.save()
+
+    console.print(f"[green]✓[/green] Draft initialized with {len(team_list)} teams:\n")
+
+    for team_name in state.teams.keys():
+        console.print(f"  [cyan]{team_name}[/cyan]")
 
 
 def _display_position_breakdown(config: DraftConfig, my_team: list):
@@ -297,7 +331,7 @@ def _display_player_details(config: DraftConfig, player_adp: dict):
 
     # Get positional rank
     state = DraftState()
-    engine = PlayerRecommendationEngine(config, state.my_team, state.drafted_players)
+    engine = PlayerRecommendationEngine(config, [], state.drafted_players)
     pos_rank = engine.get_positional_rank(player_name)
 
     # Create header panel with positional rank
