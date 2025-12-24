@@ -190,10 +190,7 @@ def suggest(
 @app.command()
 def pick(
     player_name: str,
-    team: Annotated[str | None, typer.Option(
-        "--team", "-t",
-        help="Team to add player to (defaults to your team)"
-    )] = None,
+    team: Annotated[str | None, typer.Option("--team", "-t", help="Team to add player to (defaults to your team)")] = None,
 ):
     """Add player to your team."""
     config = DraftConfig()
@@ -211,11 +208,11 @@ def pick(
         console.print(f"[{COLORS['error']}]✗[/{COLORS['error']}] Player not found")
         return
 
-    state.add_to_team(player_adp, team_name)
-    console.print(f"[{COLORS['success']}]✓[/{COLORS['success']}] Added [bold]{player_adp['player']}[/bold] to [{COLORS['info']}]{team_name}[/{COLORS['info']}]")
-
-    my_team = state.get_team(team_name)
-    _display_position_breakdown(config, my_team)
+    # Check the return value of add_to_team()
+    if state.add_to_team(player_adp, team_name):
+        console.print(f"[{COLORS['success']}]✓[/{COLORS['success']}] Added [bold]{player_adp['player']}[/bold] to [{COLORS['info']}]{team_name}[/{COLORS['info']}]")
+        my_team = state.get_team(team_name)
+        _display_position_breakdown(config, my_team)
 
 
 @app.command()

@@ -60,13 +60,19 @@ class DraftState:
         if team_name not in self.teams:
             self.teams[team_name] = []
 
-        # Check if player already on team
         player_name = player.get('player')
-        if any(p['player'] == player_name for p in self.teams[team_name]):
-            print(f"Warning: {player_name} already on {team_name}")
-            return
 
-        # Ensure we save all necessary data
+        # Check if player is already drafted by ANYONE
+        if player_name in self.drafted_players:
+            print(f"Error: {player_name} has already been drafted")
+            return False
+
+        # Check if player already on this specific team (shouldn't happen, but safety check)
+        if any(p['player'] == player_name for p in self.teams[team_name]):
+            print(f"Error: {player_name} already on {team_name}")
+            return False
+
+        # Add player
         player_data = {
             'player': player.get('player'),
             'position': player.get('position'),
@@ -78,6 +84,8 @@ class DraftState:
         self.teams[team_name].append(player_data)
         self.drafted_players.add(player_name)
         self.save()
+        return True
+
 
     def get_team(self, team_name: str) -> list:
         """Get a specific team's roster."""
