@@ -90,6 +90,7 @@ def suggest(
     """Get player recommendations."""
     config = DraftConfig()
     state = DraftState()
+    team = state.find_team_name(team) or team
 
     console.print(f"\n[{COLORS['header']}]🎯 Top {num_suggestions} Recommendations[/{COLORS['header']}]\n")
 
@@ -196,7 +197,7 @@ def pick(
     config = DraftConfig()
     state = DraftState()
 
-    team_name = team or state.my_team
+    team_name = state.find_team_name(team) if team else state.my_team
 
     with console.status(f"[{COLORS['info']}]Loading...[/{COLORS['info']}]"):
         if not config.load_all_data():
@@ -235,19 +236,13 @@ def drafted(player_name: str):
     state.mark_drafted(exact_name)
     console.print(f"[{COLORS['success']}]✓[/{COLORS['success']}] Marked [bold]{exact_name}[/bold] as drafted")
 
-
 @app.command()
-def show_team(
-    team: Annotated[str, typer.Option(
-        "--team", "-t",
-        help="Team name to view"
-    )] = "Team 1",
-):
+def show_team(team: Annotated[str, typer.Option("--team", "-t",help="Team name to view")] = "Team 1",):
     """Show a team's roster."""
     config = DraftConfig()
     state = DraftState()
 
-    team_name = team or state.my_team
+    team_name = state.find_team_name(team) or team
     team_roster = state.get_team(team_name)
 
     if not team_roster:

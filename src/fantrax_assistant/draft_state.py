@@ -95,6 +95,15 @@ class DraftState:
         """Get all teams."""
         return self.teams
 
+    def find_team_name(self, team_input: str) -> str | None:
+        """Find team name case-insensitively."""
+        if not team_input:
+            return None
+        for team in self.teams.keys():
+            if team.lower() == team_input.lower():
+                return team
+        return None
+
     def mark_drafted(self, player_name: str):
         """Mark player as drafted by opponent."""
         self.drafted_players.add(player_name)
