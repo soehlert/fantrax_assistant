@@ -3,7 +3,7 @@ import json
 from contextlib import asynccontextmanager
 from typing import Annotated # Annotated is standard in Python 3.9+
 
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -53,42 +53,105 @@ async def autocomplete_players(q: str = ""):
 
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request, page_available: int = 1, page_drafted: int = 1):
-    PAGE_SIZE = 15
+async def read_root(
+    request: Request,
+    page_available: int = 1,
+    page_drafted: int = 1,
+    search: str = "",
+    search_drafted: str = ""
+):
     with open("data/draft_state.json", "r") as f:
         draft_state = json.load(f)
-    all_drafted_player_names = draft_state.get("drafted_players", [])
-    
-    # This logic rebuilds the drafted list on every request to ensure it's fresh
+
+    drafted_player_names = draft_state.get("drafted_players", [])
     teams_data = draft_state.get("teams", {})
-    tracked_player_details = {}
-    for owner_name, roster in teams_data.items():
-        for player_obj in roster:
-            player_name = player_obj.get("player")
-            if player_name:
-                details = player_obj.copy()
-                details["owner"] = owner_name
-                details["team_id"] = owner_name
-                tracked_player_details[player_name] = details
+
+    # Get ALL players (both drafted and available)
+    all_players = config.rankings.get('rankings', [])
 
     drafted_players = []
-    for player_name in all_drafted_player_names:
-        if player_name in tracked_player_details:
-            drafted_players.append(tracked_player_details[player_name])
-        else:
-            drafted_players.append({
-                "player": player_name, "owner": "Untracked", "team_id": None, "adp": "N/A",
-                "fpts": "N/A", "fpg": "N/A", "position": "N/A", "team": "N/A"
-            })
+    available_players = []
 
-    all_available = config.get_all_available_players(set(all_drafted_player_names))
-    available_pagination = paginate(all_available, page_available, PAGE_SIZE)
-    drafted_pagination = paginate(drafted_players, page_drafted, PAGE_SIZE)
+    for player in all_players:
+        player_name = player.get('player', '')
+        injury = config.get_player_injury(player_name)
+        afcon = config.get_player_afcon_status(player_name)
+
+        enriched_player = {
+            **player,
+            'adp': player.get('adp'),
+            'fpts': player.get('fpts'),
+            'fpg': player.get('fpg'),
+            'injury_severity': injury.get('severity', 'Healthy'),
+            'at_afcon': afcon.get('at_afcon', False)
+        }
+
+        if player_name in drafted_player_names:
+            # Find owner
+            owner_team = None
+            for team_id, roster in teams_data.items():
+                if any(p.get('player') == player_name for p in roster):
+                    owner_team = team_id
+                    break
+
+            enriched_player['owner'] = owner_team
+            enriched_player['team_id'] = owner_team
+            drafted_players.append(enriched_player)
+        else:
+            available_players.append(enriched_player)
+
+    # Sort by FPTS (descending)
+    drafted_players.sort(key=lambda p: p.get('fpts', 0), reverse=True)
+    available_players.sort(key=lambda p: p.get('fpts', 0), reverse=True)
+
+    # Apply search filters
+    if search:
+        available_players = [p for p in available_players if search.lower() in p.get('player', '').lower()]
+
+    if search_drafted:
+        drafted_players = [p for p in drafted_players if search_drafted.lower() in p.get('player', '').lower()]
+
+    # Paginate
+    available_pagination = paginate(available_players, page_available, 10)
+    drafted_pagination = paginate(drafted_players, page_drafted, 10)
 
     return templates.TemplateResponse(
         request=request, name="index.html",
-        context={"available": available_pagination, "drafted": drafted_pagination}
+        context={
+            "available": available_pagination,
+            "drafted": drafted_pagination,
+            "search_query": search,
+            "search_drafted_query": search_drafted,
+            "tracked_teams": list(teams_data.keys())
+        }
     )
+
+@app.post("/draft/mark_drafted")
+async def mark_player_drafted(request: Request, player_name: Annotated[str, Form()]):
+    """Marks a player as drafted by an untracked team."""
+    state = DraftState()
+    player_details = config.get_player_adp(player_name)
+    base_url = request.url_for('read_root')
+
+    if not player_details:
+        return RedirectResponse(
+            url=f"{base_url}?draft_status=error&message=Player '{player_name}' not found",
+            status_code=303
+        )
+    
+    exact_name = player_details['player']
+    if exact_name in state.drafted_players:
+        return RedirectResponse(
+            url=f"{base_url}?draft_status=error&message={exact_name} is already drafted",
+            status_code=303
+        )
+
+    state.mark_drafted(exact_name)
+    return RedirectResponse(
+        url=f"{base_url}?draft_status=success&message=Marked {exact_name} as drafted",
+        status_code=303
+    )
+
 
 @app.get("/teams/{team_id}", response_class=HTMLResponse)
 async def read_team(
@@ -96,13 +159,18 @@ async def read_team(
     team_id: str,
     page_suggestions: int = 1,
     draft_status: str = None,
-    drafted_player: str = None
+    drafted_player: str = None,
+    exclude_teams: str = "",
+    exclude_positions: str = ""
 ):
     with open("data/draft_state.json", "r") as f:
         draft_state = json.load(f)
     teams_data = draft_state.get("teams", {})
     all_drafted_player_names = draft_state.get("drafted_players", [])
     
+    if team_id not in teams_data:
+        raise HTTPException(status_code=404, detail="Team not found")
+
     roster = teams_data.get(team_id, [])
     team_name = team_id
     roster_rules = config.get_roster_rules()
@@ -128,7 +196,31 @@ async def read_team(
     current_round = (len(drafted_names) // num_teams) + 1
     
     suggestions = engine.get_recommendations(current_round=current_round, n=100)
-    suggestions_pagination = paginate(suggestions, page_suggestions, 10)
+
+    for player in suggestions:
+        player_name = player.get('player', '')
+        injury = config.get_player_injury(player_name)
+        afcon = config.get_player_afcon_status(player_name)
+
+        player['injury_severity'] = injury.get('severity', 'Healthy')
+        player['at_afcon'] = afcon.get('at_afcon', False)
+
+        if exclude_teams:
+            excluded_teams = set(t.strip().upper() for t in exclude_teams.split(',') if t.strip())
+        else:
+            excluded_teams = set()
+
+        if exclude_positions:
+            excluded_positions = set(p.strip().upper() for p in exclude_positions.split(',') if p.strip())
+        else:
+            excluded_positions = set()
+
+        filtered_suggestions = [
+            p for p in suggestions
+            if p.get('team', '').upper() not in excluded_teams and p.get('position', '')[0].upper() not in excluded_positions
+        ]
+
+        suggestions_pagination = paginate(filtered_suggestions, page_suggestions, 10)
 
     return templates.TemplateResponse(
         request=request, name="team.html",
@@ -138,7 +230,11 @@ async def read_team(
             "position_breakdown": position_breakdown,
             "suggestions": suggestions_pagination,
             "draft_status": draft_status,
-            "drafted_player": drafted_player
+            "drafted_player": drafted_player,
+            "tracked_teams": list(teams_data.keys()),
+            "exclude_teams": exclude_teams,
+            "exclude_positions": exclude_positions,
+            "all_positions": ["G", "D", "M", "F"]
         }
     )
 

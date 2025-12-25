@@ -101,6 +101,33 @@
         </div>
     </div>
 
+    <!-- Filter Controls -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" class="row g-3" id="filter-form">
+                <div class="col-md-5">
+                    <label for="exclude-teams" class="form-label">Exclude Teams</label>
+                    <input type="text" class="form-control" id="exclude-teams" name="exclude_teams" placeholder="e.g., MCI,LIV,ARS" value="{{ exclude_teams }}">
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Exclude Positions</label>
+                    <div>
+                        {% for pos in all_positions %}
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input position-checkbox" type="checkbox" id="pos-{{ pos }}" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}>
+                            <label class="form-check-label" for="pos-{{ pos }}">{{ pos }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" id="exclude-positions-input" name="exclude_positions" value="{{ exclude_positions }}">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Suggestions Table -->
     <div class="row">
         <div class="col-12">
@@ -109,23 +136,43 @@
                 <table class="table table-striped table-hover">
                     <thead>
                         <tr>
-                            <th scope="col">ADP</th>
+                            <th scope="col">Score</th>
                             <th scope="col">Name</th>
                             <th scope="col">Position</th>
                             <th scope="col">Team</th>
+                            <th scope="col">Fantasy Points</th>
+                            <th scope="col">FP/Game</th>
+                            <th scope="col">Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for player in suggestions.players %}
                         <tr>
-                            <td>{{ player.adp | round(1) }}</td>
+                            <td><strong>{{ player.recommendation_score | round(0) }}</strong></td>
                             <td>{{ player.player }}</td>
-                            <td>{{ player.position }}</td>
+                            <td>
+                                <span class="badge badge-position-{{ player.position[0].lower() }}">{{ player.position }}</span>
+                            </td>
                             <td>{{ player.team }}</td>
+                            <td>{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
+                            <td>{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
+                            <td>
+                                {% if player.at_afcon %}
+                                    <span class="badge bg-danger">AFCON</span>
+                                {% elif player.injury_severity == 'Healthy' %}
+                                    <span class="badge bg-success">Healthy</span>
+                                {% elif 'Short Term' in player.injury_severity %}
+                                    <span class="badge bg-info text-dark">Short Term</span>
+                                {% elif 'Medium Term' in player.injury_severity %}
+                                    <span class="badge bg-warning text-dark">Medium Term</span>
+                                {% elif 'Long Term' in player.injury_severity %}
+                                    <span class="badge bg-danger text-dark">Long Term</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="4" class="text-center">No suggestions available for this team's needs.</td>
+                            <td colspan="7" class="text-center">No suggestions available for this team's needs.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -134,7 +181,8 @@
             {{ render_pagination(suggestions, 'page_suggestions', '') }}
         </div>
     </div>
-     <div class="row mt-4">
+
+    <div class="row mt-4">
         <div class="col-12 text-center">
             <a href="{{ url_for('read_root') }}" class="btn btn-primary">Back to Main Draft</a>
         </div>
@@ -143,6 +191,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // AUTOCOMPLETE FOR PLAYER INPUT
     const playerInput = document.getElementById('player-draft-input');
     const resultsContainer = document.getElementById('autocomplete-results');
 
@@ -160,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('Network response was not ok');
             }
             const data = await response.json();
-            
+
             data.players.forEach(playerName => {
                 const item = document.createElement('a');
                 item.href = '#';
@@ -184,6 +233,25 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsContainer.innerHTML = '';
         }
     });
+
+    // FILTER FORM - POSITION CHECKBOXES
+    const filterForm = document.getElementById('filter-form');
+    const excludePositionsInput = document.getElementById('exclude-positions-input');
+    const positionCheckboxes = document.querySelectorAll('.position-checkbox');
+
+    if (filterForm) {
+        filterForm.addEventListener('submit', (e) => {
+            // Gather checked positions
+            const selectedPositions = Array.from(positionCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value)
+                .join(',');
+
+            // Set the hidden input value
+            excludePositionsInput.value = selectedPositions;
+        });
+    }
 });
 </script>
+
 {% endblock %}

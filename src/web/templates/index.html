@@ -1,10 +1,52 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div class="row justify-content-center mb-4">
+    <div class="col-md-8">
+        <h2 class="text-center">Draft Board</h2>
+        <div class="card my-4">
+            <div class="card-body">
+                <h5 class="card-title">Draft Player</h5>
+                <form action="{{ url_for('mark_player_drafted') }}" method="post" class="d-flex">
+                     <div class="flex-grow-1 me-2" style="position: relative;">
+                        <input type="text" name="player_name" id="drafted-by-other-input" class="form-control" placeholder="Enter player name" required autocomplete="off">
+                        <div id="autocomplete-results-main" class="list-group" style="position: absolute; width: 100%; z-index: 1000;"></div>
+                     </div>
+                     <button type="submit" class="btn btn-secondary">Mark Drafted</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Draft Status Alert -->
+{% if draft_status %}
+<div class="row justify-content-center mb-4">
+    <div class="col-md-8">
+        <div class="alert {% if draft_status == 'success' %}alert-success{% else %}alert-danger{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row">
     <!-- Available Players Table -->
     <div class="col-12 mb-5">
         <h2>Available Players</h2>
+
+        <!-- Search Form -->
+        <div class="mb-3">
+            <form action="{{ url_for('read_root') }}" method="get" class="d-flex">
+                <div class="flex-grow-1 me-2" style="position: relative;">
+                    <input type="text" name="search" id="available-player-search" class="form-control" placeholder="Search available players..." value="{{ search_query or '' }}" autocomplete="off">
+                    <div id="autocomplete-results-search" class="list-group" style="position: absolute; width: 100%; z-index: 1000;"></div>
+                </div>
+                <button type="submit" class="btn btn-outline-primary">Search</button>
+            </form>
+        </div>
+
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead>
@@ -13,48 +55,84 @@
                         <th scope="col">Name</th>
                         <th scope="col">Position</th>
                         <th scope="col">Team</th>
+                        <th scope="col">ADP</th>
+                        <th scope="col">Fantasy Points</th>
+                        <th scope="col">FP/Game</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for player in available.players %}
                     <tr>
-                        <td>{{ player.adp }}</td>
-                        <td>{{ player.player }}</td>
-                        <td>{{ player.position }}</td>
+                        <td>{{ loop.index + (available.page - 1) * available.page_size }}</td>
+                        <td><strong>{{ player.player }}</strong></td>
+                        <td>
+                            {% if player.position != 'N/A' %}
+                                <span class="badge badge-position-{{ player.position[0].lower() }}">{{ player.position }}</span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
                         <td>{{ player.team }}</td>
+                        <td>{{ "%.1f"|format(player.adp) if player.adp else '—' }}</td>
+                        <td>{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
+                        <td>{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="text-center">No available players found.</td>
+                        <td colspan="7" class="text-center">No available players found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {{ render_pagination(available, 'page_available', '&page_drafted=' + drafted.page|string) }}
+        {{ render_pagination(available, 'page_available', '&page_drafted=' + drafted.page|string + '&search=' + (search_query or '')) }}
     </div>
 
     <!-- Drafted Players Table -->
     <div class="col-12">
         <h2>Drafted Players</h2>
+
+        <!-- Search Form -->
+        <div class="mb-3">
+            <form action="{{ url_for('read_root') }}" method="get" class="d-flex">
+                <div class="flex-grow-1 me-2" style="position: relative;">
+                    <input type="text" name="search_drafted" id="drafted-player-search" class="form-control" placeholder="Search drafted players..." value="{{ search_drafted_query or '' }}" autocomplete="off">
+                    <div id="autocomplete-results-drafted" class="list-group" style="position: absolute; width: 100%; z-index: 1000;"></div>
+                </div>
+                <button type="submit" class="btn btn-outline-primary">Search</button>
+            </form>
+        </div>
+
         <div class="table-responsive">
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
-                        <th scope="col">ADP</th>
+                        <th scope="col">Rank</th>
                         <th scope="col">Name</th>
                         <th scope="col">Position</th>
                         <th scope="col">Team</th>
+                        <th scope="col">ADP</th>
+                        <th scope="col">Fantasy Points</th>
+                        <th scope="col">FP/Game</th>
                         <th scope="col">Owner</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for player in drafted.players %}
                     <tr>
-                        <td>{{ player.adp }}</td>
-                        <td>{{ player.player }}</td>
-                        <td>{{ player.position }}</td>
+                        <td>{{ loop.index + (drafted.page - 1) * drafted.page_size }}</td>
+                        <td><strong>{{ player.player }}</strong></td>
+                        <td>
+                            {% if player.position != 'N/A' %}
+                                <span class="badge badge-position-{{ player.position[0].lower() }}">{{ player.position }}</span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
                         <td>{{ player.team }}</td>
+                        <td>{{ "%.1f"|format(player.adp) if player.adp else '—' }}</td>
+                        <td>{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
+                        <td>{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
                         <td>
                             {% if player.team_id %}
                                 <a href="{{ url_for('read_team', team_id=player.team_id) }}">{{ player.owner }}</a>
@@ -65,14 +143,85 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center">No players have been drafted yet.</td>
+                        <td colspan="8" class="text-center">No players have been drafted yet.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {{ render_pagination(drafted, 'page_drafted', '&page_available=' + available.page|string) }}
+        {{ render_pagination(drafted, 'page_drafted', '&page_available=' + available.page|string + '&search=' + (search_query or '') + '&search_drafted=' + (search_drafted_query or '')) }}
     </div>
 </div>
-{% endblock %}
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Autocomplete for Drafted by Other Input
+    const draftedByOtherInput = document.getElementById('drafted-by-other-input');
+    const draftedByOtherResults = document.getElementById('autocomplete-results-main');
+
+    function setupAutocomplete(inputElement, resultsContainer) {
+        let currentController; // To cancel previous fetch requests
+
+        inputElement.addEventListener('input', async (e) => {
+            const query = e.target.value;
+            resultsContainer.innerHTML = '';
+
+            if (currentController) {
+                currentController.abort(); // Abort previous request
+            }
+
+            if (query.length < 2) {
+                return;
+            }
+
+            currentController = new AbortController();
+            const signal = currentController.signal;
+
+            try {
+                const response = await fetch(`/api/players/autocomplete?q=${encodeURIComponent(query)}`, { signal });
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+
+                data.players.forEach(playerName => {
+                    const item = document.createElement('a');
+                    item.href = '#';
+                    item.textContent = playerName;
+                    item.classList.add('list-group-item', 'list-group-item-action');
+                    item.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        inputElement.value = playerName;
+                        resultsContainer.innerHTML = '';
+                    });
+                    resultsContainer.appendChild(item);
+                });
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    // Request was aborted, ignore
+                } else {
+                    console.error('There was a problem with the fetch operation:', error);
+                }
+            }
+        });
+
+        // Hide results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!inputElement.contains(e.target) && !resultsContainer.contains(e.target)) {
+                resultsContainer.innerHTML = '';
+            }
+        });
+    }
+
+    // Initialize autocomplete for "Drafted by Other" input
+    setupAutocomplete(draftedByOtherInput, draftedByOtherResults);
+
+    // Autocomplete for Available Player Search Input
+    const availablePlayerSearchInput = document.getElementById('available-player-search');
+    const availablePlayerSearchResults = document.getElementById('autocomplete-results-search');
+
+    // Initialize autocomplete for "Available Player Search" input
+    setupAutocomplete(availablePlayerSearchInput, availablePlayerSearchResults);
+});
+</script>
+{% endblock %}

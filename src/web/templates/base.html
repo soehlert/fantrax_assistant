@@ -9,26 +9,88 @@
     <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <h1>Fantrax Draft Assistant</h1>
-    </header>
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('read_root') }}">PEP</a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav ms-auto">
+                     <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="nav-tracked-teams" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Tracked Teams
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="nav-tracked-teams">
+                            {% for team_name in tracked_teams %}
+                                <li><a class="dropdown-item" href="{{ url_for('read_team', team_id=team_name) }}">{{ team_name }}</a></li>
+                            {% else %}
+                                <li><a class="dropdown-item" href="#">No teams tracked</a></li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
 {% macro render_pagination(pagination, url_param_name, other_params) %}
+    {#- Settings -#}
+    {% set window = 2 %}
+    {% set show_first = true %}
+    {% set show_last = true %}
+    
+    {% if pagination.total_pages > 1 %}
     <nav aria-label="Page navigation">
         <ul class="pagination justify-content-center">
+            
+            {# First Page Link #}
+            {% if show_first %}
+            <li class="page-item {% if pagination.page == 1 %}disabled{% endif %}">
+                <a class="page-link" href="?{{ url_param_name }}=1{{ other_params }}">First</a>
+            </li>
+            {% endif %}
+
+            {# Previous Page Link #}
             <li class="page-item {% if pagination.page == 1 %}disabled{% endif %}">
                 <a class="page-link" href="?{{ url_param_name }}={{ pagination.page - 1 }}{{ other_params }}">Previous</a>
             </li>
+
+            {# Ellipsis for start #}
+            {% if pagination.page > window + 2 %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+
+            {# Page Numbers #}
             {% for i in range(1, pagination.total_pages + 1) %}
-                <li class="page-item {% if i == pagination.page %}active{% endif %}">
-                    <a class="page-link" href="?{{ url_param_name }}={{ i }}{{ other_params }}">{{ i }}</a>
-                </li>
+                {% if i >= pagination.page - window and i <= pagination.page + window %}
+                    <li class="page-item {% if i == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="?{{ url_param_name }}={{ i }}{{ other_params }}">{{ i }}</a>
+                    </li>
+                {% endif %}
             {% endfor %}
+            
+            {# Ellipsis for end #}
+            {% if pagination.page < pagination.total_pages - (window + 1) %}
+                 <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+
+            {# Next Page Link #}
             <li class="page-item {% if pagination.page == pagination.total_pages %}disabled{% endif %}">
                 <a class="page-link" href="?{{ url_param_name }}={{ pagination.page + 1 }}{{ other_params }}">Next</a>
             </li>
+
+            {# Last Page Link #}
+            {% if show_last %}
+            <li class="page-item {% if pagination.page == pagination.total_pages %}disabled{% endif %}">
+                <a class="page-link" href="?{{ url_param_name }}={{ pagination.total_pages }}{{ other_params }}">Last</a>
+            </li>
+            {% endif %}
+
         </ul>
     </nav>
+    {% endif %}
 {% endmacro %}
 
     <main class="container mt-4">
