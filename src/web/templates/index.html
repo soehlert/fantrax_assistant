@@ -64,7 +64,11 @@
                     {% for player in available.players %}
                     <tr>
                         <td>{{ loop.index + (available.page - 1) * available.page_size }}</td>
-                        <td><strong>{{ player.player }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('read_player_profile', player_name=player.player) }}" style="text-decoration: none; color: inherit;">
+                                <strong>{{ player.player }}</strong>
+                            </a>
+                        </td>
                         <td>
                             {% if player.position != 'N/A' %}
                                 <span class="badge badge-position-{{ player.position[0].lower() }}">{{ player.position }}</span>
@@ -121,7 +125,11 @@
                     {% for player in drafted.players %}
                     <tr>
                         <td>{{ loop.index + (drafted.page - 1) * drafted.page_size }}</td>
-                        <td><strong>{{ player.player }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('read_player_profile', player_name=player.player) }}">
+                                <strong>{{ player.player }}</strong>
+                            </a>
+                        </td>
                         <td>
                             {% if player.position != 'N/A' %}
                                 <span class="badge badge-position-{{ player.position[0].lower() }}">{{ player.position }}</span>

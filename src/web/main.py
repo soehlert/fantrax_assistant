@@ -9,11 +9,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from fantrax_assistant.config import DraftConfig
+from fantrax_assistant.scrapers.understat import Understat
 from fantrax_assistant.suggest import PlayerRecommendationEngine
 from fantrax_assistant.draft_state import DraftState
 
 # --- App Setup ---
 config = DraftConfig()
+understat = Understat()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,12 +27,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
 templates = Jinja2Templates(directory="src/web/templates")
-
-# --- Routes ---
-# Note: In a real-world scenario, you'd have a proper database and a more robust
-# way of managing state. For this tool, we are reading/writing from JSON on each
-# request that modifies state, which is not ideal for high concurrency but works
-# for a local, single-user tool.
 
 @app.get("/api/players/autocomplete")
 async def autocomplete_players(q: str = ""):
@@ -271,6 +267,72 @@ async def draft_player(
             url=f"{base_url}?draft_status=error&drafted_player={player_details.get('player')} is already drafted",
             status_code=303
         )
+
+def safe_float(value, default=0.0):
+    """Converts a value to a float, returning a default if it fails."""
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        print(f"Could not convert value '{value}' to float. Using default {default}.")
+        return default
+
+@app.get("/player/{player_name}", response_class=HTMLResponse)
+async def read_player_profile(request: Request, player_name: str):
+    with open("data/draft_state.json", "r") as f:
+        draft_state = json.load(f)
+
+    try:
+        player_data = understat.get_player_data_by_name(
+            player_name=player_name, league="EPL", season="2024"
+        )
+
+        if not player_data:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Player '{player_name}' not found on Understat."
+            )
+
+        position = player_data.get("position", "").split(" ")[0]
+        
+        positional_data = understat.get_positional_data(
+            player_position=position, league="EPL", season="2024"
+        )
+        
+        percentiles = understat.get_player_percentiles(
+            player_data=player_data, positional_data=positional_data
+        )
+        
+        chart_data = {
+            "labels": ["Non-Penalty Goals", "xG", "xA", "Shots", "Key Passes"],
+            "percentiles": [
+                percentiles.get("npg", 0),
+                percentiles.get("xG", 0),
+                percentiles.get("xA", 0),
+                percentiles.get("shots", 0),
+                percentiles.get("key_passes", 0),
+            ],
+        }
+
+        # Get injury and AFCON status
+        injury = config.get_player_injury(player_name)
+        afcon = config.get_player_afcon_status(player_name)
+
+        return templates.TemplateResponse(
+            request=request, name="player_profile.html",
+            context={
+                "player_name": player_name,
+                "player_data": player_data,
+                "injury_severity": injury.get('severity', 'Healthy'),
+                "at_afcon": afcon.get('at_afcon', False),
+                "tracked_teams": list(draft_state.get("teams", {}).keys()),
+                "chart_data": chart_data,
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Player profile error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 # --- Helper Functions ---
 def paginate(data: list, page: int, page_size: int):

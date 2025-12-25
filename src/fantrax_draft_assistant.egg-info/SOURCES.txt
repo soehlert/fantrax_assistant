@@ -16,6 +16,7 @@ src/fantrax_assistant/scrapers/fdr_scraper.py
 src/fantrax_assistant/scrapers/injury_scraper.py
 src/fantrax_assistant/scrapers/recent_form_scraper.py
 src/fantrax_assistant/scrapers/stat_scraper.py
+src/fantrax_assistant/scrapers/understat.py
 src/fantrax_draft_assistant.egg-info/PKG-INFO
 src/fantrax_draft_assistant.egg-info/SOURCES.txt
 src/fantrax_draft_assistant.egg-info/dependency_links.txt
