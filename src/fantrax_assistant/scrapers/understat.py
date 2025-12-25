@@ -2,6 +2,7 @@ import json
 from typing import Dict, Optional, List
 
 import pandas as pd
+import redis
 from understatapi import UnderstatClient
 
 
@@ -10,6 +11,7 @@ from scipy.stats import percentileofscore
 class Understat:
     def __init__(self):
         self._client = UnderstatClient()
+        self._redis = redis.Redis(host='localhost', port=6380, db=0)
 
     def get_player_data(self, player_id: str) -> Dict:
         return self._client.player(player=player_id).get_shot_data()
@@ -17,7 +19,14 @@ class Understat:
     def get_all_players_data(
         self, league: str, season: str
     ) -> List[Dict]:
-        return self._client.league(league=league).get_player_data(season=season)
+        cache_key = f"understat:league:{league}:{season}"
+        cached_data = self._redis.get(cache_key)
+        if cached_data:
+            return json.loads(cached_data)
+
+        data = self._client.league(league=league).get_player_data(season=season)
+        self._redis.set(cache_key, json.dumps(data), ex=86400)  # Cache for 24 hours
+        return data
 
     def get_player_data_by_name(
         self, player_name: str, league: str, season: str
