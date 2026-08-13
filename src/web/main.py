@@ -445,10 +445,10 @@ async def draft_player(
 @app.get("/draft/analysis", response_class=HTMLResponse)
 async def read_draft_analysis(request: Request):
     """Render reverse chronological pick analysis and grades feed."""
-    draft_state = get_draft_state_dict()
-    analysis_history = draft_state.get("pick_analysis_history", [])
+    state = DraftState()
+    analysis_history = analyzer.backfill_retroactive_analysis(state)
     analysis_history_sorted = list(reversed(analysis_history))
-    teams_data = draft_state.get("teams", {})
+    teams_data = state.teams
 
     return templates.TemplateResponse(
         request=request,

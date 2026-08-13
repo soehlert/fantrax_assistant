@@ -78,3 +78,54 @@ class DraftPickAnalyzer:
             "team": player_team,
             "rationale": " ".join(reasons)
         }
+
+    def backfill_retroactive_analysis(self, draft_state) -> list[dict]:
+        """
+        Retroactively evaluates all previously drafted players in draft_history/teams
+        if they do not already have an evaluation in pick_analysis_history.
+        """
+        owner_map = {}
+        for team_name, roster in draft_state.teams.items():
+            for player_obj in roster:
+                p_name = player_obj.get('player') or player_obj.get('name')
+                if p_name:
+                    owner_map[p_name] = team_name
+
+        sequence = list(draft_state.draft_history)
+        for p in draft_state.drafted_players:
+            if p not in sequence:
+                sequence.append(p)
+
+        running_rosters: dict[str, list[dict]] = {t: [] for t in draft_state.teams.keys()}
+        new_history = []
+
+        for idx, p_name in enumerate(sequence, start=1):
+            owner = owner_map.get(p_name, "Other")
+            details = self.config.get_player_adp(p_name) if self.config else None
+            p_adp = details.get('adp') if details else None
+            p_pos = details.get('position', '') if details else ''
+            p_team = details.get('team', '') if details else ''
+
+            existing_record = next((item for item in draft_state.pick_analysis_history if item.get('player') == p_name), None)
+            if existing_record:
+                existing_record['pick_number'] = idx
+                new_history.append(existing_record)
+            else:
+                current_roster = running_rosters.get(owner, [])
+                analysis_item = self.grade_pick(
+                    player_name=p_name,
+                    team_id=owner,
+                    overall_pick_num=idx,
+                    player_adp=p_adp,
+                    player_pos=p_pos,
+                    player_team=p_team,
+                    team_roster=current_roster
+                )
+                new_history.append(analysis_item)
+
+            if owner in running_rosters:
+                running_rosters[owner].append({"player": p_name, "position": p_pos})
+
+        draft_state.pick_analysis_history = new_history
+        draft_state.save()
+        return new_history

@@ -38,5 +38,23 @@ class TestDraftPickAnalyzer(unittest.TestCase):
         self.assertIn(result["grade"], ("C+", "C", "C-", "D", "F"))
         self.assertIn("reach", result["rationale"].lower())
 
+    def test_backfill_retroactive_analysis(self):
+        analyzer = DraftPickAnalyzer()
+
+        class MockDraftState:
+            def __init__(self):
+                self.teams = {"Sam": [{"player": "Jean-Philippe Mateta"}]}
+                self.draft_history = ["Jean-Philippe Mateta"]
+                self.drafted_players = {"Jean-Philippe Mateta"}
+                self.pick_analysis_history = []
+            def save(self):
+                pass
+
+        mock_state = MockDraftState()
+        history = analyzer.backfill_retroactive_analysis(mock_state)
+        self.assertEqual(len(history), 1)
+        self.assertEqual(history[0]["player"], "Jean-Philippe Mateta")
+        self.assertEqual(history[0]["team_id"], "Sam")
+
 if __name__ == "__main__":
     unittest.main()
