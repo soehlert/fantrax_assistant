@@ -174,7 +174,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             {% for sim in similar_players %}
-            <a href="/player/{{ sim.player }}" class="bg-surface-container-low border border-outline-variant rounded-lg p-4 hover:border-primary-container/50 transition-all flex flex-col gap-2.5 group">
+            <a href="/player/{{ sim.id or sim.player }}" class="bg-surface-container-low border border-outline-variant rounded-lg p-4 hover:border-primary-container/50 transition-all flex flex-col gap-2.5 group">
                 <div class="flex items-center justify-between">
                     <span class="text-base font-bold text-on-surface group-hover:text-primary-container transition-colors">{{ sim.player }}</span>
                     <span class="text-xs font-bold px-2 py-0.5 rounded bg-surface-variant text-on-surface border border-outline-variant">{{ sim.position }}</span>

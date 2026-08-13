@@ -213,14 +213,21 @@ class DatabaseManager:
             conn.commit()
 
     def get_full_player_profile(self, name_or_id: str) -> Optional[Dict[str, Any]]:
-        """Fetch unified player data across all 7 tables for a given name or ID."""
-        player_id = self.get_player_id_by_name(name_or_id) or name_or_id
-        
+        """Fetch unified player data across all 7 tables for a given UUID or player name."""
         with self.get_connection() as conn:
             cursor = conn.cursor()
             
-            cursor.execute("SELECT * FROM players WHERE id = ?", (player_id,))
+            # 1. Try direct lookup by UUID first
+            cursor.execute("SELECT * FROM players WHERE id = ?", (name_or_id,))
             p_row = cursor.fetchone()
+
+            # 2. Fallback to name / alias lookup
+            if not p_row:
+                player_id = self.get_player_id_by_name(name_or_id)
+                if player_id:
+                    cursor.execute("SELECT * FROM players WHERE id = ?", (player_id,))
+                    p_row = cursor.fetchone()
+
             if not p_row:
                 return None
             

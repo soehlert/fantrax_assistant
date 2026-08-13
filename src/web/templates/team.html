@@ -48,7 +48,7 @@
                             <span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">{{ player.adp }}</span>
                         </td>
                         <td class="px-6 py-2.5 font-bold text-on-surface text-base">
-                            <a href="/player/{{ player.player }}" class="hover:text-primary-container transition-colors">
+                            <a href="/player/{{ player.id or player.player }}" class="hover:text-primary-container transition-colors">
                                 {{ player.player }}
                             </a>
                         </td>

@@ -103,8 +103,13 @@ async def read_root(
         injury = config.get_player_injury(player_name)
         afcon = config.get_player_afcon_status(player_name)
 
+        from fantrax_assistant.db import DatabaseManager
+        db_mgr = DatabaseManager("data/fantrax_assistant.db")
+        p_uuid = db_mgr.get_player_id_by_name(player_name) or player_name
+
         enriched_player = {
             **player,
+            'id': p_uuid,
             'adp': player.get('adp'),
             'fpts': player.get('fpts'),
             'fpg': player.get('fpg'),
@@ -284,6 +289,7 @@ async def read_team(
 
     for player in roster:
         a_data = grade_lookup.get(player.get("player"), {})
+        player["id"] = db_mgr.get_player_id_by_name(player.get("player")) or player.get("player")
         player["grade"] = a_data.get("grade", "—")
         player["grade_class"] = a_data.get("grade_class", "blue")
         player["pick_number"] = a_data.get("pick_number")
@@ -710,6 +716,7 @@ async def read_player_profile(request: Request, player_name: str):
             total_score = u_dist + adp_penalty + fpg_penalty
 
             cand_copy = dict(cand)
+            cand_copy["id"] = db.get_player_id_by_name(cand.get("player")) or cand.get("player")
             if cand_u:
                 gms = max(float(cand_u.get("games", 1) or 1), 1.0)
                 cand_copy["xg_per_game"] = round(float(cand_u.get("xG", 0) or 0) / gms, 2)

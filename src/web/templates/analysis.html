@@ -106,7 +106,7 @@
         <!-- Middle Row: Player Info & Badges -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-                <a href="/player/{{ item.player }}" class="text-xl font-bold text-on-surface hover:text-primary-container transition-colors">{{ item.player }}</a>
+                <a href="/player/{{ item.id or item.player }}" class="text-xl font-bold text-on-surface hover:text-primary-container transition-colors">{{ item.player }}</a>
                 <span class="text-base font-extrabold text-on-surface">({{ item.position }})</span>
                 {% if item.team %}
                     {{ render_team_badge(item.team) }}
