@@ -47,7 +47,16 @@
                         <td class="px-6 py-2.5">
                             <span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">{{ player.adp }}</span>
                         </td>
-                        <td class="px-6 py-2.5 font-bold text-on-surface text-base">{{ player.player }}</td>
+                        <td class="px-6 py-2.5 font-bold text-on-surface text-base">
+                            {% if player.pick_number %}
+                                <a href="/draft/analysis#pick-card-{{ player.pick_number }}" class="hover:text-primary-container hover:underline transition-colors flex items-center gap-1.5 group">
+                                    <span>{{ player.player }}</span>
+                                    <span class="material-symbols-outlined text-xs opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant">open_in_new</span>
+                                </a>
+                            {% else %}
+                                {{ player.player }}
+                            {% endif %}
+                        </td>
                         <td class="px-6 py-2.5">
                             <div class="flex gap-1.5 font-bold text-on-surface text-base">
                                 {% for pos_char in player.position.split(',') %}
@@ -58,15 +67,18 @@
                         <td class="px-6 py-2.5 text-center">
                             {% if player.grade and player.grade != '—' %}
                                 {% set gclass = player.grade_class or 'blue' %}
-                                {% if gclass == 'emerald' %}
-                                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Grade: {{ player.grade }}</span>
-                                {% elif gclass == 'blue' %}
-                                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-blue-500/20 text-blue-400 border border-blue-500/30">Grade: {{ player.grade }}</span>
-                                {% elif gclass == 'amber' %}
-                                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">Grade: {{ player.grade }}</span>
-                                {% else %}
-                                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-red-500/20 text-red-400 border border-red-500/30">Grade: {{ player.grade }}</span>
-                                {% endif %}
+                                {% set target_url = '/draft/analysis#pick-card-' ~ player.pick_number if player.pick_number else '#' %}
+                                <a href="{{ target_url }}" class="inline-block transition-transform hover:scale-105">
+                                    {% if gclass == 'emerald' %}
+                                        <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Grade: {{ player.grade }}</span>
+                                    {% elif gclass == 'blue' %}
+                                        <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-blue-500/20 text-blue-400 border border-blue-500/30">Grade: {{ player.grade }}</span>
+                                    {% elif gclass == 'amber' %}
+                                        <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">Grade: {{ player.grade }}</span>
+                                    {% else %}
+                                        <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-red-500/20 text-red-400 border border-red-500/30">Grade: {{ player.grade }}</span>
+                                    {% endif %}
+                                </a>
                             {% else %}
                                 <span class="text-xs text-on-surface-variant font-semibold">—</span>
                             {% endif %}

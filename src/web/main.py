@@ -286,6 +286,7 @@ async def read_team(
         a_data = grade_lookup.get(player.get("player"), {})
         player["grade"] = a_data.get("grade", "—")
         player["grade_class"] = a_data.get("grade_class", "blue")
+        player["pick_number"] = a_data.get("pick_number")
 
     roster_rules = {"G": 2, "D": 5, "M": 5, "F": 3}
     all_drafted_player_names = list(draft_state.get("drafted_players", []))

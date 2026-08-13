@@ -71,7 +71,7 @@
     <h2 class="text-headline-lg font-display text-on-surface">Draft Reaction Feed</h2>
 
     {% for item in feed %}
-    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4 transition-all hover:border-[#434655]">
+    <div id="pick-card-{{ item.pick_number }}" class="scroll-mt-24 bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4 transition-all hover:border-[#434655]">
         <!-- Top Row: Pick #, Team, Grade Badge -->
         <div class="flex items-center justify-between border-b border-outline-variant pb-3">
             <div class="flex items-center gap-3">
