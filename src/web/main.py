@@ -773,7 +773,7 @@ async def read_player_profile(request: Request, player_name: str):
     apps = pl_stats.get("total_apps", 0) if pl_stats else 0
     mins = pl_stats.get("minutes", 0) if pl_stats else 0
 
-    if fpg_val >= 4.2 and (apps == 0 or (starts / max(1, apps)) >= 0.8):
+    if fpg_val >= 4.0 and (apps == 0 or (starts / max(1, apps)) >= 0.8):
         rotation_risk_info = {"level": "Low", "badge": "Nailed Starter", "sub": "100% Floor", "color": "emerald"}
     elif team_code in {'MCI', 'ARS', 'CHE', 'LIV'}:
         avg_mins = (mins / apps) if apps > 0 else 0
