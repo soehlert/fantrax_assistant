@@ -80,6 +80,7 @@
                     "base": "4px"
             },
             "fontFamily": {
+                    "sans": ["'Hanken Grotesk'", "sans-serif"],
                     "label-md": ["JetBrains Mono"],
                     "headline-lg-mobile": ["Hanken Grotesk"],
                     "body-lg": ["Hanken Grotesk"],
@@ -108,16 +109,18 @@
       }
     </script>
     <style>
+        *, body, input, button, select, th, td, span, a, div, h1, h2, h3, h4 {
+            font-family: 'Hanken Grotesk', sans-serif !important;
+        }
         .table-row-hover:hover {
             background-color: #373942;
         }
-        /* 4 Distinct, High-Contrast Colors for Positions */
         .pos-badge-g { background-color: #fbbf24; color: #000; }
         .pos-badge-d { background-color: #06b6d4; color: #fff; }
         .pos-badge-m { background-color: #a855f7; color: #fff; }
         .pos-badge-f { background-color: #22c55e; color: #fff; }
         .need-badge { background-color: #facc15; color: #000; }
-        .adp-badge { background-color: #32343d; color: #e1e2ed; border-color: #434655; width: 3.25rem; display: inline-block; text-align: center; }
+        .adp-badge { background-color: #32343d; color: #e1e2ed; border-color: #434655; width: 3.5rem; display: inline-block; text-align: center; }
     </style>
 </head>
 <body class="bg-background text-on-surface min-h-screen flex flex-col font-body-md selection:bg-primary-container selection:text-white">
