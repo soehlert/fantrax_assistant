@@ -562,13 +562,56 @@ async def read_player_profile(request: Request, player_name: str):
     except Exception as e:
         print(f"Understat lookup info for {player_name_clean}: {e}")
 
-    # 4. Availability Status
+    # 4. Availability Status & Position Label
     injury = config.get_player_injury(player_name_clean)
     afcon = config.get_player_afcon_status(player_name_clean)
 
     pos_map = {"D": "Defender (D)", "M": "Midfielder (M)", "F": "Forward (F)", "G": "Goalkeeper (G)", "GK": "Goalkeeper (G)"}
     raw_pos = (fantrax_info.get("position") or (player_data.get("position") if player_data else "M")).split(",")[0].split(" ")[0].upper()
     position_display = pos_map.get(raw_pos, f"Position ({raw_pos})")
+
+    # 5. Premier League Official Match Stats (current_stats.json)
+    pl_stats = None
+    try:
+        import json, unicodedata
+        def norm(s):
+            return ''.join(c for c in unicodedata.normalize('NFD', str(s)) if unicodedata.category(c) != 'Mn').lower().replace('-', ' ').strip()
+        
+        with open("data/current_stats.json") as f:
+            c_db = json.load(f)
+            t_norm = norm(player_name_clean)
+            for p in c_db.get("players", []):
+                p_norm = norm(p.get("name", ""))
+                if p_norm == t_norm or t_norm in p_norm or p_norm in t_norm:
+                    pl_stats = p
+                    break
+    except Exception as e:
+        print(f"Error loading PL stats: {e}")
+
+    # 6. Similar Available Alternatives
+    similar_players = []
+    try:
+        player_pos = (fantrax_info.get("position") or "M").split(",")[0].strip().upper()
+        player_fpg = float(fantrax_info.get("fpg", 0) or 0)
+        player_adp = float(fantrax_info.get("adp", 999) or 999)
+
+        all_available = [
+            p for p in config.rankings.get("rankings", [])
+            if p.get("player") not in state.drafted_players
+            and p.get("player") != player_name_clean
+        ]
+        pos_match = [
+            p for p in all_available
+            if player_pos in p.get("position", "").upper().split(",")
+        ] or all_available
+
+        pos_match.sort(key=lambda p: (
+            abs(float(p.get("adp", 999) or 999) - player_adp) * 0.6 +
+            abs(float(p.get("fpg", 0) or 0) - player_fpg) * 4.0
+        ))
+        similar_players = pos_match[:3]
+    except Exception as e:
+        print(f"Error finding similar players: {e}")
 
     return templates.TemplateResponse(
         request=request,
@@ -581,6 +624,8 @@ async def read_player_profile(request: Request, player_name: str):
             "pick_analysis": pick_analysis,
             "player_data": player_data,
             "chart_data": chart_data,
+            "pl_stats": pl_stats,
+            "similar_players": similar_players,
             "injury_severity": injury.get('severity', 'Healthy'),
             "injury_notes": injury.get('notes', ''),
             "at_afcon": afcon.get('at_afcon', False),

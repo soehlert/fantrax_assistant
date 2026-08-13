@@ -87,7 +87,48 @@
         </div>
     </div>
 
-    <!-- Draft Pick Analysis Card (If Drafted) -->
+    <!-- Official Workload & Match Rating Row (If Available) -->
+    {% if pl_stats %}
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
+        <div class="flex items-center justify-between border-b border-outline-variant pb-3 mb-4">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary-container text-xl">dataset</span>
+                <h3 class="text-headline-sm font-bold text-on-surface">Premier League Workload & Match Index</h3>
+            </div>
+            {% set fpg_val = fantrax_info.get('fpg', 0) | float %}
+            {% if fpg_val >= 4.0 %}
+                <span class="bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-extrabold px-3 py-1 rounded-full">🔥 Elite Dominant Form</span>
+            {% elif fpg_val >= 3.0 %}
+                <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-extrabold px-3 py-1 rounded-full">⚡ Strong Regular Starter</span>
+            {% elif fpg_val >= 2.0 %}
+                <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-extrabold px-3 py-1 rounded-full">📈 Solid Rotation Contributor</span>
+            {% else %}
+                <span class="bg-surface-variant text-on-surface-variant text-xs font-semibold px-3 py-1 rounded-full">💤 Bench Role / Low Volume</span>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3">
+                <div class="text-xs font-semibold text-on-surface-variant uppercase">Starts / Matches</div>
+                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('starts', 0) }} / {{ pl_stats.get('matches_played', 0) }}</div>
+            </div>
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3">
+                <div class="text-xs font-semibold text-on-surface-variant uppercase">Minutes Played</div>
+                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('minutes', 0) }}'</div>
+            </div>
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3">
+                <div class="text-xs font-semibold text-on-surface-variant uppercase">PL ICT Index</div>
+                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('ict_index', '0.0') }}</div>
+            </div>
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3">
+                <div class="text-xs font-semibold text-on-surface-variant uppercase">Influence / Threat</div>
+                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('influence', 0) }} / {{ pl_stats.get('threat', 0) }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Draft Pick Evaluation Card (If Drafted) -->
     {% if pick_analysis %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-3">
         <div class="flex items-center justify-between border-b border-outline-variant pb-3">
@@ -102,19 +143,6 @@
         <p class="text-body-md text-on-surface leading-relaxed">
             Picked <strong>#{{ pick_analysis.pick_number }}</strong> by <strong>{{ pick_analysis.team_id }}</strong>. {{ pick_analysis.rationale }}
         </p>
-    </div>
-    {% endif %}
-
-    <!-- Availability Details -->
-    {% if injury_notes or at_afcon %}
-    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
-        <h3 class="text-headline-sm font-bold text-on-surface mb-3">Availability Details</h3>
-        {% if at_afcon %}
-            <p class="text-body-md text-amber-300">Player is participating in the Africa Cup of Nations (AFCON) and will miss upcoming matches.</p>
-        {% endif %}
-        {% if injury_notes %}
-            <p class="text-body-md text-on-surface-variant mt-1"><strong>Injury Notes:</strong> {{ injury_notes }}</p>
-        {% endif %}
     </div>
     {% endif %}
 
@@ -144,6 +172,35 @@
     {% else %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-5 shadow-sm text-center">
         <p class="text-on-surface-variant text-sm font-medium">No Understat advanced metrics recorded for this player.</p>
+    </div>
+    {% endif %}
+
+    <!-- Similar Available Alternatives Card -->
+    {% if similar_players %}
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center justify-between border-b border-outline-variant pb-3">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary-container text-xl">compare_arrows</span>
+                <h3 class="text-headline-sm font-bold text-on-surface">Similar Available Alternatives</h3>
+            </div>
+            <span class="text-xs font-semibold text-on-surface-variant">Top Undrafted Options at {{ position_display.split(' ')[0] }}</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% for sim in similar_players %}
+            <a href="/player/{{ sim.player }}" class="bg-surface-container-low border border-outline-variant rounded-lg p-4 hover:border-primary-container/50 transition-all flex flex-col gap-2 group">
+                <div class="flex items-center justify-between">
+                    <span class="text-base font-bold text-on-surface group-hover:text-primary-container transition-colors">{{ sim.player }}</span>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded bg-surface-variant text-on-surface border border-outline-variant">{{ sim.position }}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-on-surface-variant mt-1">
+                    <span>Club: <strong class="text-on-surface">{{ sim.team }}</strong></span>
+                    <span>ADP: <strong class="text-on-surface">{{ "%.1f"|format(sim.adp) if sim.adp else '—' }}</strong></span>
+                    <span>FP/G: <strong class="text-on-surface">{{ "%.2f"|format(sim.fpg) if sim.fpg else '—' }}</strong></span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
     </div>
     {% endif %}
 </section>
