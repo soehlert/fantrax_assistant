@@ -841,18 +841,22 @@ async def read_player_profile(request: Request, player_name: str):
 
     is_new_team = bool(fantrax_info.get("is_new_signing") or (full_profile and full_profile.get("is_new_transfer")) or (starts == 0 and apps == 0 and adp_val < 150))
 
-    if apps > 0 and starts == apps and mins >= 500:
-        rotation_risk_info = {"level": "Low", "badge": "Nailed When Fit", "sub": "100% Fit Start Rate", "color": "emerald"}
-    elif starts >= 30 or mins >= 2500:
-        rotation_risk_info = {"level": "Low", "badge": "Nailed Starter", "sub": "100% Floor", "color": "emerald"}
-    elif starts >= 22 or mins >= 1800:
-        rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "95% Floor", "color": "emerald"}
+    if starts >= 25 and apps > 0 and starts >= 0.85 * apps:
+        rotation_risk_info = {"level": "Low", "badge": "Nailed on when fit", "sub": "100% Expected Value", "color": "emerald"}
+    elif starts >= 25 or mins >= 2200:
+        rotation_risk_info = {"level": "Low", "badge": "Nailed Starter", "sub": "100% Expected Value", "color": "emerald"}
+    elif (starts >= 15 and apps > 0 and starts >= 0.75 * apps) or starts >= 22 or mins >= 1800:
+        rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "95% Expected Value", "color": "emerald"}
     elif is_new_team and starts < 10:
-        rotation_risk_info = {"level": "Medium", "badge": "New Team Adaption", "sub": "10%-15% Integration Risk", "color": "amber"}
-    elif starts >= 14 or mins >= 1200:
-        rotation_risk_info = {"level": "Medium", "badge": "Moderate Risk", "sub": "12% Discount", "color": "amber"}
+        rotation_risk_info = {"level": "Medium", "badge": "New Team", "sub": "85%-90% Expected Value", "color": "amber"}
+    elif starts <= 14 and apps > 0 and starts >= 0.75 * apps:
+        rotation_risk_info = {"level": "Medium", "badge": "Small Sample", "sub": "85% Expected Value", "color": "amber"}
+    elif starts >= 15 and apps > 0 and starts < 0.50 * apps:
+        rotation_risk_info = {"level": "High", "badge": "Large Rotation Risk", "sub": "80% Expected Value", "color": "red"}
+    elif starts >= 15 or mins >= 1200:
+        rotation_risk_info = {"level": "Medium", "badge": "Moderate Rotation Risk", "sub": "88% Expected Value", "color": "amber"}
     else:
-        rotation_risk_info = {"level": "High", "badge": "Low Volume", "sub": "20% Discount", "color": "red"}
+        rotation_risk_info = {"level": "High", "badge": "Large Rotation Risk", "sub": "80% Expected Value", "color": "red"}
 
     return templates.TemplateResponse(
         request=request,
