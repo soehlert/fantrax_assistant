@@ -8,7 +8,7 @@
         <form action="{{ url_for('mark_player_drafted') }}" method="post" class="flex items-center gap-4">
             <div class="relative flex-grow">
                 <input type="text" name="player_name" id="drafted-by-other-input" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-3 px-4 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Enter player name marked as drafted" required autocomplete="off"/>
-                <div id="autocomplete-results-main" class="absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
+                <div id="autocomplete-results-main" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
             <button type="submit" class="bg-surface-variant hover:bg-outline-variant text-on-surface font-bold py-3 px-6 rounded-md transition-colors shadow-md active:scale-95">
                 Mark Drafted
@@ -41,7 +41,7 @@
         <form action="{{ url_for('read_root') }}" method="get" class="flex items-center gap-2 max-w-md w-full">
             <div class="relative flex-grow">
                 <input type="text" name="search" id="available-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Search available players..." value="{{ search_query or '' }}" autocomplete="off"/>
-                <div id="autocomplete-results-search" class="absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
+                <div id="autocomplete-results-search" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
             <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md transition-colors">
                 Search
@@ -53,7 +53,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant text-label-sm font-label-sm text-on-surface uppercase tracking-wider">
+                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface uppercase tracking-wider">
                         <th class="px-6 py-4 font-bold">Rank</th>
                         <th class="px-6 py-4 font-bold">Name</th>
                         <th class="px-6 py-4 font-bold">Position</th>
@@ -103,7 +103,7 @@
         <form action="{{ url_for('read_root') }}" method="get" class="flex items-center gap-2 max-w-md w-full">
             <div class="relative flex-grow">
                 <input type="text" name="search_drafted" id="drafted-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Search drafted players..." value="{{ search_drafted_query or '' }}" autocomplete="off"/>
-                <div id="autocomplete-results-drafted" class="absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
+                <div id="autocomplete-results-drafted" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
             <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md transition-colors">
                 Search
@@ -115,7 +115,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant text-label-sm font-label-sm text-on-surface uppercase tracking-wider">
+                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface uppercase tracking-wider">
                         <th class="px-6 py-4 font-bold">Rank</th>
                         <th class="px-6 py-4 font-bold">Name</th>
                         <th class="px-6 py-4 font-bold">Position</th>
@@ -179,13 +179,22 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('input', async (e) => {
             const query = e.target.value;
             container.innerHTML = '';
-            if (query.length < 2) return;
+            if (query.length < 2) {
+                container.classList.add('hidden');
+                return;
+            }
 
             try {
                 const response = await fetch(`${endpoint}?q=${encodeURIComponent(query)}`);
                 if (!response.ok) return;
                 const data = await response.json();
 
+                if (!data.players || data.players.length === 0) {
+                    container.classList.add('hidden');
+                    return;
+                }
+
+                container.classList.remove('hidden');
                 data.players.forEach(name => {
                     const item = document.createElement('a');
                     item.href = '#';
@@ -195,17 +204,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         evt.preventDefault();
                         input.value = name;
                         container.innerHTML = '';
+                        container.classList.add('hidden');
                     });
                     container.appendChild(item);
                 });
             } catch (err) {
                 console.error(err);
+                container.classList.add('hidden');
             }
         });
 
         document.addEventListener('click', (e) => {
             if (!input.contains(e.target)) {
                 container.innerHTML = '';
+                container.classList.add('hidden');
             }
         });
     }

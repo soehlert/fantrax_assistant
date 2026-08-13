@@ -8,7 +8,7 @@
         <form action="{{ url_for('draft_player', team_id=team_name) }}" method="post" class="flex items-center gap-4" id="draft-form">
             <div class="relative flex-grow">
                 <input type="text" name="player_name" id="player-draft-input" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-3 px-4 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Enter player name to draft" required autocomplete="off"/>
-                <div id="autocomplete-results" class="absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
+                <div id="autocomplete-results" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
             <button type="submit" class="bg-primary-container hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md transition-colors shadow-md active:scale-95">
                 Draft
@@ -44,11 +44,11 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">
-                        <th class="px-6 py-3 font-semibold">ADP</th>
-                        <th class="px-6 py-3 font-semibold">Name</th>
-                        <th class="px-6 py-3 font-semibold">Position</th>
-                        <th class="px-6 py-3 font-semibold text-right">Team</th>
+                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface-variant uppercase tracking-wider">
+                        <th class="px-6 py-3">ADP</th>
+                        <th class="px-6 py-3">Name</th>
+                        <th class="px-6 py-3">Position</th>
+                        <th class="px-6 py-3 text-right">Team</th>
                     </tr>
                 </thead>
                 <tbody class="text-body-md text-on-surface">
@@ -87,11 +87,11 @@
         <div class="overflow-x-auto flex-grow">
             <table class="w-full text-left border-collapse h-full">
                 <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">
-                        <th class="px-6 py-3 font-semibold">Position</th>
-                        <th class="px-4 py-3 font-semibold text-center">Has</th>
-                        <th class="px-4 py-3 font-semibold text-center">Max</th>
-                        <th class="px-6 py-3 font-semibold text-right">Need</th>
+                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface-variant uppercase tracking-wider">
+                        <th class="px-6 py-3">Position</th>
+                        <th class="px-4 py-3 text-center">Has</th>
+                        <th class="px-4 py-3 text-center">Max</th>
+                        <th class="px-6 py-3 text-right">Need</th>
                     </tr>
                 </thead>
                 <tbody class="text-body-md text-on-surface">
@@ -183,20 +183,20 @@
     {% endfor %}
 </section>
 
-<!-- Suggestions Table Section (Heading FIRST, Filter Row DIRECTLY UNDER Heading with Balanced Spacing) -->
+<!-- Suggestions Table Section (Heading FIRST, Filter Row DIRECTLY UNDER Heading with Evenly Spaced Centered Elements) -->
 <section class="mt-8 flex flex-col gap-6">
     <h2 class="text-headline-lg font-display text-on-surface">Suggestions</h2>
 
-    <!-- Balanced Filter Bar Row (Evenly Spaced Across Full Width) -->
-    <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="bg-surface-container border border-outline-variant rounded-xl p-5 shadow-sm">
-        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div class="flex items-center gap-3 w-full md:w-auto">
-                <label class="text-sm font-semibold text-on-surface whitespace-nowrap">Exclude Teams:</label>
-                <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-60" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
+    <!-- Filter Bar Row (justify-evenly for Perfect Balanced Spacing) -->
+    <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="bg-surface-container border border-outline-variant rounded-xl p-4 shadow-sm">
+        <div class="flex flex-col md:flex-row items-center justify-evenly gap-4">
+            <div class="flex items-center gap-3">
+                <label class="text-sm font-bold text-on-surface whitespace-nowrap">Exclude Teams:</label>
+                <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-52" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
             </div>
             <div class="flex items-center gap-3">
-                <span class="text-sm font-semibold text-on-surface whitespace-nowrap">Exclude Positions:</span>
-                <div class="flex items-center gap-3.5">
+                <span class="text-sm font-bold text-on-surface whitespace-nowrap">Exclude Positions:</span>
+                <div class="flex items-center gap-3">
                     {% for pos in all_positions %}
                     <label class="flex items-center gap-1.5 cursor-pointer select-none">
                         <input class="form-checkbox position-checkbox rounded bg-surface-container-low border-outline-variant text-primary-container focus:ring-primary-container" type="checkbox" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}/>
@@ -206,7 +206,7 @@
                 </div>
                 <input type="hidden" id="exclude-positions-input" name="exclude_positions" value="{{ exclude_positions }}">
             </div>
-            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-2 px-8 rounded-md transition-colors active:scale-95 shadow-sm">
+            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-1.5 px-7 rounded-md transition-colors active:scale-95 shadow-sm">
                 Filter
             </button>
         </div>
@@ -216,14 +216,14 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="border-b border-outline-variant text-label-sm font-label-sm text-on-surface uppercase tracking-wider">
-                        <th class="px-6 py-4 font-bold">Score</th>
-                        <th class="px-6 py-4 font-bold">Name</th>
-                        <th class="px-6 py-4 font-bold">Position</th>
-                        <th class="px-6 py-4 font-bold">Team</th>
-                        <th class="px-6 py-4 font-bold">Fantasy Points</th>
-                        <th class="px-6 py-4 font-bold">FP/Game</th>
-                        <th class="px-6 py-4 font-bold">Status</th>
+                    <tr class="border-b border-outline-variant font-sans font-bold text-xs text-on-surface-variant uppercase tracking-wider">
+                        <th class="px-6 py-4">Score</th>
+                        <th class="px-6 py-4">Name</th>
+                        <th class="px-6 py-4">Position</th>
+                        <th class="px-6 py-4">Team</th>
+                        <th class="px-6 py-4">Fantasy Points</th>
+                        <th class="px-6 py-4">FP/Game</th>
+                        <th class="px-6 py-4">Status</th>
                     </tr>
                 </thead>
                 <tbody class="text-body-md text-on-surface">
@@ -284,6 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsContainer.innerHTML = '';
 
             if (query.length < 2) {
+                resultsContainer.classList.add('hidden');
                 return;
             }
 
@@ -294,6 +295,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 const data = await response.json();
 
+                if (!data.players || data.players.length === 0) {
+                    resultsContainer.classList.add('hidden');
+                    return;
+                }
+
+                resultsContainer.classList.remove('hidden');
                 data.players.forEach(playerName => {
                     const item = document.createElement('a');
                     item.href = '#';
@@ -303,11 +310,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         event.preventDefault();
                         playerInput.value = playerName;
                         resultsContainer.innerHTML = '';
+                        resultsContainer.classList.add('hidden');
                     });
                     resultsContainer.appendChild(item);
                 });
             } catch (error) {
                 console.error('Autocomplete fetch error:', error);
+                resultsContainer.classList.add('hidden');
             }
         });
 
@@ -315,6 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('click', (e) => {
             if (!playerInput.contains(e.target)) {
                 resultsContainer.innerHTML = '';
+                resultsContainer.classList.add('hidden');
             }
         });
     }
