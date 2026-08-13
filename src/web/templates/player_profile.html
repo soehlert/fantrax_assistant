@@ -1,177 +1,125 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <h1>{{ player_name }}</h1>
-
-            <!-- Status Badges -->
-            <div class="mb-3">
+<section class="flex flex-col gap-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-display font-display text-on-surface">{{ player_name }}</h1>
+            <div class="mt-2 flex items-center gap-2">
                 {% if at_afcon %}
-                    <span class="badge bg-danger">⚠️ AFCON</span>
+                    <span class="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full">⚠️ AFCON</span>
                 {% elif injury_severity == 'Healthy' %}
-                    <span class="badge bg-success">✓ Healthy</span>
+                    <span class="bg-[#059669] text-white text-xs font-bold px-3 py-1 rounded-full">✓ Healthy</span>
                 {% elif 'Short Term' in injury_severity %}
-                    <span class="badge bg-warning text-dark">Short Term Injury</span>
+                    <span class="bg-amber-600 text-white text-xs font-bold px-3 py-1 rounded-full">Short Term Injury</span>
                 {% elif 'Medium Term' in injury_severity %}
-                    <span class="badge bg-orange">Medium Term Injury</span>
-                {% elif 'Long Term' in injury_severity %}
-                    <span class="badge bg-danger">Long Term Injury</span>
+                    <span class="bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full">Medium Term Injury</span>
+                {% else %}
+                    <span class="bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full">Long Term Injury</span>
                 {% endif %}
             </div>
+        </div>
+        <a href="{{ url_for('read_root') }}" class="bg-surface-variant hover:bg-outline-variant text-on-surface font-medium py-2 px-6 rounded-md transition-colors inline-flex items-center gap-2 w-fit">
+            <span class="material-symbols-outlined text-[18px]">arrow_back</span> Back to Draft Board
+        </a>
+    </div>
 
-            <!-- Key Stats -->
-            <div class="row mb-4">
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h6 class="card-title text-muted">Team</h6>
-                            <p class="card-text fs-5"><strong>{{ player_data.get('team_title', 'N/A') }}</strong></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h6 class="card-title text-muted">Position</h6>
-                            <p class="card-text fs-5"><strong>{{ player_data.get('position', 'N/A') }}</strong></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h6 class="card-title text-muted">xG</h6>
-                            <p class="card-text fs-5"><strong>{{ "%.2f"|format(player_data.get('xG', 0) | float) }}</strong></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h6 class="card-title text-muted">xA</h6>
-                            <p class="card-text fs-5"><strong>{{ "%.2f"|format(player_data.get('xA', 0) | float) }}</strong></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h6 class="card-title text-muted">Goals</h6>
-                            <p class="card-text fs-5"><strong>{{ player_data.get('goals', 0) }}</strong></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <div class="card text-center">
-                        <div class="card-body">
-                            <h6 class="card-title text-muted">Assists</h6>
-                            <p class="card-text fs-5"><strong>{{ player_data.get('assists', 0) }}</strong></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mt-4">
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">Percentile Rankings</h5>
-                        </div>
-                        <div class="card-body" style="max-height: 300px;">
-                            <canvas id="percentileChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row mt-4">
-                <div class="col-12 text-center">
-                    <a href="{{ url_for('read_root') }}" class="btn btn-primary">Back to Draft Board</a>
-                </div>
+    <!-- Key Stats Cards Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center">
+            <div class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Team</div>
+            <div class="text-xl font-bold text-on-surface mt-1">{{ player_data.get('team_title', 'N/A') }}</div>
+        </div>
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center">
+            <div class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Position</div>
+            <div class="text-xl font-bold text-on-surface mt-1">
+                <span class="pos-badge-{{ player_data.get('position', 'M')[0].lower() }} text-xs font-bold px-2 py-1 rounded">{{ player_data.get('position', 'N/A') }}</span>
             </div>
         </div>
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center">
+            <div class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">xG</div>
+            <div class="text-xl font-bold text-on-surface mt-1">{{ "%.2f"|format(player_data.get('xG', 0) | float) }}</div>
+        </div>
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center">
+            <div class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">xA</div>
+            <div class="text-xl font-bold text-on-surface mt-1">{{ "%.2f"|format(player_data.get('xA', 0) | float) }}</div>
+        </div>
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center">
+            <div class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Shots</div>
+            <div class="text-xl font-bold text-on-surface mt-1">{{ player_data.get('shots', 0) }}</div>
+        </div>
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center">
+            <div class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Key Passes</div>
+            <div class="text-xl font-bold text-on-surface mt-1">{{ player_data.get('key_passes', 0) }}</div>
+        </div>
     </div>
-</div>
+
+    <!-- Injury / AFCON Details -->
+    {% if injury_notes or at_afcon %}
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
+        <h3 class="text-headline-sm font-bold text-on-surface mb-3">Availability Details</h3>
+        {% if at_afcon %}
+            <p class="text-body-md text-amber-300">Player is participating in the Africa Cup of Nations (AFCON) and will miss upcoming matches.</p>
+        {% endif %}
+        {% if injury_notes %}
+            <p class="text-body-md text-on-surface-variant mt-1"><strong>Injury Notes:</strong> {{ injury_notes }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Performance Chart -->
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
+        <h3 class="text-headline-sm font-bold text-on-surface mb-4">Understat Performance</h3>
+        <div class="h-64 w-full">
+            <canvas id="understatChart"></canvas>
+        </div>
+    </div>
+</section>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const ctx = document.getElementById('percentileChart').getContext('2d');
-    const chartData = {{ chart_data | tojson }};
-
-    function getBarColor(value) {
-        const r = Math.round(255 * (100 - value) / 100);
-        const g = Math.round(255 * value / 100);
-        return `rgba(${r}, ${g}, 0, 0.6)`;
-    }
-
-    const backgroundColors = chartData.percentiles.map(p => getBarColor(p));
-    const borderColors = chartData.percentiles.map(p => getBarColor(p).replace('0.6', '1'));
+document.addEventListener('DOMContentLoaded', () => {
+    const ctx = document.getElementById('understatChart').getContext('2d');
+    const xG = {{ player_data.get('xG', 0) | float }};
+    const xA = {{ player_data.get('xA', 0) | float }};
+    const npxG = {{ player_data.get('npxG', 0) | float }};
 
     new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: chartData.labels,
+            labels: ['xG (Expected Goals)', 'xA (Expected Assists)', 'npxG (Non-Penalty xG)'],
             datasets: [{
-                label: 'Percentile',
-                data: chartData.percentiles,
-                backgroundColor: backgroundColors,
-                borderColor: borderColors,
-                borderWidth: 1,
-                barThickness: 15
+                label: 'Per Game Metric',
+                data: [xG, xA, npxG],
+                backgroundColor: [
+                    'rgba(56, 189, 248, 0.7)',
+                    'rgba(192, 132, 252, 0.7)',
+                    'rgba(129, 140, 248, 0.7)'
+                ],
+                borderColor: [
+                    '#38bdf8',
+                    '#c084fc',
+                    '#818cf8'
+                ],
+                borderWidth: 1.5
             }]
         },
         options: {
-            indexAxis: 'y',
+            responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
-                },
-                tooltip: {
-                    enabled: false
+                    labels: { color: '#e1e2ed' }
                 }
             },
             scales: {
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    min: 0,
-                    max: 100,
-                    ticks: {
-                        stepSize: 25
-                    }
-                },
                 y: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        font: {
-                            size: 12
-                        }
-                    }
-                }
-            },
-            animation: {
-                onComplete: (context) => {
-                    const chart = context.chart;
-                    const ctx = chart.ctx;
-                    ctx.textAlign = 'center';
-                    ctx.fillStyle = "rgba(0, 0, 0, 1)";
-                    ctx.textBaseline = 'bottom';
-                    ctx.font = "12px Arial";
-
-                    const datasets = chart.config.data.datasets;
-                    datasets.forEach((dataset, i) => {
-                        const meta = chart.getDatasetMeta(i);
-                        meta.data.forEach((bar, index) => {
-                            const data = dataset.data[index];
-                            ctx.fillText(Math.round(data), bar.x - 20, bar.y + 6);
-                        });
-                    });
+                    beginAtZero: true,
+                    ticks: { color: '#9ca3af' },
+                    grid: { color: '#32343d' }
+                },
+                x: {
+                    ticks: { color: '#9ca3af' },
+                    grid: { color: '#32343d' }
                 }
             }
         }

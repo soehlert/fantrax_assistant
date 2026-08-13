@@ -1,272 +1,261 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12 text-center mb-4">
-            <h1>{{ team_name }}</h1>
-        </div>
-    </div>
-
-    <!-- Draft Player Form -->
-    <div class="row justify-content-center mb-4">
-        <div class="col-md-6">
-            <form action="{{ url_for('draft_player', team_id=team_name) }}" method="post" class="d-flex" id="draft-form">
-                <div class="flex-grow-1 me-2" style="position: relative;">
-                    <input type="text" name="player_name" id="player-draft-input" class="form-control" placeholder="Enter player name to draft" required autocomplete="off">
-                    <div id="autocomplete-results" class="list-group" style="position: absolute; width: 100%; z-index: 1000;"></div>
-                </div>
-                <button type="submit" class="btn btn-primary">Draft</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Draft Status Alert -->
-    {% if draft_status %}
-    <div class="row justify-content-center mb-4">
-        <div class="col-md-8">
-            <div class="alert {% if draft_status == 'success' %}alert-success{% else %}alert-danger{% endif %} alert-dismissible fade show" role="alert">
-                {% if draft_status == 'success' %}
-                    Successfully drafted <strong>{{ drafted_player }}</strong>!
-                {% else %}
-                    <strong>Error:</strong> {{ drafted_player }}
-                {% endif %}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<!-- Header & Draft Input Section -->
+<section class="flex flex-col items-center gap-6">
+    <h1 class="text-display font-display text-on-surface">{{ team_name }}</h1>
+    <div class="w-full max-w-2xl">
+        <form action="{{ url_for('draft_player', team_id=team_name) }}" method="post" class="flex items-center gap-4" id="draft-form">
+            <div class="relative flex-grow">
+                <input type="text" name="player_name" id="player-draft-input" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-3 px-4 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-shadow shadow-inner" placeholder="Enter player name to draft" required autocomplete="off"/>
+                <div id="autocomplete-results" class="absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
+            <button type="submit" class="bg-primary-container hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md transition-colors shadow-md active:scale-95">
+                Draft
+            </button>
+        </form>
+    </div>
+</section>
+
+<!-- Draft Status Alert -->
+{% if draft_status %}
+<div class="w-full max-w-2xl mx-auto">
+    <div class="p-4 rounded-md {% if draft_status == 'success' %}bg-green-900/40 text-green-200 border border-green-700{% else %}bg-red-900/40 text-red-200 border border-red-700{% endif %} flex justify-between items-center">
+        <span>
+            {% if draft_status == 'success' %}
+                Successfully drafted <strong>{{ drafted_player }}</strong>!
+            {% else %}
+                <strong>Error:</strong> {{ drafted_player }}
+            {% endif %}
+        </span>
+    </div>
+</div>
+{% endif %}
+
+<!-- Two Column Layout for Roster and Needs -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+    <!-- Left Column: Current Roster (8 cols on desktop) -->
+    <div class="lg:col-span-8 bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col">
+        <div class="px-6 py-5 border-b border-outline-variant bg-surface-container">
+            <h2 class="text-headline-sm font-headline-sm text-on-surface">Current Roster ({{ roster | length }})</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-surface-container-low border-b border-outline-variant text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">
+                        <th class="px-6 py-3 font-semibold">ADP</th>
+                        <th class="px-6 py-3 font-semibold">Name</th>
+                        <th class="px-6 py-3 font-semibold">Position</th>
+                        <th class="px-6 py-3 font-semibold text-right">Team</th>
+                    </tr>
+                </thead>
+                <tbody class="text-body-md text-on-surface">
+                    {% for player in roster %}
+                    <tr class="border-b border-outline-variant table-row-hover transition-colors">
+                        <td class="px-6 py-4">
+                            <span class="adp-badge text-xs font-bold px-2 py-1 rounded inline-block w-12 text-center shadow-sm border">{{ player.adp }}</span>
+                        </td>
+                        <td class="px-6 py-4 font-medium text-on-surface">{{ player.player }}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex gap-1">
+                                {% for pos_char in player.position.split(',') %}
+                                    <span class="pos-badge-{{ pos_char[0].lower() }} text-xs font-bold px-2 py-1 rounded inline-flex items-center justify-center min-w-[28px]">{{ pos_char }}</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <span class="team-badge text-[11px] font-bold px-2 py-1 rounded inline-block w-12 text-center uppercase tracking-wider">{{ player.team }}</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-8 text-center text-on-surface-variant">This team's roster is empty.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Right Column: Position Needs (4 cols on desktop) -->
+    <div class="lg:col-span-4 bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col">
+        <div class="px-6 py-5 border-b border-outline-variant bg-surface-container">
+            <h2 class="text-headline-sm font-headline-sm text-on-surface">Position Needs</h2>
+        </div>
+        <div class="overflow-x-auto flex-grow">
+            <table class="w-full text-left border-collapse h-full">
+                <thead>
+                    <tr class="bg-surface-container-low border-b border-outline-variant text-label-sm font-label-sm text-on-surface-variant uppercase tracking-wider">
+                        <th class="px-6 py-3 font-semibold">Position</th>
+                        <th class="px-4 py-3 font-semibold text-center">Has</th>
+                        <th class="px-4 py-3 font-semibold text-center">Max</th>
+                        <th class="px-6 py-3 font-semibold text-right">Need</th>
+                    </tr>
+                </thead>
+                <tbody class="text-body-md text-on-surface">
+                    {% for item in position_breakdown %}
+                    <tr class="border-b border-outline-variant table-row-hover transition-colors">
+                        <td class="px-6 py-3.5">
+                            <span class="pos-badge-{{ item.position[0].lower() }} text-xs font-bold w-6 h-6 rounded flex items-center justify-center shadow-sm">{{ item.position }}</span>
+                        </td>
+                        <td class="px-4 py-3.5 text-center font-bold text-on-surface">{{ item.current }}</td>
+                        <td class="px-4 py-3.5 text-center text-on-surface-variant">{{ item.max }}</td>
+                        <td class="px-6 py-3.5 text-right">
+                            {% if item.need > 0 %}
+                                <span class="need-badge text-xs font-bold w-6 h-6 rounded inline-flex items-center justify-center shadow-sm ml-auto">{{ item.need }}</span>
+                            {% else %}
+                                <span class="bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded inline-flex items-center justify-center shadow-sm ml-auto">✓</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- Team Cards Grid Section -->
+<section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    {% for item in club_breakdown %}
+    {% if item.has_players %}
+    <!-- Active Team Card -->
+    <div class="bg-[#1a2130] rounded-lg p-4 flex flex-col h-[220px] relative overflow-hidden border border-[#2c3e50]">
+        <div class="absolute top-0 left-0 w-full h-1" style="background-color: {{ item.accent_color }};"></div>
+        <div class="flex items-center gap-3 mb-4 mt-2">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center bg-[#f0f0f0]">
+                <span class="text-xs font-bold text-gray-800">{{ item.code }}</span>
+            </div>
+            <h3 class="text-xl font-bold text-on-surface">{{ item.code }}</h3>
+        </div>
+        <div class="text-[10px] font-bold text-on-surface mb-3 tracking-wider uppercase border-b border-[#2c3e50] pb-2">DRAFTED PLAYERS ({{ item.count }})</div>
+        <ul class="flex flex-col gap-1.5 flex-grow overflow-y-auto">
+            {% for p in item.players %}
+            <li class="flex justify-between items-center text-sm">
+                <div class="flex items-center gap-1.5 min-w-0">
+                    <span class="w-1 h-1 bg-on-surface rounded-full flex-shrink-0"></span>
+                    <span class="text-on-surface truncate" title="{{ p.name }}">{{ p.name }}</span>
+                    {% if p.position %}
+                        <span class="text-on-surface-variant text-xs flex-shrink-0">({{ p.position }})</span>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <!-- Empty / Unowned Team Card -->
+    <div class="bg-[#2a2c33] rounded-lg p-4 flex flex-col h-[220px] relative overflow-hidden border border-[#3f414a]">
+        <div class="absolute top-0 left-0 w-full h-1 bg-[#d4d4d4]"></div>
+        <div class="flex items-center justify-between mb-4 mt-2">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center bg-[#f0f0f0]">
+                    <span class="text-xs font-bold text-gray-500">{{ item.code }}</span>
+                </div>
+                <h3 class="text-xl font-bold text-on-surface">{{ item.code }}</h3>
+            </div>
+        </div>
+        <div class="flex-grow flex items-center justify-center text-on-surface-variant text-sm border-t border-[#3f414a] pt-4 mt-auto">
+            No Players Drafted
         </div>
     </div>
     {% endif %}
+    {% endfor %}
+</section>
 
-    <!-- Row 1: Roster & Position Needs -->
-    <div class="row mb-4">
-        <!-- Current Roster Table -->
-        <div class="col-lg-8 mb-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white py-3">
-                    <h4 class="mb-0 fw-bold text-dark">Current Roster ({{ roster | length }})</h4>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th scope="col">ADP</th>
-                                    <th scope="col">Name</th>
-                                    <th scope="col">Position</th>
-                                    <th scope="col">Team</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for player in roster %}
-                                <tr>
-                                    <td><span class="badge bg-light text-dark border">{{ player.adp }}</span></td>
-                                    <td><strong>{{ player.player }}</strong></td>
-                                    <td><span class="badge badge-position-{{ player.position[0].lower() }}">{{ player.position }}</span></td>
-                                    <td><span class="badge bg-secondary">{{ player.team }}</span></td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-4">This team's roster is empty.</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+<!-- Bottom Status Bar -->
+<section class="mt-4 bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+    <h3 class="text-headline-sm font-headline-sm text-on-surface font-bold">Premier League Clubs &amp; Big Six Exposure</h3>
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="bg-primary-container text-white px-4 py-2 rounded-md text-sm font-bold shadow-sm">
+            Big Six: {{ big_six_count }}
+        </div>
+        <div class="bg-surface-variant text-on-surface px-4 py-2 rounded-md text-sm font-bold shadow-sm">
+            Other: {{ non_big_six_count }}
+        </div>
+        <div class="text-on-surface px-4 py-2 text-sm font-bold ml-2">
+            Active Clubs: {{ club_breakdown | selectattr('has_players') | list | length }}
+        </div>
+    </div>
+</section>
+
+<!-- Suggestions Table Section -->
+<section class="mt-8 flex flex-col gap-6">
+    <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form">
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div class="flex flex-col gap-2 flex-grow max-w-md">
+                <label class="text-sm font-medium text-on-surface">Exclude Teams</label>
+                <input name="exclude_teams" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-shadow" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
             </div>
-        </div>
-
-        <!-- Position Breakdown Table -->
-        <div class="col-lg-4 mb-3">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white py-3">
-                    <h4 class="mb-0 fw-bold text-dark">Position Needs</h4>
+            <div class="flex flex-col gap-2">
+                <label class="text-sm font-medium text-on-surface">Exclude Positions</label>
+                <div class="flex items-center gap-4 h-[42px]">
+                    {% for pos in all_positions %}
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input class="form-checkbox position-checkbox rounded bg-surface-container border-outline-variant text-primary-container focus:ring-primary-container focus:ring-offset-background" type="checkbox" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}/>
+                        <span class="text-sm text-on-surface">{{ pos }}</span>
+                    </label>
+                    {% endfor %}
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover align-middle mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th scope="col">Position</th>
-                                    <th scope="col" class="text-center">Has</th>
-                                    <th scope="col" class="text-center">Max</th>
-                                    <th scope="col" class="text-end">Need</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in position_breakdown %}
-                                <tr>
-                                    <td><span class="badge badge-position-{{ item.position[0].lower() }}">{{ item.position }}</span></td>
-                                    <td class="text-center fw-bold">{{ item.current }}</td>
-                                    <td class="text-center text-muted">{{ item.max }}</td>
-                                    <td class="text-end">
-                                        {% if item.need > 0 %}
-                                            <span class="badge bg-warning text-dark px-2">{{ item.need }}</span>
-                                        {% else %}
-                                            <span class="badge bg-success px-2">✓ Full</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                <input type="hidden" id="exclude-positions-input" name="exclude_positions" value="{{ exclude_positions }}">
             </div>
+            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-medium py-2 px-8 rounded-md transition-colors h-[42px] min-w-[120px]">
+                Filter
+            </button>
         </div>
-    </div>
+    </form>
 
-    <!-- Row 2: Full-Width 20-Team Club & Big Six Exposure Dashboard -->
-    <div class="row mb-5">
-        <div class="col-12">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap">
-                    <h4 class="mb-0 fw-bold text-dark">Premier League Clubs & Big Six Exposure</h4>
-                    <div class="d-flex gap-2 mt-2 mt-sm-0">
-                        <span class="badge bg-primary fs-6 px-3 py-2">Big Six: {{ big_six_count }}</span>
-                        <span class="badge bg-secondary fs-6 px-3 py-2">Other: {{ non_big_six_count }}</span>
-                        <span class="badge bg-dark fs-6 px-3 py-2">Active Clubs: {{ club_breakdown | selectattr('has_players') | list | length }}</span>
-                    </div>
-                </div>
-                <div class="card-body p-4">
-                    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
-                        {% for item in club_breakdown %}
-                        <div class="col">
-                            <div class="card h-100 shadow-sm rounded-3 transition-all"
-                                 style="{% if item.has_players %}background-color: #141c2b; border: 2px solid {{ item.accent_color }}; border-top: 4px solid {{ item.accent_color }}; box-shadow: 0 0 14px {{ item.accent_color }}33;{% else %}background-color: #2b2f3a; border: 1px solid #383e4d;{% endif %}">
-                                <div class="card-body p-3 d-flex flex-column justify-content-between">
-                                    <div>
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <h4 class="fw-bold mb-0" style="{% if item.has_players %}color: #ffffff;{% else %}color: #8a94a6;{% endif %}">{{ item.code }}</h4>
-                                            {% if item.is_big_six %}
-                                                <span class="badge bg-warning text-dark px-2 py-1">Big 6</span>
-                                            {% else %}
-                                                <span class="badge bg-secondary text-light opacity-75 px-2 py-1">Other</span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="small fw-semibold mb-2" style="{% if item.has_players %}color: #94a3b8;{% else %}color: #6c757d;{% endif %}">{{ item.name }}</div>
-                                        
-                                        {% if item.has_players %}
-                                        <div class="pt-2 border-top border-secondary small">
-                                            <div class="text-uppercase fw-bold text-muted mb-2" style="font-size: 0.65rem; letter-spacing: 0.8px;">
-                                                DRAFTED PLAYERS ({{ item.count }})
-                                            </div>
-                                            <div style="max-height: 130px; overflow-y: auto;">
-                                                <ul class="list-unstyled mb-0 text-start">
-                                                    {% for p in item.players %}
-                                                    <li class="py-1 text-truncate d-flex align-items-center justify-content-between" style="color: #ffffff; font-weight: 500;" title="{{ p.name }}">
-                                                        <span>• {{ p.name }}</span>
-                                                        {% if p.position %}
-                                                            <span class="badge badge-position-{{ p.position[0].lower() }} ms-1" style="font-size: 0.7rem !important;">{{ p.position }}</span>
-                                                        {% endif %}
-                                                    </li>
-                                                    {% endfor %}
-                                                </ul>
-                                            </div>
-                                        </div>
-                                        {% else %}
-                                        <div class="py-3 text-center" style="color: #8a94a6; font-size: 0.85rem;">
-                                            No Players Drafted
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
+    <h2 class="text-headline-lg font-display text-on-surface mt-4">Suggestions</h2>
+    <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse whitespace-nowrap">
+                <thead>
+                    <tr class="border-b border-outline-variant text-label-sm font-label-sm text-on-surface uppercase tracking-wider">
+                        <th class="px-6 py-4 font-bold">Score</th>
+                        <th class="px-6 py-4 font-bold">Name</th>
+                        <th class="px-6 py-4 font-bold">Position</th>
+                        <th class="px-6 py-4 font-bold">Team</th>
+                        <th class="px-6 py-4 font-bold">Fantasy Points</th>
+                        <th class="px-6 py-4 font-bold">FP/Game</th>
+                        <th class="px-6 py-4 font-bold">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="text-body-md text-on-surface">
+                    {% for player in suggestions.players %}
+                    <tr class="border-b border-outline-variant table-row-hover transition-colors">
+                        <td class="px-6 py-4 font-bold text-blue-400">{{ player.recommendation_score | round(0) }}</td>
+                        <td class="px-6 py-4 font-medium">{{ player.player }}</td>
+                        <td class="px-6 py-4">
+                            <span class="pos-badge-{{ player.position[0].lower() }} text-xs font-bold px-2 py-1 rounded inline-flex items-center justify-center min-w-[28px]">{{ player.position }}</span>
+                        </td>
+                        <td class="px-6 py-4"><span class="team-badge text-[11px] font-bold px-2 py-1 rounded inline-block w-12 text-center uppercase tracking-wider">{{ player.team }}</span></td>
+                        <td class="px-6 py-4">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
+                        <td class="px-6 py-4">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
+                        <td class="px-6 py-4">
+                            {% if player.at_afcon %}
+                                <span class="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">AFCON</span>
+                            {% elif player.injury_severity == 'Healthy' %}
+                                <span class="bg-[#059669] text-white text-xs font-bold px-2.5 py-1 rounded-full">Healthy</span>
+                            {% elif 'Short Term' in player.injury_severity %}
+                                <span class="bg-cyan-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">Short Term</span>
+                            {% elif 'Medium Term' in player.injury_severity %}
+                                <span class="bg-amber-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">Medium Term</span>
+                            {% else %}
+                                <span class="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">Long Term</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="px-6 py-8 text-center text-on-surface-variant">No suggestions available for this team's needs.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-
-    <!-- Filter Controls -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" class="row g-3" id="filter-form">
-                <div class="col-md-5">
-                    <label for="exclude-teams" class="form-label">Exclude Teams</label>
-                    <input type="text" class="form-control" id="exclude-teams" name="exclude_teams" placeholder="e.g., MCI,LIV,ARS" value="{{ exclude_teams }}">
-                </div>
-                <div class="col-md-5">
-                    <label class="form-label">Exclude Positions</label>
-                    <div>
-                        {% for pos in all_positions %}
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input position-checkbox" type="checkbox" id="pos-{{ pos }}" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}>
-                            <label class="form-check-label" for="pos-{{ pos }}">{{ pos }}</label>
-                        </div>
-                        {% endfor %}
-                    </div>
-                    <input type="hidden" id="exclude-positions-input" name="exclude_positions" value="{{ exclude_positions }}">
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">Filter</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Suggestions Table -->
-    <div class="row">
-        <div class="col-12">
-            <h2>Suggestions</h2>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th scope="col">Score</th>
-                            <th scope="col">Name</th>
-                            <th scope="col">Position</th>
-                            <th scope="col">Team</th>
-                            <th scope="col">Fantasy Points</th>
-                            <th scope="col">FP/Game</th>
-                            <th scope="col">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for player in suggestions.players %}
-                        <tr>
-                            <td><strong>{{ player.recommendation_score | round(0) }}</strong></td>
-                            <td>{{ player.player }}</td>
-                            <td>
-                                <span class="badge badge-position-{{ player.position[0].lower() }}">{{ player.position }}</span>
-                            </td>
-                            <td>{{ player.team }}</td>
-                            <td>{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
-                            <td>{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
-                            <td>
-                                {% if player.at_afcon %}
-                                    <span class="badge bg-danger">AFCON</span>
-                                {% elif player.injury_severity == 'Healthy' %}
-                                    <span class="badge bg-success">Healthy</span>
-                                {% elif 'Short Term' in player.injury_severity %}
-                                    <span class="badge bg-info text-dark">Short Term</span>
-                                {% elif 'Medium Term' in player.injury_severity %}
-                                    <span class="badge bg-warning text-dark">Medium Term</span>
-                                {% elif 'Long Term' in player.injury_severity %}
-                                    <span class="badge bg-danger text-dark">Long Term</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="7" class="text-center">No suggestions available for this team's needs.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {{ render_pagination(suggestions, 'page_suggestions', '') }}
-        </div>
-    </div>
-
-    <div class="row mt-4">
-        <div class="col-12 text-center">
-            <a href="{{ url_for('read_root') }}" class="btn btn-primary">Back to Main Draft</a>
-        </div>
-    </div>
-</div>
+    {{ render_pagination(suggestions, 'page_suggestions', '&exclude_teams=' + exclude_teams + '&exclude_positions=' + exclude_positions) }}
+</section>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -274,63 +263,61 @@ document.addEventListener('DOMContentLoaded', () => {
     const playerInput = document.getElementById('player-draft-input');
     const resultsContainer = document.getElementById('autocomplete-results');
 
-    playerInput.addEventListener('input', async (e) => {
-        const query = e.target.value;
-        resultsContainer.innerHTML = '';
-
-        if (query.length < 2) {
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/players/autocomplete?q=${encodeURIComponent(query)}`);
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            const data = await response.json();
-
-            data.players.forEach(playerName => {
-                const item = document.createElement('a');
-                item.href = '#';
-                item.textContent = playerName;
-                item.classList.add('list-group-item', 'list-group-item-action');
-                item.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    playerInput.value = playerName;
-                    resultsContainer.innerHTML = '';
-                });
-                resultsContainer.appendChild(item);
-            });
-        } catch (error) {
-            console.error('There was a problem with the fetch operation:', error);
-        }
-    });
-
-    // Hide results when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!playerInput.contains(e.target)) {
+    if (playerInput && resultsContainer) {
+        playerInput.addEventListener('input', async (e) => {
+            const query = e.target.value;
             resultsContainer.innerHTML = '';
-        }
-    });
 
-    // FILTER FORM - POSITION CHECKBOXES
+            if (query.length < 2) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/players/autocomplete?q=${encodeURIComponent(query)}`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+
+                data.players.forEach(playerName => {
+                    const item = document.createElement('a');
+                    item.href = '#';
+                    item.textContent = playerName;
+                    item.classList.add('block', 'px-4', 'py-2.5', 'text-sm', 'text-on-surface', 'hover:bg-surface-variant', 'transition-colors', 'border-b', 'border-outline-variant');
+                    item.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        playerInput.value = playerName;
+                        resultsContainer.innerHTML = '';
+                    });
+                    resultsContainer.appendChild(item);
+                });
+            } catch (error) {
+                console.error('Autocomplete fetch error:', error);
+            }
+        });
+
+        // Hide autocomplete when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!playerInput.contains(e.target)) {
+                resultsContainer.innerHTML = '';
+            }
+        });
+    }
+
+    // EXCLUDE POSITIONS CHECKBOX HANDLER
     const filterForm = document.getElementById('filter-form');
     const excludePositionsInput = document.getElementById('exclude-positions-input');
     const positionCheckboxes = document.querySelectorAll('.position-checkbox');
 
-    if (filterForm) {
+    if (filterForm && excludePositionsInput) {
         filterForm.addEventListener('submit', (e) => {
-            // Gather checked positions
             const selectedPositions = Array.from(positionCheckboxes)
                 .filter(cb => cb.checked)
                 .map(cb => cb.value)
                 .join(',');
-
-            // Set the hidden input value
             excludePositionsInput.value = selectedPositions;
         });
     }
 });
 </script>
-
 {% endblock %}
