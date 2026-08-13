@@ -26,7 +26,7 @@ class DraftConfig:
         self.injuries = self._load_json('injuries.json')
         self.rankings = self._load_json('adp_rankings.json')
         self.league_config = self._load_json('league_config.json')
-        self.afcon = self._load_json('afcon_callups.json')
+        self.afcon = self._load_json('afcon_callups.json', quiet=True)
 
         # Validate critical data
         if not self.league_config:
@@ -47,19 +47,21 @@ class DraftConfig:
         print("✓ All critical data loaded successfully")
         return True
 
-    def _load_json(self, filename: str) -> Optional[dict]:
+    def _load_json(self, filename: str, quiet: bool = False) -> Optional[dict]:
         """Load a JSON file."""
         filepath = self.data_dir / filename
 
         if not filepath.exists():
-            print(f"Warning: {filename} not found")
+            if not quiet:
+                print(f"Warning: {filename} not found")
             return None
 
         try:
             with filepath.open('r') as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error loading {filename}: {e}")
+            if not quiet:
+                print(f"Error loading {filename}: {e}")
             return None
 
     def _fuzzy_match_name(self, search_name: str, candidate_name: str) -> bool:

@@ -103,7 +103,9 @@ class PlayerRecommendationEngine:
         Weight: 20%
         """
         # Try to get recent form data
-        recent_form = self.config._load_json('recent_form.json')
+        if not hasattr(self, '_recent_form_cache'):
+            self._recent_form_cache = self.config._load_json('recent_form.json', quiet=True)
+        recent_form = self._recent_form_cache
 
         if recent_form and 'recent_form' in recent_form:
             for form_player in recent_form['recent_form']:
