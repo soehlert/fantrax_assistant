@@ -8,24 +8,24 @@
     --info-color: #0dcaf0;
 }
 
-/* Dark Mode Theme Tokens (Matched to Dashboard Mockup) */
+/* Dark Mode Theme Tokens (Matched to Dashboard Mockup Image 1) */
 [data-bs-theme="dark"] {
-    --bs-body-bg: #141518;
+    --bs-body-bg: #111318;
     --bs-body-color: #f1f5f9;
-    --bs-card-bg: #1c1e24;
-    --bs-card-border-color: #2d313c;
-    --bs-tertiary-bg: #1c1e24;
+    --bs-card-bg: #1a1d24;
+    --bs-card-border-color: #282c36;
+    --bs-tertiary-bg: #1a1d24;
 }
 
 [data-bs-theme="dark"] body {
-    background-color: #141518 !important;
+    background-color: #111318 !important;
     color: #f1f5f9 !important;
 }
 
 /* Navbar Styling */
 .navbar-custom {
-    background: #20242e;
-    border-bottom: 1px solid #2d3340;
+    background: #1e222b;
+    border-bottom: 1px solid #282c36;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
@@ -55,34 +55,44 @@
 
 /* Card and Table Styling Overrides for Dark Mode */
 [data-bs-theme="dark"] .card {
-    background-color: #1c1e24 !important;
-    border-color: #2d313c !important;
+    background-color: #1a1d24 !important;
+    border-color: #282c36 !important;
     color: #f1f5f9 !important;
 }
 
 [data-bs-theme="dark"] .card-header {
-    background-color: #242832 !important;
-    border-bottom-color: #2d313c !important;
-    color: #f1f5f9 !important;
+    background-color: #1f232c !important;
+    border-bottom-color: #282c36 !important;
+    color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .card-header h4,
+[data-bs-theme="dark"] .card-header h5,
+[data-bs-theme="dark"] h1,
+[data-bs-theme="dark"] h2,
+[data-bs-theme="dark"] h3,
+[data-bs-theme="dark"] h4 {
+    color: #ffffff !important;
+    font-weight: 700 !important;
 }
 
 [data-bs-theme="dark"] .table-light {
-    --bs-table-bg: #242832;
-    --bs-table-color: #f1f5f9;
+    --bs-table-bg: #1f232c;
+    --bs-table-color: #ffffff;
 }
 
 [data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
-    background-color: #1c1e24 !important;
+    background-color: #1a1d24 !important;
     color: #f1f5f9 !important;
 }
 
 [data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > * {
-    background-color: #141518 !important;
+    background-color: #111318 !important;
     color: #f1f5f9 !important;
 }
 
 [data-bs-theme="dark"] .table-hover > tbody > tr:hover > * {
-    background-color: #2d313c !important;
+    background-color: #282c36 !important;
     color: #ffffff !important;
 }
 
