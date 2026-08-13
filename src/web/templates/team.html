@@ -265,6 +265,12 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // CLEAR DRAFT TOAST QUERY PARAMETERS FROM URL HISTORY AFTER RENDER (PREVENTS REPEAT ON RELOAD)
+    if (window.location.search.includes('draft_status')) {
+        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
+
     // PURE AUTO-DISMISS DRAFT TOAST ALERT AFTER 3.5 SECONDS
     const toastAlert = document.getElementById('draft-toast-alert');
     if (toastAlert) {

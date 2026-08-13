@@ -96,7 +96,7 @@
     {{ render_pagination(available, 'page_available', '&page_drafted=' + drafted.page|string + '&search=' + (search_query or '')) }}
 </section>
 
-<!-- Drafted Players Section -->
+<!-- Drafted Players Section (7 Columns - FP/Game Removed to Line Up Perfectly With Available Players Above) -->
 <section class="flex flex-col gap-6 mt-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 class="text-headline-lg font-display text-on-surface">Drafted Players</h2>
@@ -122,7 +122,6 @@
                         <th class="px-6 py-4 font-bold">Team</th>
                         <th class="px-6 py-4 font-bold">ADP</th>
                         <th class="px-6 py-4 font-bold">Fantasy Points</th>
-                        <th class="px-6 py-4 font-bold">FP/Game</th>
                         <th class="px-6 py-4 font-bold">Owner</th>
                     </tr>
                 </thead>
@@ -145,12 +144,11 @@
                         <td class="px-6 py-4"><span class="team-badge text-[11px] font-bold px-2 py-1 rounded inline-block w-12 text-center uppercase tracking-wider">{{ player.team }}</span></td>
                         <td class="px-6 py-4"><span class="adp-badge text-xs font-bold px-2 py-1 rounded inline-block w-12 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
                         <td class="px-6 py-4">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
-                        <td class="px-6 py-4">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
                         <td class="px-6 py-4"><span class="bg-surface-variant text-on-surface text-xs font-bold px-3 py-1 rounded-full">{{ player.owner or 'Drafted' }}</span></td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="px-6 py-8 text-center text-on-surface-variant">No drafted players found.</td>
+                        <td colspan="7" class="px-6 py-8 text-center text-on-surface-variant">No drafted players found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -162,6 +160,12 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // CLEAR DRAFT TOAST QUERY PARAMETERS FROM URL HISTORY AFTER RENDER (PREVENTS REPEAT ON RELOAD)
+    if (window.location.search.includes('draft_status')) {
+        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
+
     // AUTO-DISMISS DRAFT TOAST ALERT AFTER 3.5 SECONDS
     const toastAlert = document.getElementById('draft-toast-alert-main');
     if (toastAlert) {
@@ -194,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                container.classList.remove('hidden');
+                resultsContainer.classList.remove('hidden');
                 data.players.forEach(name => {
                     const item = document.createElement('a');
                     item.href = '#';
