@@ -22,11 +22,11 @@ class DraftPickAnalyzer:
         adp = player_adp if (player_adp and player_adp > 0) else 100.0
         adp_diff = overall_pick_num - adp  # Positive = Steal, Negative = Reach
 
-        # Baseline score starts at 92.0 (A-) for selecting top players
+        # Baseline score starts at 87.0 (B+) for selecting expected consensus ADP
         reasons = []
 
         if adp_diff >= 0:
-            value_score = 92.0 + min(7.0, adp_diff * 0.7)
+            value_score = 87.0 + min(11.0, adp_diff * 0.8)
             if adp_diff >= 12:
                 reasons.append(f"Major value steal! {player_name} (ADP #{adp:.1f}) was selected at pick #{overall_pick_num}.")
             elif adp_diff >= 5:
@@ -35,8 +35,8 @@ class DraftPickAnalyzer:
                 reasons.append(f"Solid pick right around expected ADP (#{adp:.1f}).")
         else:
             reach_ratio = abs(adp_diff) / max(1.0, adp)
-            penalty = min(28.0, reach_ratio * 15.0 + abs(adp_diff) * 0.25)
-            value_score = 92.0 - penalty
+            penalty = min(28.0, reach_ratio * 14.0 + abs(adp_diff) * 0.25)
+            value_score = 87.0 - penalty
 
             if adp_diff <= -25:
                 reasons.append(f"Target reach. {player_name} (ADP #{adp:.1f}) was selected ahead of consensus rank at pick #{overall_pick_num}.")
@@ -52,13 +52,13 @@ class DraftPickAnalyzer:
 
         if current_pos_count < max_pos:
             if current_pos_count == 0 and primary_pos in ('G', 'D'):
-                value_score += 4.0
+                value_score += 3.0
                 reasons.append(f"Fills an urgent starting {primary_pos} roster need for {team_id}.")
             else:
-                value_score += 2.0
+                value_score += 1.5
                 reasons.append(f"Addresses team {primary_pos} positional depth ({current_pos_count + 1}/{max_pos}).")
         else:
-            value_score -= 6.0
+            value_score -= 5.0
             reasons.append(f"Roster surplus pick—{team_id} already reached standard capacity ({max_pos}) for position {primary_pos}.")
 
         score = max(55.0, min(100.0, value_score))
