@@ -84,6 +84,55 @@ async def autocomplete_players(q: str = ""):
     return JSONResponse({"players": matches})
 
 
+@app.get("/api/players/search")
+async def api_universal_player_search(q: str = ""):
+    """Universal player search endpoint covering ALL players (drafted, available, on any team)."""
+    import urllib.parse
+    if not q or len(q.strip()) < 1:
+        return JSONResponse({"results": []})
+
+    query = q.strip().lower()
+    state = DraftState()
+    drafted_map = {}
+    for team_id, roster in state.teams.items():
+        for p in roster:
+            p_name = p.get('player') or p.get('name')
+            if p_name:
+                drafted_map[p_name.lower()] = team_id
+
+    for d_name in state.drafted_players:
+        if d_name.lower() not in drafted_map:
+            drafted_map[d_name.lower()] = "Other"
+
+    all_players = config.rankings.get('rankings', []) if config.rankings else []
+    matches = []
+    seen = set()
+
+    for p in all_players:
+        name = p.get("player", "")
+        if not name or name.lower() in seen:
+            continue
+
+        p_lower = name.lower()
+        if query in p_lower:
+            seen.add(p_lower)
+            drafted_by = drafted_map.get(p_lower)
+            matches.append({
+                "name": name,
+                "position": p.get("position", "M"),
+                "team": p.get("team", ""),
+                "fpg": safe_float(p.get("fpg")),
+                "adp": safe_float(p.get("adp")),
+                "is_drafted": drafted_by is not None,
+                "drafted_by": drafted_by,
+                "profile_url": f"/player/{urllib.parse.quote(name)}"
+            })
+            if len(matches) >= 8:
+                break
+
+    return JSONResponse({"results": matches})
+
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(
     request: Request,

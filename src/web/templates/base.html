@@ -149,6 +149,25 @@
             </div>
         </div>
 
+        <!-- Center/Right: Universal Live Player Search Quick Picker -->
+        <div class="relative flex-1 max-w-xs sm:max-w-sm md:max-w-md mx-4 sm:mx-6">
+            <div class="relative flex items-center">
+                <span class="material-symbols-outlined absolute left-3 text-outline text-lg pointer-events-none">search</span>
+                <input 
+                    type="text" 
+                    id="universal-player-search-input" 
+                    placeholder="Search any player (e.g. Havertz, Saka, Stach)..." 
+                    autocomplete="off" 
+                    class="w-full bg-surface-container-low text-on-surface text-xs sm:text-sm font-medium pl-9 pr-10 py-1.5 sm:py-2 rounded-lg border border-outline-variant/60 focus:border-primary-container focus:outline-none focus:ring-1 focus:ring-primary-container transition-all shadow-inner placeholder:text-on-surface-variant/60"
+                />
+                <kbd class="hidden sm:inline-block absolute right-2.5 px-1.5 py-0.5 text-[10px] font-mono font-bold text-on-surface-variant bg-surface-container-high rounded border border-outline-variant/50">⌘K</kbd>
+            </div>
+
+            <!-- Live Dropdown Results Container -->
+            <div id="universal-search-results" class="hidden absolute left-0 right-0 mt-2 bg-[#1a2130] border border-outline-variant rounded-xl shadow-2xl overflow-hidden z-50 divide-y divide-outline-variant/40 max-h-[380px] overflow-y-auto">
+            </div>
+        </div>
+
         <!-- Right Side: Dynamic Inline Tracked Team Links with Active Highlight -->
         <div class="flex items-center gap-6">
             {% if tracked_teams | length <= 4 and tracked_teams | length > 0 %}
@@ -254,6 +273,104 @@
         if (container && menu && !container.contains(event.target)) {
             menu.classList.add('hidden');
         }
+    });
+
+    // UNIVERSAL LIVE PLAYER SEARCH QUICK PICKER HANDLER
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchInput = document.getElementById('universal-player-search-input');
+        const searchResults = document.getElementById('universal-search-results');
+
+        if (!searchInput || !searchResults) return;
+
+        let debounceTimer;
+
+        // Global hotkey: ⌘K, Ctrl+K, or / to focus search bar
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+            } else if (e.key === '/' && document.activeElement !== searchInput && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+            } else if (e.key === 'Escape') {
+                searchResults.classList.add('hidden');
+                searchInput.blur();
+            }
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(debounceTimer);
+            const query = e.target.value.trim();
+
+            if (query.length < 1) {
+                searchResults.innerHTML = '';
+                searchResults.classList.add('hidden');
+                return;
+            }
+
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/players/search?q=${encodeURIComponent(query)}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const players = data.results || [];
+
+                    if (players.length === 0) {
+                        searchResults.innerHTML = `<div class="p-3.5 text-xs text-on-surface-variant text-center font-medium">No matching players found</div>`;
+                        searchResults.classList.remove('hidden');
+                        return;
+                    }
+
+                    const clubColors = {{ CLUB_COLORS_MAP | tojson }};
+
+                    searchResults.innerHTML = players.map(p => {
+                        const pos = (p.position || 'M').toUpperCase();
+                        const posColor = pos.includes('D') ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' :
+                                       (pos.includes('M') ? 'bg-purple-500/20 text-purple-300 border-purple-500/30' :
+                                       (pos.includes('F') ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'));
+                        
+                        const statusBadge = p.is_drafted 
+                            ? `<span class="text-[10.5px] font-bold px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant border border-outline-variant/60">Drafted (${p.drafted_by})</span>`
+                            : `<span class="text-[10.5px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Available</span>`;
+
+                        const accentColor = clubColors[p.team] || '#434655';
+                        const teamBadge = p.team ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase" style="border: 1px solid ${accentColor}; color: ${accentColor};">${p.team}</span>` : '';
+
+                        return `
+                            <a href="${p.profile_url}" class="p-3 flex items-center justify-between hover:bg-surface-variant transition-colors group">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="text-[10.5px] font-mono font-extrabold px-1.5 py-0.5 rounded border ${posColor}">${p.position}</span>
+                                    <div>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="font-bold text-sm text-on-surface group-hover:text-primary-container transition-colors">${p.name}</span>
+                                            ${teamBadge}
+                                        </div>
+                                        ${p.fpg ? `<span class="text-[11px] text-on-surface-variant font-medium">${p.fpg.toFixed(2)} FP/G</span>` : ''}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    ${statusBadge}
+                                    <span class="material-symbols-outlined text-sm text-outline group-hover:text-primary-container transition-colors">chevron_right</span>
+                                </div>
+                            </a>
+                        `;
+                    }).join('');
+
+                    searchResults.classList.remove('hidden');
+                } catch (err) {
+                    console.error('Universal search fetch error:', err);
+                }
+            }, 120);
+        });
+
+        // Hide search results when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                searchResults.classList.add('hidden');
+            }
+        });
     });
 </script>
 </body>
