@@ -87,7 +87,10 @@ async def read_root(
     page_available: int = 1,
     page_drafted: int = 1,
     search: str = "",
-    search_drafted: str = ""
+    search_drafted: str = "",
+    sort_available: str = "adp",
+    sort_drafted: str = "recent",
+    min_games: int = 5
 ):
     draft_state = get_draft_state_dict()
 
@@ -105,8 +108,6 @@ async def read_root(
         injury = config.get_player_injury(player_name)
         afcon = config.get_player_afcon_status(player_name)
 
-        from fantrax_assistant.db import DatabaseManager
-        db_mgr = DatabaseManager("data/fantrax_assistant.db")
         p_uuid = db_mgr.get_player_id_by_name(player_name) or player_name
 
         enriched_player = {
@@ -134,13 +135,44 @@ async def read_root(
         else:
             available_players.append(enriched_player)
 
-    # Sort available players by FPTS (descending) and drafted players by most recent draft pick
-    state_obj = DraftState()
-    draft_history = state_obj.draft_history
-    draft_order_map = {name: i for i, name in enumerate(draft_history)}
+    # Estimate games played helper
+    def est_games(p):
+        fpts = float(p.get('fpts', 0) or 0)
+        fpg = float(p.get('fpg', 0) or 0)
+        return round(fpts / fpg) if fpg > 0 else 0
 
-    drafted_players.sort(key=lambda p: draft_order_map.get(p.get('player', ''), -1), reverse=True)
-    available_players.sort(key=lambda p: p.get('fpts', 0), reverse=True)
+    # Sort available players
+    if sort_available == "fpts":
+        available_players.sort(key=lambda p: float(p.get('fpts', 0) or 0), reverse=True)
+    elif sort_available == "fpg":
+        available_players.sort(
+            key=lambda p: (
+                1 if (float(p.get('fpg', 0) or 0) > 0 and est_games(p) >= min_games) else 0,
+                float(p.get('fpg', 0) or 0)
+            ),
+            reverse=True
+        )
+    else: # "adp" (default)
+        available_players.sort(key=lambda p: float(p.get('adp', 999) or 999))
+
+    # Sort drafted players
+    if sort_drafted == "fpts":
+        drafted_players.sort(key=lambda p: float(p.get('fpts', 0) or 0), reverse=True)
+    elif sort_drafted == "fpg":
+        drafted_players.sort(
+            key=lambda p: (
+                1 if (float(p.get('fpg', 0) or 0) > 0 and est_games(p) >= min_games) else 0,
+                float(p.get('fpg', 0) or 0)
+            ),
+            reverse=True
+        )
+    elif sort_drafted == "adp":
+        drafted_players.sort(key=lambda p: float(p.get('adp', 999) or 999))
+    else: # "recent" (default)
+        state_obj = DraftState()
+        draft_history = state_obj.draft_history
+        draft_order_map = {name: i for i, name in enumerate(draft_history)}
+        drafted_players.sort(key=lambda p: draft_order_map.get(p.get('player', ''), -1), reverse=True)
 
     # Apply search filters
     if search:
@@ -160,6 +192,9 @@ async def read_root(
             "drafted": drafted_pagination,
             "search_query": search,
             "search_drafted_query": search_drafted,
+            "sort_available": sort_available,
+            "sort_drafted": sort_drafted,
+            "min_games": min_games,
             "tracked_teams": list(teams_data.keys())
         }
     )
