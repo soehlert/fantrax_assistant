@@ -450,10 +450,6 @@ async def read_draft_analysis(request: Request):
     analysis_history_sorted = list(reversed(analysis_history))
     teams_data = state.teams
 
-    # Rolling calculation of the best overall pick (excluding mandatory top 4 consensus picks, pick_number > 4)
-    eligible_best = [x for x in analysis_history if x.get("pick_number", 0) > 4]
-    best_overall = max(eligible_best, key=lambda x: x.get("score", 0)) if eligible_best else (analysis_history[0] if analysis_history else None)
-
     # Rolling calculation of the highest value steal (biggest pick_number - adp diff)
     top_steal = None
     best_steal_diff = -999.0
@@ -466,6 +462,14 @@ async def read_draft_analysis(request: Request):
             if diff > best_steal_diff:
                 best_steal_diff = diff
                 top_steal = item
+
+    # Rolling calculation of the best overall pick (excluding top 4 picks AND avoiding duplication with top_steal)
+    eligible_best = [
+        x for x in analysis_history 
+        if x.get("pick_number", 0) > 4 
+        and (not top_steal or x.get("player") != top_steal.get("player"))
+    ]
+    best_overall = max(eligible_best, key=lambda x: x.get("score", 0)) if eligible_best else (analysis_history[0] if analysis_history else None)
 
     if not top_steal and analysis_history:
         top_steal = best_overall
