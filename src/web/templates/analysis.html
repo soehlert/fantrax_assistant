@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="flex flex-col items-center gap-3 text-center">
+    <h1 class="text-display font-display text-on-surface">Pick Grades &amp; Draft Feed</h1>
+    <p class="text-on-surface-variant text-base max-w-2xl">
+        Live AI post-pick evaluations grading every draft pick on value vs consensus ADP and positional roster need fit.
+    </p>
+</section>
+
+<!-- Summary Statistics Bar -->
+<section class="mt-6 bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-around gap-6">
+    <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-primary-container/20 text-primary-container flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-2xl">analytics</span>
+        </div>
+        <div>
+            <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Total Picks Graded</div>
+            <div class="text-2xl font-extrabold text-on-surface">{{ feed | length }}</div>
+        </div>
+    </div>
+
+    <div class="h-10 w-px bg-outline-variant hidden md:block"></div>
+
+    <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+            <span class="material-symbols-outlined text-2xl">grade</span>
+        </div>
+        <div>
+            <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Highest Value Steal</div>
+            <div class="text-lg font-bold text-on-surface">
+                {% set steals = feed | selectattr('grade_class', 'equalto', 'emerald') | list %}
+                {% if steals %}
+                    {{ steals[0].player }} (Pick #{{ steals[0].pick_number }})
+                {% else %}
+                    —
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Feed Section (Reverse Chronological Cards) -->
+<section class="mt-8 flex flex-col gap-5 max-w-4xl mx-auto w-full">
+    <h2 class="text-headline-lg font-display text-on-surface">Draft Reaction Feed</h2>
+
+    {% for item in feed %}
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4 transition-all hover:border-[#434655]">
+        <!-- Top Row: Pick #, Team, Grade Badge -->
+        <div class="flex items-center justify-between border-b border-outline-variant pb-3">
+            <div class="flex items-center gap-3">
+                <span class="bg-surface-container-low text-on-surface font-extrabold text-base px-3 py-1 rounded-md border border-outline-variant">
+                    Pick #{{ item.pick_number }}
+                </span>
+                <span class="text-on-surface-variant text-sm font-semibold">Drafted by <strong class="text-on-surface font-bold">{{ item.team_id }}</strong></span>
+            </div>
+
+            <!-- Grade Badge Pill -->
+            <div class="flex items-center gap-2">
+                {% if item.grade_class == 'emerald' %}
+                    <span class="bg-emerald-950/70 text-emerald-300 border border-emerald-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
+                        Grade: {{ item.grade }}
+                    </span>
+                {% elif item.grade_class == 'blue' %}
+                    <span class="bg-blue-950/70 text-blue-300 border border-blue-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
+                        Grade: {{ item.grade }}
+                    </span>
+                {% elif item.grade_class == 'amber' %}
+                    <span class="bg-amber-950/70 text-amber-300 border border-amber-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
+                        Grade: {{ item.grade }}
+                    </span>
+                {% else %}
+                    <span class="bg-red-950/70 text-red-300 border border-red-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
+                        Grade: {{ item.grade }}
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Middle Row: Player Info & Badges -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <span class="text-xl font-bold text-on-surface">{{ item.player }}</span>
+                <span class="text-base font-extrabold text-on-surface">({{ item.position }})</span>
+                {% if item.team %}
+                    {{ render_team_badge(item.team) }}
+                {% endif %}
+            </div>
+
+            <div class="flex items-center gap-4 text-sm font-semibold text-on-surface-variant">
+                <span>ADP: <strong class="text-on-surface">{{ "%.1f"|format(item.adp) if item.adp else '—' }}</strong></span>
+                <span>Pick #: <strong class="text-on-surface">{{ item.pick_number }}</strong></span>
+            </div>
+        </div>
+
+        <!-- Bottom Row: Narrative Rationale -->
+        <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3.5 text-base text-on-surface leading-relaxed">
+            <span class="font-semibold text-on-surface-variant">Analysis:</span> {{ item.rationale }}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-12 text-center text-on-surface-variant">
+        <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2">article</span>
+        <h3 class="text-lg font-bold text-on-surface">No Draft Picks Graded Yet</h3>
+        <p class="text-sm mt-1">Draft players from the Draft Board or Team suggestions page to generate live pick evaluations and grades!</p>
+    </div>
+    {% endfor %}
+</section>
+{% endblock %}

@@ -14,6 +14,7 @@ class DraftState:
         self.state_file = Path(state_file)
         self.drafted_players: set[str] = set()
         self.draft_history: list[str] = []
+        self.pick_analysis_history: list[dict] = []
         self.load()
 
     def load(self):
@@ -26,11 +27,13 @@ class DraftState:
                     self.my_team = state.get('my_team', "Team 1")
                     self.drafted_players = set(state.get('drafted_players', []))
                     self.draft_history = state.get('draft_history', list(self.drafted_players))
+                    self.pick_analysis_history = state.get('pick_analysis_history', [])
             else:
                 self.teams = {"Team 1": []}
                 self.my_team = "Team 1"
                 self.drafted_players = set()
                 self.draft_history = []
+                self.pick_analysis_history = []
                 self.save()
         except Exception as e:
             print(f"Error loading draft state: {e}")
@@ -38,6 +41,7 @@ class DraftState:
             self.my_team = "Team 1"
             self.drafted_players = set()
             self.draft_history = []
+            self.pick_analysis_history = []
             self.save()
 
     def save(self) -> bool:
@@ -50,6 +54,7 @@ class DraftState:
                 'my_team': self.my_team,
                 'drafted_players': list(self.drafted_players),
                 'draft_history': self.draft_history,
+                'pick_analysis_history': self.pick_analysis_history,
                 'teams': self.teams
             }
 
@@ -60,6 +65,13 @@ class DraftState:
         except Exception as e:
             print(f"Error saving draft state: {e}")
             return False
+
+    def add_pick_analysis(self, analysis_item: dict):
+        """Record pick analysis evaluation in history."""
+        # Replace existing analysis if already present for this player
+        self.pick_analysis_history = [p for p in self.pick_analysis_history if p.get('player') != analysis_item.get('player')]
+        self.pick_analysis_history.append(analysis_item)
+        self.save()
 
     def remove_from_teams(self, player_name: str):
         """Remove player from any team roster."""

@@ -109,8 +109,11 @@
       }
     </script>
     <style>
-        *, body, input, button, select, th, td, span, a, div, h1, h2, h3, h4 {
-            font-family: 'Hanken Grotesk', sans-serif !important;
+        *, body, input, button, select, th, td, a, div, h1, h2, h3, h4 {
+            font-family: 'Hanken Grotesk', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined' !important;
         }
         .table-row-hover:hover {
             background-color: #373942;
@@ -136,7 +139,10 @@
             </a>
             <div class="flex gap-6 ml-6 text-base font-bold">
                 <a class="transition-colors flex items-center gap-2 {% if request.url.path == '/' %}text-on-surface border-b-2 border-primary-container pb-1{% else %}text-on-surface-variant hover:text-on-surface{% endif %}" href="{{ url_for('read_root') }}">
-                    <span class="material-symbols-outlined text-[20px]">list_alt</span> Draft Board
+                    Draft Board
+                </a>
+                <a class="transition-colors flex items-center gap-2 {% if request.url.path == '/draft/analysis' %}text-on-surface border-b-2 border-primary-container pb-1{% else %}text-on-surface-variant hover:text-on-surface{% endif %}" href="{{ url_for('read_draft_analysis') }}">
+                    Pick Grades
                 </a>
             </div>
         </div>
@@ -148,7 +154,7 @@
                     {% for t_name in tracked_teams %}
                         {% set t_url = url_for('read_team', team_id=t_name) %}
                         <a href="{{ t_url }}" class="transition-colors flex items-center gap-2 text-base font-bold {% if request.url.path == t_url %}text-on-surface border-b-2 border-primary-container pb-1{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
-                            <span class="material-symbols-outlined text-[20px]">groups</span> {{ t_name }}
+                            {{ t_name }}
                         </a>
                     {% endfor %}
                 </div>

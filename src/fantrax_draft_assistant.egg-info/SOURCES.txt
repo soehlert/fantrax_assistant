@@ -2,6 +2,7 @@ README.md
 pyproject.toml
 src/__init__.py
 src/fantrax_assistant/__init__.py
+src/fantrax_assistant/analysis.py
 src/fantrax_assistant/colors.py
 src/fantrax_assistant/completion.py
 src/fantrax_assistant/config.py
@@ -25,3 +26,4 @@ src/fantrax_draft_assistant.egg-info/requires.txt
 src/fantrax_draft_assistant.egg-info/top_level.txt
 src/web/__init__.py
 src/web/main.py
+tests/test_analysis.py

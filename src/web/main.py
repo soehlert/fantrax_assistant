@@ -12,10 +12,12 @@ from fantrax_assistant.config import DraftConfig
 from fantrax_assistant.scrapers.understat import Understat
 from fantrax_assistant.suggest import PlayerRecommendationEngine
 from fantrax_assistant.draft_state import DraftState
+from fantrax_assistant.analysis import DraftPickAnalyzer
 
 # --- App Setup ---
 config = DraftConfig()
 understat = Understat()
+analyzer = DraftPickAnalyzer(config=config)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -176,6 +178,18 @@ async def mark_player_drafted(request: Request, player_name: Annotated[str, Form
         )
 
     state.mark_drafted(exact_name)
+    pick_num = len(state.drafted_players)
+    analysis = analyzer.grade_pick(
+        player_name=exact_name,
+        team_id='Other',
+        overall_pick_num=pick_num,
+        player_adp=player_details.get('adp'),
+        player_pos=player_details.get('position', ''),
+        player_team=player_details.get('team', ''),
+        team_roster=[]
+    )
+    state.add_pick_analysis(analysis)
+
     return RedirectResponse(
         url=f"{base_url}?draft_status=success&message=Marked {exact_name} as drafted",
         status_code=303
@@ -404,6 +418,19 @@ async def draft_player(
     success = state.add_to_team(player_details, team_id)
 
     if success:
+        pick_num = len(state.drafted_players)
+        team_roster = state.teams.get(team_id, [])
+        analysis = analyzer.grade_pick(
+            player_name=player_details.get('player'),
+            team_id=team_id,
+            overall_pick_num=pick_num,
+            player_adp=player_details.get('adp'),
+            player_pos=player_details.get('position', ''),
+            player_team=player_details.get('team', ''),
+            team_roster=team_roster
+        )
+        state.add_pick_analysis(analysis)
+
         return RedirectResponse(
             url=f"{base_url}?draft_status=success&drafted_player={player_details.get('player')}",
             status_code=303
@@ -414,6 +441,23 @@ async def draft_player(
             url=f"{base_url}?draft_status=error&drafted_player={player_details.get('player')} is already drafted",
             status_code=303
         )
+
+@app.get("/draft/analysis", response_class=HTMLResponse)
+async def read_draft_analysis(request: Request):
+    """Render reverse chronological pick analysis and grades feed."""
+    draft_state = get_draft_state_dict()
+    analysis_history = draft_state.get("pick_analysis_history", [])
+    analysis_history_sorted = list(reversed(analysis_history))
+    teams_data = draft_state.get("teams", {})
+
+    return templates.TemplateResponse(
+        request=request,
+        name="analysis.html",
+        context={
+            "feed": analysis_history_sorted,
+            "tracked_teams": list(teams_data.keys())
+        }
+    )
 
 def safe_float(value, default=0.0):
     """Converts a value to a float, returning a default if it fails."""
