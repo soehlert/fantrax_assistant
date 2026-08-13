@@ -73,16 +73,24 @@
             </div>
 
             <!-- Custom Floating Tooltip for Rotation Risk -->
-            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-3 bg-surface-container-high border border-outline-variant rounded-lg shadow-xl text-left hidden group-hover:block z-50 pointer-events-none">
-                <div class="text-xs font-bold text-on-surface mb-1.5 border-b border-outline-variant/60 pb-1 flex items-center gap-1">
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 p-3.5 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl text-left hidden group-hover:block z-50 pointer-events-none">
+                <div class="text-xs font-bold text-on-surface mb-2 border-b border-outline-variant/60 pb-1.5 flex items-center gap-1">
                     <span class="material-symbols-outlined text-sm text-primary">autorenew</span>
-                    <span>Rotation & Workload Risk Levels</span>
+                    <span>Rotation Risk vs. Injury Absences</span>
                 </div>
-                <div class="space-y-1.5 text-[11px] text-on-surface-variant leading-tight">
-                    <div><span class="font-bold text-emerald-400">Nailed Starter:</span> 30+ season starts (100% value floor).</div>
-                    <div><span class="font-bold text-emerald-400">Regular Starter:</span> 22-29 season starts (95% value floor).</div>
-                    <div><span class="font-bold text-amber-300">Moderate Risk:</span> 14-21 season starts (12% rotation discount).</div>
-                    <div><span class="font-bold text-red-400">Low Volume:</span> &lt;14 season starts (20% sample/injury discount).</div>
+                <div class="space-y-2 text-[11px] text-on-surface-variant leading-relaxed">
+                    <div class="bg-surface-container-low p-2 rounded border border-outline-variant/40">
+                        <span class="font-bold text-on-surface">Tactical Rotation vs. Injuries:</span>
+                        <div class="text-[10.5px] mt-0.5 text-on-surface-variant">
+                            A player who starts every fit game but missed 20 matches with an injury is a <span class="text-emerald-400 font-semibold">Nailed Starter When Fit</span>. Tactical rotation discounts apply specifically when a manager healthy-benches or rotates a player.
+                        </div>
+                    </div>
+                    <div class="space-y-1 text-[10.5px]">
+                        <div><span class="font-bold text-emerald-400">Nailed Starter:</span> 30+ season starts (100% value floor).</div>
+                        <div><span class="font-bold text-emerald-400">Regular Starter:</span> 22-29 season starts (95% value floor).</div>
+                        <div><span class="font-bold text-amber-300">Moderate Risk:</span> 14-21 season starts (12% rotation discount).</div>
+                        <div><span class="font-bold text-red-400">Low Volume / Injury:</span> &lt;14 starts (20% durability/sample discount).</div>
+                    </div>
                 </div>
             </div>
         </div>
