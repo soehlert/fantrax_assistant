@@ -34,7 +34,7 @@
 </div>
 {% endif %}
 
-<!-- Available Players Section (Click Row to Draft - Larger Text & Auto Live Search) -->
+<!-- Available Players Section (Click Row to Draft - Sleek Compact Vertical Spacing) -->
 <section class="flex flex-col gap-6 mt-6">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 class="text-headline-lg font-display text-on-surface">Available Players</h2>
@@ -53,34 +53,34 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-sm text-on-surface uppercase tracking-wider">
-                        <th class="px-6 py-4.5 font-extrabold">Rank</th>
-                        <th class="px-6 py-4.5 font-extrabold">Name</th>
-                        <th class="px-6 py-4.5 font-extrabold">Position</th>
-                        <th class="px-6 py-4.5 font-extrabold">Team</th>
-                        <th class="px-6 py-4.5 font-extrabold">ADP</th>
-                        <th class="px-6 py-4.5 font-extrabold">Fantasy Points</th>
-                        <th class="px-6 py-4.5 font-extrabold">FP/Game</th>
+                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface uppercase tracking-wider">
+                        <th class="px-6 py-3 font-bold">Rank</th>
+                        <th class="px-6 py-3 font-bold">Name</th>
+                        <th class="px-6 py-3 font-bold">Position</th>
+                        <th class="px-6 py-3 font-bold">Team</th>
+                        <th class="px-6 py-3 font-bold">ADP</th>
+                        <th class="px-6 py-3 font-bold">Fantasy Points</th>
+                        <th class="px-6 py-3 font-bold">FP/Game</th>
                     </tr>
                 </thead>
-                <tbody class="text-[17px] text-on-surface">
+                <tbody class="text-body-md text-on-surface">
                     {% for player in available.players %}
                     <tr onclick="triggerDraftConfirmModal('{{ player.player }}')" class="border-b border-outline-variant table-row-hover transition-colors cursor-pointer group">
-                        <td class="px-6 py-4.5 font-bold text-on-surface-variant text-base">{{ loop.index + (available.page - 1) * available.page_size }}</td>
-                        <td class="px-6 py-4.5 font-bold text-on-surface group-hover:text-primary transition-colors text-lg">
+                        <td class="px-6 py-2.5 font-bold text-on-surface-variant text-sm">{{ loop.index + (available.page - 1) * available.page_size }}</td>
+                        <td class="px-6 py-2.5 font-semibold text-on-surface group-hover:text-primary transition-colors text-base">
                             {{ player.player }}
                         </td>
-                        <td class="px-6 py-4.5 font-extrabold text-on-surface text-lg">
+                        <td class="px-6 py-2.5 font-bold text-on-surface text-base">
                             {{ player.position }}
                         </td>
-                        <td class="px-6 py-4.5">{{ render_team_badge(player.team) }}</td>
-                        <td class="px-6 py-4.5"><span class="adp-badge text-base font-bold px-2.5 py-1 rounded inline-block w-14 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
-                        <td class="px-6 py-4.5 font-semibold text-base">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
-                        <td class="px-6 py-4.5 font-semibold text-base">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
+                        <td class="px-6 py-2.5">{{ render_team_badge(player.team) }}</td>
+                        <td class="px-6 py-2.5"><span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
+                        <td class="px-6 py-2.5 font-medium text-sm">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
+                        <td class="px-6 py-2.5 font-medium text-sm">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="px-6 py-8 text-center text-on-surface-variant text-base">No available players found.</td>
+                        <td colspan="7" class="px-6 py-6 text-center text-on-surface-variant text-sm">No available players found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -90,7 +90,7 @@
     {{ render_pagination(available, 'page_available', '&page_drafted=' + drafted.page|string + '&search=' + (search_query or '')) }}
 </section>
 
-<!-- Drafted Players Section (7 Columns - Larger Text & Auto Live Search) -->
+<!-- Drafted Players Section (7 Columns - Sleek Compact Vertical Spacing) -->
 <section class="flex flex-col gap-6 mt-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 class="text-headline-lg font-display text-on-surface">Drafted Players</h2>
@@ -109,36 +109,36 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-sm text-on-surface uppercase tracking-wider">
-                        <th class="px-6 py-4.5 font-extrabold">Rank</th>
-                        <th class="px-6 py-4.5 font-extrabold">Name</th>
-                        <th class="px-6 py-4.5 font-extrabold">Position</th>
-                        <th class="px-6 py-4.5 font-extrabold">Team</th>
-                        <th class="px-6 py-4.5 font-extrabold">ADP</th>
-                        <th class="px-6 py-4.5 font-extrabold">Fantasy Points</th>
-                        <th class="px-6 py-4.5 font-extrabold">Owner</th>
+                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface uppercase tracking-wider">
+                        <th class="px-6 py-3 font-bold">Rank</th>
+                        <th class="px-6 py-3 font-bold">Name</th>
+                        <th class="px-6 py-3 font-bold">Position</th>
+                        <th class="px-6 py-3 font-bold">Team</th>
+                        <th class="px-6 py-3 font-bold">ADP</th>
+                        <th class="px-6 py-3 font-bold">Fantasy Points</th>
+                        <th class="px-6 py-3 font-bold">Owner</th>
                     </tr>
                 </thead>
-                <tbody class="text-[17px] text-on-surface">
+                <tbody class="text-body-md text-on-surface">
                     {% for player in drafted.players %}
                     <tr class="border-b border-outline-variant table-row-hover transition-colors">
-                        <td class="px-6 py-4.5 font-bold text-on-surface-variant text-base">{{ loop.index + (drafted.page - 1) * drafted.page_size }}</td>
-                        <td class="px-6 py-4.5 font-bold text-on-surface text-lg">
+                        <td class="px-6 py-2.5 font-bold text-on-surface-variant text-sm">{{ loop.index + (drafted.page - 1) * drafted.page_size }}</td>
+                        <td class="px-6 py-2.5 font-bold text-on-surface text-base">
                             <a href="{{ url_for('read_player_profile', player_name=player.player) }}" class="hover:text-primary transition-colors">
                                 {{ player.player }}
                             </a>
                         </td>
-                        <td class="px-6 py-4.5 font-extrabold text-on-surface text-lg">
+                        <td class="px-6 py-2.5 font-bold text-on-surface text-base">
                             {{ player.position }}
                         </td>
-                        <td class="px-6 py-4.5">{{ render_team_badge(player.team) }}</td>
-                        <td class="px-6 py-4.5"><span class="adp-badge text-base font-bold px-2.5 py-1 rounded inline-block w-14 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
-                        <td class="px-6 py-4.5 font-semibold text-base">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
-                        <td class="px-6 py-4.5"><span class="bg-surface-variant text-on-surface text-sm font-bold px-3.5 py-1 rounded-full">{{ player.owner or 'Drafted' }}</span></td>
+                        <td class="px-6 py-2.5">{{ render_team_badge(player.team) }}</td>
+                        <td class="px-6 py-2.5"><span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
+                        <td class="px-6 py-2.5 font-medium text-sm">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
+                        <td class="px-6 py-2.5"><span class="bg-surface-variant text-on-surface text-xs font-bold px-3 py-0.5 rounded-full">{{ player.owner or 'Drafted' }}</span></td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="px-6 py-8 text-center text-on-surface-variant text-base">No drafted players found.</td>
+                        <td colspan="7" class="px-6 py-6 text-center text-on-surface-variant text-sm">No drafted players found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
