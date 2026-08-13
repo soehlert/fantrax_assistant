@@ -266,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function setupAutocomplete(inputId, resultsId, endpoint = '/api/players/autocomplete') {
+    function setupAutocomplete(inputId, resultsId, endpoint = '/api/players/autocomplete', autoSubmit = false) {
         const input = document.getElementById(inputId);
         const container = document.getElementById(resultsId);
         if (!input || !container) return;
@@ -300,7 +300,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         input.value = name;
                         container.innerHTML = '';
                         container.classList.add('hidden');
-                        input.closest('form').submit();
+                        if (autoSubmit) {
+                            input.closest('form').submit();
+                        }
                     });
                     container.appendChild(item);
                 });
@@ -318,9 +320,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    setupAutocomplete('drafted-by-other-input', 'autocomplete-results-main');
-    setupAutocomplete('available-player-search', 'autocomplete-results-search');
-    setupAutocomplete('drafted-player-search', 'autocomplete-results-drafted');
+    setupAutocomplete('drafted-by-other-input', 'autocomplete-results-main', '/api/players/autocomplete', false);
+    setupAutocomplete('available-player-search', 'autocomplete-results-search', '/api/players/autocomplete', true);
+    setupAutocomplete('drafted-player-search', 'autocomplete-results-drafted', '/api/players/autocomplete', true);
 });
 </script>
 {% endblock %}
