@@ -185,34 +185,33 @@ class PlayerRecommendationEngine:
 
     def calculate_rotation_risk_penalty(self, player: dict) -> float:
         """
-        Calculate rotation risk / minutes security penalty based on total season team starts (out of 38 games).
-        Players on high-depth top clubs (MCI, ARS, CHE, LIV) who do not start regularly (>=22 starts / 38)
-        receive a rotation risk discount.
+        Calculate tactical rotation risk (sub appearances vs starts when fit).
+        - If a player starts 100% of matches when fit (starts == apps), they have 0 tactical rotation risk.
+        - Tactical rotation discount applies when managers frequently bench/sub a player (starts < 0.75 * apps).
         """
         team = str(player.get('team', '')).upper()
         fpg = float(player.get('fpg', 0) or 0)
 
-        # Check minutes / starts if stats available
         stats = player.get('stats') or {}
         starts = int(stats.get('starts', 0) or 0)
+        apps = int(stats.get('matches_played', 0) or 0)
         mins = int(stats.get('minutes', 0) or 0)
 
-        # Nailed-on core starters (>=28 starts out of 38, or 2400+ mins) retain 100% floor
-        if starts >= 28 or mins >= 2400:
+        # 1. 100% Fit Start Rate: Zero tactical rotation penalty when healthy!
+        if apps > 0 and starts == apps and fpg >= 3.0:
             return 1.0
 
-        # Regular starters (>=22 starts out of 38, or 1800+ mins)
-        if starts >= 22 or mins >= 1800:
-            return 1.0 if team not in {'MCI', 'ARS', 'CHE', 'LIV'} else 0.95
+        # 2. Nailed Core Starters (high total starts/minutes)
+        if starts >= 25 or mins >= 2100:
+            return 1.0
 
-        # Rotational / Fringe players (<22 starts out of 38)
-        if team in {'MCI', 'ARS', 'CHE', 'LIV'}:
-            if starts < 14 or mins < 1200:
-                return 0.80  # 20% discount for low team starts / heavy rotation
-            else:
-                return 0.88  # 12% discount for moderate rotation
-        elif starts < 14 and mins < 1200:
-            return 0.90  # 10% discount for general low-volume / injury-prone players
+        # 3. Tactical Rotation Penalty for players on top clubs (MCI, ARS, CHE, LIV) who frequently come off bench
+        if team in {'MCI', 'ARS', 'CHE', 'LIV'} and apps >= 5:
+            fit_start_rate = starts / max(1, apps)
+            if fit_start_rate < 0.60:
+                return 0.82  # Heavy tactical rotation (e.g. 8 starts, 20 appearances)
+            elif fit_start_rate < 0.78:
+                return 0.90  # Moderate tactical rotation
 
         return 1.0
 

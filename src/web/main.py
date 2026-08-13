@@ -766,27 +766,27 @@ async def read_player_profile(request: Request, player_name: str):
     except Exception as e:
         print(f"Error finding similar players for {player_name_clean}: {e}")
 
-    # 8. Rotation Risk Score & Status for Player Profile (based on 38-match season workload)
+    # 8. Rotation Risk Score & Status for Player Profile
     team_code = (fantrax_info.get("team") or (player_data.get("team_title") if player_data else "")).upper()
     starts = pl_stats.get("starts", 0) if pl_stats else 0
+    apps = pl_stats.get("total_apps", 0) if pl_stats else 0
     mins = pl_stats.get("minutes", 0) if pl_stats else 0
+    fpg_val = safe_float(fantrax_info.get("fpg", 0))
 
-    if starts >= 28 or mins >= 2400:
+    if apps > 0 and starts == apps and fpg_val >= 3.0:
+        rotation_risk_info = {"level": "Low", "badge": "Nailed When Fit", "sub": "100% Fit Start Rate", "color": "emerald"}
+    elif starts >= 25 or mins >= 2100:
         rotation_risk_info = {"level": "Low", "badge": "Nailed Core Starter", "sub": "100% Floor", "color": "emerald"}
-    elif starts >= 22 or mins >= 1800:
-        if team_code in {'MCI', 'ARS', 'CHE', 'LIV'}:
-            rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "95% Floor", "color": "emerald"}
+    elif team_code in {'MCI', 'ARS', 'CHE', 'LIV'} and apps >= 5:
+        fit_start_rate = starts / max(1, apps)
+        if fit_start_rate < 0.60:
+            rotation_risk_info = {"level": "High", "badge": "Heavy Rotation Risk", "sub": "18% Discount", "color": "red"}
+        elif fit_start_rate < 0.78:
+            rotation_risk_info = {"level": "Medium", "badge": "Moderate Rotation Risk", "sub": "10% Discount", "color": "amber"}
         else:
             rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "100% Floor", "color": "emerald"}
-    elif team_code in {'MCI', 'ARS', 'CHE', 'LIV'}:
-        if starts < 14 or mins < 1200:
-            rotation_risk_info = {"level": "High", "badge": "Heavy Risk", "sub": "20% Discount", "color": "red"}
-        else:
-            rotation_risk_info = {"level": "Medium", "badge": "Moderate Risk", "sub": "12% Discount", "color": "amber"}
-    elif starts < 14 and mins < 1200:
-        rotation_risk_info = {"level": "Medium", "badge": "Low Workload Risk", "sub": "10% Discount", "color": "amber"}
     else:
-        rotation_risk_info = {"level": "Low", "badge": "Regular Contributor", "sub": "100% Floor", "color": "emerald"}
+        rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "100% Floor", "color": "emerald"}
 
     return templates.TemplateResponse(
         request=request,
