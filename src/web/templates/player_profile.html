@@ -118,17 +118,22 @@
     </div>
     {% endif %}
 
-    <!-- Understat Performance Chart (If Available and Outfield) -->
+    <!-- Understat Horizontal Percentile Bar Chart -->
     {% set is_gk = (fantrax_info.get('position') == 'G' or (player_data and player_data.get('position') == 'GK')) %}
     {% set has_understat_metrics = player_data and not is_gk and chart_data %}
 
     {% if has_understat_metrics %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-headline-sm font-bold text-on-surface">Understat Positional Percentiles</h3>
-            <span class="text-xs font-semibold text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full border border-outline-variant">vs EPL {{ player_data.get('position', 'M') }} Peers</span>
+        <div class="flex items-center justify-between mb-4 pb-3 border-b border-outline-variant">
+            <div>
+                <h3 class="text-headline-sm font-bold text-on-surface">Understat Advanced Positional Percentiles</h3>
+                <p class="text-xs text-on-surface-variant mt-0.5">Percentile rank compared to all Premier League players at the same position</p>
+            </div>
+            <span class="text-xs font-bold text-primary-container bg-primary-container/10 px-3 py-1.5 rounded-full border border-primary-container/30">
+                vs EPL {{ position_display }} Peers
+            </span>
         </div>
-        <div class="h-72 w-full">
+        <div class="h-[420px] w-full">
             <canvas id="understatChart"></canvas>
         </div>
     </div>
@@ -162,24 +167,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 label: 'Percentile Rank (%)',
                 data: percentiles,
                 backgroundColor: [
-                    'rgba(56, 189, 248, 0.75)',
-                    'rgba(59, 130, 246, 0.75)',
-                    'rgba(168, 85, 247, 0.75)',
-                    'rgba(236, 72, 153, 0.75)',
-                    'rgba(16, 185, 129, 0.75)'
+                    'rgba(56, 189, 248, 0.8)',
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(99, 102, 241, 0.8)',
+                    'rgba(168, 85, 247, 0.8)',
+                    'rgba(236, 72, 153, 0.8)',
+                    'rgba(244, 63, 94, 0.8)',
+                    'rgba(249, 115, 22, 0.8)',
+                    'rgba(234, 179, 8, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(20, 184, 166, 0.8)'
                 ],
                 borderColor: [
                     '#38bdf8',
                     '#3b82f6',
+                    '#6366f1',
                     '#a855f7',
                     '#ec4899',
-                    '#10b981'
+                    '#f43f5e',
+                    '#f97316',
+                    '#eab308',
+                    '#10b981',
+                    '#14b8a6'
                 ],
                 borderWidth: 1.5,
                 borderRadius: 6
             }]
         },
         options: {
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
@@ -192,13 +208,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             const index = context.dataIndex;
                             const pct = percentiles[index];
                             const raw = rawValues[index];
-                            return ` ${pct}th Percentile (Total: ${raw})`;
+                            return ` ${pct}th Percentile (Season Total: ${raw})`;
                         }
                     }
                 }
             },
             scales: {
-                y: {
+                x: {
                     beginAtZero: true,
                     max: 100,
                     ticks: {
@@ -207,8 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     },
                     grid: { color: '#32343d' }
                 },
-                x: {
-                    ticks: { color: '#e1e2ed', font: { weight: 'bold' } },
+                y: {
+                    ticks: { color: '#e1e2ed', font: { weight: 'bold', size: 12 } },
                     grid: { color: '#32343d' }
                 }
             }

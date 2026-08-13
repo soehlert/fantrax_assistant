@@ -87,10 +87,10 @@ class Understat:
             return pd.DataFrame()
 
         df = pd.DataFrame(positional_players)
-        for col in ["npg", "xG", "xA", "shots", "key_passes"]:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
+        cols = ["goals", "npg", "xG", "npxG", "assists", "xA", "shots", "key_passes", "xGChain", "xGBuildup"]
+        for col in cols:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-        df = df.dropna(subset=["npg", "xG", "xA", "shots", "key_passes"])
         return df
 
     def get_player_percentiles(
@@ -99,10 +99,14 @@ class Understat:
         if positional_data.empty:
             return {}
 
+        cols = ["goals", "npg", "xG", "npxG", "assists", "xA", "shots", "key_passes", "xGChain", "xGBuildup"]
         percentiles = {}
-        for col in ["npg", "xG", "xA", "shots", "key_passes"]:
+        for col in cols:
             player_value = float(player_data.get(col, 0))
-            percentiles[col] = percentileofscore(positional_data[col], player_value)
+            if col in positional_data.columns:
+                percentiles[col] = percentileofscore(positional_data[col], player_value)
+            else:
+                percentiles[col] = 0.0
             
         return percentiles
 

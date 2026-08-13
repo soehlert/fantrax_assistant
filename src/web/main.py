@@ -549,22 +549,15 @@ async def read_player_profile(request: Request, player_name: str):
             percentiles = understat.get_player_percentiles(
                 player_data=player_data, positional_data=positional_data
             )
+            metric_keys = ["goals", "npg", "xG", "npxG", "assists", "xA", "shots", "key_passes", "xGChain", "xGBuildup"]
+            metric_labels = [
+                "Goals", "Non-Penalty Goals", "xG (Expected Goals)", "Non-Penalty xG",
+                "Assists", "xA (Expected Assists)", "Shots", "Key Passes", "xG Chain", "xG Build-Up"
+            ]
             chart_data = {
-                "labels": ["Non-Penalty Goals", "xG", "xA", "Shots", "Key Passes"],
-                "percentiles": [
-                    round(float(percentiles.get("npg", 0)), 1),
-                    round(float(percentiles.get("xG", 0)), 1),
-                    round(float(percentiles.get("xA", 0)), 1),
-                    round(float(percentiles.get("shots", 0)), 1),
-                    round(float(percentiles.get("key_passes", 0)), 1),
-                ],
-                "raw_values": [
-                    round(float(player_data.get("npg", 0)), 2),
-                    round(float(player_data.get("xG", 0)), 2),
-                    round(float(player_data.get("xA", 0)), 2),
-                    round(float(player_data.get("shots", 0)), 0),
-                    round(float(player_data.get("key_passes", 0)), 0),
-                ]
+                "labels": metric_labels,
+                "percentiles": [round(float(percentiles.get(k, 0)), 1) for k in metric_keys],
+                "raw_values": [round(float(player_data.get(k, 0)), 2) for k in metric_keys],
             }
     except Exception as e:
         print(f"Understat lookup info for {player_name_clean}: {e}")
@@ -573,12 +566,17 @@ async def read_player_profile(request: Request, player_name: str):
     injury = config.get_player_injury(player_name_clean)
     afcon = config.get_player_afcon_status(player_name_clean)
 
+    pos_map = {"D": "Defender (D)", "M": "Midfielder (M)", "F": "Forward (F)", "G": "Goalkeeper (G)", "GK": "Goalkeeper (G)"}
+    raw_pos = (fantrax_info.get("position") or (player_data.get("position") if player_data else "M")).split(",")[0].split(" ")[0].upper()
+    position_display = pos_map.get(raw_pos, f"Position ({raw_pos})")
+
     return templates.TemplateResponse(
         request=request,
         name="player_profile.html",
         context={
             "player_name": player_name_clean,
             "fantrax_info": fantrax_info or {},
+            "position_display": position_display,
             "drafted_by_team": drafted_by_team,
             "pick_analysis": pick_analysis,
             "player_data": player_data,
