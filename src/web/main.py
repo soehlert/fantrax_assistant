@@ -509,60 +509,79 @@ def safe_float(value, default=0.0):
 
 @app.get("/player/{player_name}", response_class=HTMLResponse)
 async def read_player_profile(request: Request, player_name: str):
-    draft_state = get_draft_state_dict()
+    import urllib.parse
+    player_name_clean = urllib.parse.unquote(player_name).strip()
+    
+    state = DraftState()
+    draft_state_dict = get_draft_state_dict()
 
+    # 1. Fantrax Master Info Lookup
+    fantrax_info = config.get_player_adp(player_name_clean)
+    if not fantrax_info:
+        for p in config.rankings.get('rankings', []):
+            if p.get('player', '').lower() == player_name_clean.lower():
+                fantrax_info = p
+                player_name_clean = p.get('player')
+                break
+
+    # 2. Draft Status & Pick Analysis
+    drafted_by_team = None
+    for team_id, roster in state.teams.items():
+        if any(p.get('player') == player_name_clean for p in roster):
+            drafted_by_team = team_id
+            break
+
+    analysis_history = analyzer.backfill_retroactive_analysis(state)
+    pick_analysis = next((a for a in analysis_history if a.get("player") == player_name_clean), None)
+
+    # 3. Understat Data Lookup (Graceful Fallback)
+    player_data = None
+    chart_data = None
     try:
         player_data = understat.get_player_data_by_name(
-            player_name=player_name, league="EPL", season="2024"
+            player_name=player_name_clean, league="EPL", season="2024"
         )
-
-        if not player_data:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Player '{player_name}' not found on Understat."
+        if player_data:
+            position = player_data.get("position", "").split(" ")[0]
+            positional_data = understat.get_positional_data(
+                player_position=position, league="EPL", season="2024"
             )
-
-        position = player_data.get("position", "").split(" ")[0]
-        
-        positional_data = understat.get_positional_data(
-            player_position=position, league="EPL", season="2024"
-        )
-        
-        percentiles = understat.get_player_percentiles(
-            player_data=player_data, positional_data=positional_data
-        )
-        
-        chart_data = {
-            "labels": ["Non-Penalty Goals", "xG", "xA", "Shots", "Key Passes"],
-            "percentiles": [
-                percentiles.get("npg", 0),
-                percentiles.get("xG", 0),
-                percentiles.get("xA", 0),
-                percentiles.get("shots", 0),
-                percentiles.get("key_passes", 0),
-            ],
-        }
-
-        # Get injury and AFCON status
-        injury = config.get_player_injury(player_name)
-        afcon = config.get_player_afcon_status(player_name)
-
-        return templates.TemplateResponse(
-            request=request, name="player_profile.html",
-            context={
-                "player_name": player_name,
-                "player_data": player_data,
-                "injury_severity": injury.get('severity', 'Healthy'),
-                "at_afcon": afcon.get('at_afcon', False),
-                "tracked_teams": list(draft_state.get("teams", {}).keys()),
-                "chart_data": chart_data,
+            percentiles = understat.get_player_percentiles(
+                player_data=player_data, positional_data=positional_data
+            )
+            chart_data = {
+                "labels": ["Non-Penalty Goals", "xG", "xA", "Shots", "Key Passes"],
+                "percentiles": [
+                    percentiles.get("npg", 0),
+                    percentiles.get("xG", 0),
+                    percentiles.get("xA", 0),
+                    percentiles.get("shots", 0),
+                    percentiles.get("key_passes", 0),
+                ],
             }
-        )
-    except HTTPException:
-        raise
     except Exception as e:
-        print(f"Player profile error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        print(f"Understat lookup info for {player_name_clean}: {e}")
+
+    # 4. Availability Status
+    injury = config.get_player_injury(player_name_clean)
+    afcon = config.get_player_afcon_status(player_name_clean)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="player_profile.html",
+        context={
+            "player_name": player_name_clean,
+            "fantrax_info": fantrax_info or {},
+            "drafted_by_team": drafted_by_team,
+            "pick_analysis": pick_analysis,
+            "player_data": player_data,
+            "chart_data": chart_data,
+            "injury_severity": injury.get('severity', 'Healthy'),
+            "injury_notes": injury.get('notes', ''),
+            "at_afcon": afcon.get('at_afcon', False),
+            "tracked_teams": list(draft_state_dict.get("teams", {}).keys()),
+        }
+    )
 
 # --- Helper Functions ---
 def paginate(data: list, page: int, page_size: int):

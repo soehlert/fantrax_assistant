@@ -67,8 +67,10 @@
                     {% for player in available.players %}
                     <tr onclick="triggerDraftConfirmModal('{{ player.player }}')" class="border-b border-outline-variant table-row-hover transition-colors cursor-pointer group">
                         <td class="px-6 py-2.5 font-bold text-on-surface-variant text-sm">{{ loop.index + (available.page - 1) * available.page_size }}</td>
-                        <td class="px-6 py-2.5 font-semibold text-on-surface group-hover:text-primary transition-colors text-base">
-                            {{ player.player }}
+                        <td class="px-6 py-2.5 font-semibold text-on-surface transition-colors text-base">
+                            <a href="/player/{{ player.player }}" onclick="event.stopPropagation();" class="hover:text-primary-container hover:underline transition-colors font-bold">
+                                {{ player.player }}
+                            </a>
                         </td>
                         <td class="px-6 py-2.5 font-bold text-on-surface text-base">
                             {{ player.position }}
