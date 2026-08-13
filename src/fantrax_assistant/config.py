@@ -64,30 +64,37 @@ class DraftConfig:
 
     def _fuzzy_match_name(self, search_name: str, candidate_name: str) -> bool:
         """
-        Check if two player names match using fuzzy logic.
-        Handles cases like 'Richarlison' vs 'Richarlison de Andrade'
+        Check if two player names refer to the same player.
         """
-        search_lower = search_name.lower().strip()
-        candidate_lower = candidate_name.lower().strip()
+        if not search_name or not candidate_name:
+            return False
 
-        # Exact match
-        if search_lower == candidate_lower:
+        s_lower = search_name.lower().strip()
+        c_lower = candidate_name.lower().strip()
+
+        # 1. Exact match
+        if s_lower == c_lower:
             return True
 
-        # Check if search name is contained in candidate (e.g., "Richarlison" in "Richarlison de Andrade")
-        if search_lower in candidate_lower:
+        # 2. Strip accents for comparison
+        import unicodedata
+        s_norm = "".join(c for c in unicodedata.normalize('NFD', s_lower) if unicodedata.category(c) != 'Mn')
+        c_norm = "".join(c for c in unicodedata.normalize('NFD', c_lower) if unicodedata.category(c) != 'Mn')
+
+        if s_norm == c_norm:
             return True
 
-        # Check if candidate is contained in search
-        if candidate_lower in search_lower:
-            return True
+        s_words = [w for w in s_norm.split() if len(w) > 1]
+        c_words = [w for w in c_norm.split() if len(w) > 1]
 
-        # Split names and check if all parts of search are in candidate
-        search_parts = search_lower.split()
-        candidate_parts = candidate_lower.split()
+        # Single-word names must match exactly (e.g. "Rayan" is not "Rayan Cherki")
+        if len(s_words) == 1 or len(c_words) == 1:
+            return False
 
-        # If all search parts are in candidate parts, it's a match
-        if all(any(sp in cp for cp in candidate_parts) for sp in search_parts):
+        s_set = set(s_words)
+        c_set = set(c_words)
+
+        if s_set.issubset(c_set) or c_set.issubset(s_set):
             return True
 
         return False

@@ -1,3 +1,10 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [project]
 name = "fantrax-draft-assistant"
 version = "0.1.0"
@@ -28,3 +35,4 @@ dependencies = [
 draft = "fantrax_assistant.draft:app"
 scrape = "fantrax_assistant.scrapers.cli:scrape_cli"
 search = "fantrax_assistant.search:app"
+

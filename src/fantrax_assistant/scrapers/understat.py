@@ -11,7 +11,8 @@ from scipy.stats import percentileofscore
 class Understat:
     def __init__(self):
         self._client = UnderstatClient()
-        self._redis = redis.Redis(host='localhost', port=6380, db=0)
+        self._redis = redis.Redis(host='localhost', port=6380, db=0, socket_timeout=1)
+        self._memory_cache: Dict[str, List[Dict]] = {}
 
     def get_player_data(self, player_id: str) -> Dict:
         return self._client.player(player=player_id).get_shot_data()
@@ -20,12 +21,29 @@ class Understat:
         self, league: str, season: str
     ) -> List[Dict]:
         cache_key = f"understat:league:{league}:{season}"
-        cached_data = self._redis.get(cache_key)
-        if cached_data:
-            return json.loads(cached_data)
 
+        # 1. Try Redis cache if running
+        try:
+            cached_data = self._redis.get(cache_key)
+            if cached_data:
+                return json.loads(cached_data)
+        except Exception:
+            pass
+
+        # 2. Try in-memory cache fallback
+        if cache_key in self._memory_cache:
+            return self._memory_cache[cache_key]
+
+        # 3. Fetch from Understat API
         data = self._client.league(league=league).get_player_data(season=season)
-        self._redis.set(cache_key, json.dumps(data), ex=86400)  # Cache for 24 hours
+        self._memory_cache[cache_key] = data
+
+        # 4. Save to Redis if available
+        try:
+            self._redis.set(cache_key, json.dumps(data), ex=86400)  # Cache for 24 hours
+        except Exception:
+            pass
+
         return data
 
     def get_player_data_by_name(

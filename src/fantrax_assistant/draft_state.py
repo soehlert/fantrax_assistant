@@ -29,11 +29,13 @@ class DraftState:
                 self.teams = {"Team 1": []}
                 self.my_team = "Team 1"
                 self.drafted_players = set()
+                self.save()
         except Exception as e:
             print(f"Error loading draft state: {e}")
             self.teams = {"Team 1": []}
             self.my_team = "Team 1"
             self.drafted_players = set()
+            self.save()
 
     def save(self) -> bool:
         """Save draft state to file."""
@@ -55,22 +57,25 @@ class DraftState:
             print(f"Error saving draft state: {e}")
             return False
 
+    def remove_from_teams(self, player_name: str):
+        """Remove player from any team roster."""
+        for team_name, roster in self.teams.items():
+            self.teams[team_name] = [p for p in roster if p.get('player') != player_name]
+
     def add_to_team(self, player: dict, team_name: str = "Team 1"):
-        """Add player to specific team."""
+        """Add player to specific team, preventing duplicates."""
         if team_name not in self.teams:
             self.teams[team_name] = []
 
         player_name = player.get('player')
 
-        # Check if player is already drafted by ANYONE
-        if player_name in self.drafted_players:
-            print(f"Error: {player_name} has already been drafted")
+        # If already on this specific team, prevent duplicate entry
+        if any(p['player'] == player_name for p in self.teams[team_name]):
+            print(f"{player_name} is already on {team_name}")
             return False
 
-        # Check if player already on this specific team (shouldn't happen, but safety check)
-        if any(p['player'] == player_name for p in self.teams[team_name]):
-            print(f"Error: {player_name} already on {team_name}")
-            return False
+        # Remove from any other team roster if present (reassignment)
+        self.remove_from_teams(player_name)
 
         # Add player
         player_data = {
@@ -85,6 +90,12 @@ class DraftState:
         self.drafted_players.add(player_name)
         self.save()
         return True
+
+    def undraft_player(self, player_name: str):
+        """Remove player from drafted_players set and all team rosters."""
+        self.remove_from_teams(player_name)
+        self.drafted_players.discard(player_name)
+        self.save()
 
 
     def get_team(self, team_name: str) -> list:

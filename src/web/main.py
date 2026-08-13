@@ -21,6 +21,8 @@ understat = Understat()
 async def lifespan(app: FastAPI):
     # Load all data on startup
     config.load_all_data()
+    # Ensure default draft state file exists
+    DraftState()
     yield
     # Clean up resources if needed on shutdown
 
@@ -28,24 +30,41 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
 templates = Jinja2Templates(directory="src/web/templates")
 
+def get_draft_state_dict() -> dict:
+    state = DraftState()
+    return {
+        "my_team": state.my_team,
+        "drafted_players": list(state.drafted_players),
+        "teams": state.teams,
+    }
+
 @app.get("/api/players/autocomplete")
 async def autocomplete_players(q: str = ""):
-    """Endpoint for player name autocomplete."""
+    """Endpoint for player name autocomplete (excludes already drafted players)."""
     if len(q) < 2:
         return JSONResponse({"players": []})
 
-    with open("data/draft_state.json", "r") as f:
-        draft_state = json.load(f)
-    all_drafted_player_names = draft_state.get("drafted_players", [])
-    
-    all_available = config.get_all_available_players(set(all_drafted_player_names))
-    
-    matches = [
-        p["player"] for p in all_available 
-        if q.lower() in p["player"].lower()
-    ]
-    
-    return JSONResponse({"players": matches[:10]})
+    draft_state = get_draft_state_dict()
+    drafted_names = set(draft_state.get("drafted_players", []))
+
+    all_players = config.rankings.get('rankings', []) if config.rankings else []
+
+    seen = set()
+    matches = []
+    for p in all_players:
+        name = p.get("player", "")
+
+        # Skip if player is already drafted
+        if any(config._fuzzy_match_name(name, d) for d in drafted_names):
+            continue
+
+        if q.lower() in name.lower() and name not in seen:
+            seen.add(name)
+            matches.append(name)
+            if len(matches) >= 10:
+                break
+
+    return JSONResponse({"players": matches})
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -56,8 +75,7 @@ async def read_root(
     search: str = "",
     search_drafted: str = ""
 ):
-    with open("data/draft_state.json", "r") as f:
-        draft_state = json.load(f)
+    draft_state = get_draft_state_dict()
 
     drafted_player_names = draft_state.get("drafted_players", [])
     teams_data = draft_state.get("teams", {})
@@ -82,11 +100,12 @@ async def read_root(
             'at_afcon': afcon.get('at_afcon', False)
         }
 
-        if player_name in drafted_player_names:
+        is_drafted = any(config._fuzzy_match_name(player_name, d) for d in drafted_player_names)
+        if is_drafted:
             # Find owner
             owner_team = None
             for team_id, roster in teams_data.items():
-                if any(p.get('player') == player_name for p in roster):
+                if any(config._fuzzy_match_name(player_name, p.get('player', '')) for p in roster):
                     owner_team = team_id
                     break
 
@@ -148,6 +167,14 @@ async def mark_player_drafted(request: Request, player_name: Annotated[str, Form
         status_code=303
     )
 
+@app.post("/draft/undraft")
+async def undraft_player_endpoint(request: Request, player_name: Annotated[str, Form()]):
+    """Undrafts a player, returning them to the available pool."""
+    state = DraftState()
+    state.undraft_player(player_name)
+    referer = request.headers.get("referer") or str(request.url_for('read_root'))
+    return RedirectResponse(url=referer, status_code=303)
+
 
 @app.get("/teams/{team_id}", response_class=HTMLResponse)
 async def read_team(
@@ -159,8 +186,7 @@ async def read_team(
     exclude_teams: str = "",
     exclude_positions: str = ""
 ):
-    with open("data/draft_state.json", "r") as f:
-        draft_state = json.load(f)
+    draft_state = get_draft_state_dict()
     teams_data = draft_state.get("teams", {})
     all_drafted_player_names = draft_state.get("drafted_players", [])
     
@@ -183,6 +209,76 @@ async def read_team(
         position_breakdown.append({
             "position": pos, "current": current_val, "max": max_val, "need": max(0, max_val - current_val)
         })
+
+    # Premier League Club Color Scheme and Metadata
+    CLUB_COLORS = {
+        "MCI": {"bg": "#6CABDD", "text": "#FFFFFF", "border": "#1C2C5B", "name": "Man City"},
+        "ARS": {"bg": "#EF0107", "text": "#FFFFFF", "border": "#000000", "name": "Arsenal"},
+        "LIV": {"bg": "#C8102E", "text": "#FFFFFF", "border": "#00B2A9", "name": "Liverpool"},
+        "MUN": {"bg": "#DA291C", "text": "#FFFFFF", "border": "#FBE122", "name": "Man United"},
+        "CHE": {"bg": "#034694", "text": "#FFFFFF", "border": "#DBA111", "name": "Chelsea"},
+        "TOT": {"bg": "#132257", "text": "#FFFFFF", "border": "#132257", "name": "Tottenham"},
+        "AVL": {"bg": "#95BFE5", "text": "#111111", "border": "#670E36", "name": "Aston Villa"},
+        "BOU": {"bg": "#DA291C", "text": "#FFFFFF", "border": "#000000", "name": "Bournemouth"},
+        "BHA": {"bg": "#0057B8", "text": "#FFFFFF", "border": "#FFCD00", "name": "Brighton"},
+        "CRY": {"bg": "#1B458F", "text": "#FFFFFF", "border": "#A71930", "name": "Crystal Palace"},
+        "EVE": {"bg": "#003399", "text": "#FFFFFF", "border": "#003399", "name": "Everton"},
+        "FUL": {"bg": "#241F20", "text": "#FFFFFF", "border": "#CC0000", "name": "Fulham"},
+        "NEW": {"bg": "#241F20", "text": "#FFFFFF", "border": "#41B6E6", "name": "Newcastle"},
+        "NOT": {"bg": "#DD0000", "text": "#FFFFFF", "border": "#DD0000", "name": "Nott'm Forest"},
+        "SUN": {"bg": "#EB172B", "text": "#FFFFFF", "border": "#000000", "name": "Sunderland"},
+        "IPS": {"bg": "#0054A6", "text": "#FFFFFF", "border": "#E30613", "name": "Ipswich"},
+        "LEE": {"bg": "#1D428A", "text": "#FFFFFF", "border": "#FFCD00", "name": "Leeds"},
+        "COV": {"bg": "#00A3E0", "text": "#FFFFFF", "border": "#111111", "name": "Coventry"},
+        "WOL": {"bg": "#FDB913", "text": "#111111", "border": "#231F20", "name": "Wolves"},
+        "WHU": {"bg": "#7A263A", "text": "#FFFFFF", "border": "#1BB1E7", "name": "West Ham"},
+        "BRE": {"bg": "#D20000", "text": "#FFFFFF", "border": "#FBB800", "name": "Brentford"}
+    }
+
+    PL_CLUBS_ORDER = [
+        "MCI", "ARS", "LIV", "MUN", "CHE", "TOT",
+        "AVL", "BHA", "BOU", "BRE", "CRY", "EVE", "FUL", "IPS", "LEE", "NEW", "NOT", "SUN", "WHU", "WOL"
+    ]
+
+    BIG_SIX = {"MCI", "ARS", "LIV", "MUN", "CHE", "TOT"}
+
+    # Map player names by club for current roster
+    players_by_club = {}
+    big_six_count = 0
+    non_big_six_count = 0
+
+    for player in roster:
+        club = player.get("team", "UNKNOWN").upper()
+        if club not in players_by_club:
+            players_by_club[club] = []
+        players_by_club[club].append(player.get("player"))
+
+        if club in BIG_SIX:
+            big_six_count += 1
+        else:
+            non_big_six_count += 1
+
+    # Include extra rostered clubs if any outside standard PL set
+    all_known_clubs = PL_CLUBS_ORDER + [c for c in players_by_club.keys() if c not in PL_CLUBS_ORDER]
+
+    club_breakdown = []
+    for club in all_known_clubs:
+        rostered_players = players_by_club.get(club, [])
+        color_info = CLUB_COLORS.get(club, {"bg": "#6c757d", "text": "#FFFFFF", "border": "#495057", "name": club})
+        club_breakdown.append({
+            "code": club,
+            "name": color_info.get("name", club),
+            "count": len(rostered_players),
+            "players": rostered_players,
+            "is_big_six": club in BIG_SIX,
+            "has_players": len(rostered_players) > 0,
+            "bg_color": color_info["bg"],
+            "text_color": color_info["text"],
+            "border_color": color_info["border"]
+        })
+
+    # Sort so active clubs appear first (by player count), then Big Six, then inactive
+    club_breakdown.sort(key=lambda x: (not x["has_players"], -x["count"], not x["is_big_six"]))
 
     # Get suggestions using the backend engine
     drafted_names = set(all_drafted_player_names)
@@ -224,6 +320,9 @@ async def read_team(
             "team_name": team_name,
             "roster": roster,
             "position_breakdown": position_breakdown,
+            "club_breakdown": club_breakdown,
+            "big_six_count": big_six_count,
+            "non_big_six_count": non_big_six_count,
             "suggestions": suggestions_pagination,
             "draft_status": draft_status,
             "drafted_player": drafted_player,
@@ -278,8 +377,7 @@ def safe_float(value, default=0.0):
 
 @app.get("/player/{player_name}", response_class=HTMLResponse)
 async def read_player_profile(request: Request, player_name: str):
-    with open("data/draft_state.json", "r") as f:
-        draft_state = json.load(f)
+    draft_state = get_draft_state_dict()
 
     try:
         player_data = understat.get_player_data_by_name(

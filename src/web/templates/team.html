@@ -37,66 +37,141 @@
     </div>
     {% endif %}
 
-    <!-- Roster and Breakdown -->
-    <div class="row mb-5">
+    <!-- Row 1: Roster & Position Needs -->
+    <div class="row mb-4">
         <!-- Current Roster Table -->
-        <div class="col-md-8">
-            <h2>Current Roster</h2>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th scope="col">ADP</th>
-                            <th scope="col">Name</th>
-                            <th scope="col">Position</th>
-                            <th scope="col">Team</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for player in roster %}
-                        <tr>
-                            <td>{{ player.adp }}</td>
-                            <td>{{ player.player }}</td>
-                            <td>{{ player.position }}</td>
-                            <td>{{ player.team }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="text-center">This team's roster is empty.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <div class="col-lg-8 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h4 class="mb-0 fw-bold text-dark">Current Roster ({{ roster | length }})</h4>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">ADP</th>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Position</th>
+                                    <th scope="col">Team</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for player in roster %}
+                                <tr>
+                                    <td><span class="badge bg-light text-dark border">{{ player.adp }}</span></td>
+                                    <td><strong>{{ player.player }}</strong></td>
+                                    <td><span class="badge badge-position-{{ player.position[0].lower() }}">{{ player.position }}</span></td>
+                                    <td><span class="badge bg-secondary">{{ player.team }}</span></td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">This team's roster is empty.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
+
         <!-- Position Breakdown Table -->
-        <div class="col-md-4">
-            <h2>Position Breakdown</h2>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th scope="col">Position</th>
-                            <th scope="col">Current</th>
-                            <th scope="col">Max</th>
-                            <th scope="col">Need</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in position_breakdown %}
-                        <tr>
-                            <td>{{ item.position }}</td>
-                            <td>{{ item.current }}</td>
-                            <td>{{ item.max }}</td>
-                            <td>{{ item.need }}</td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="text-center">No position data available.</td>
-                        </tr>
+        <div class="col-lg-4 mb-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3">
+                    <h4 class="mb-0 fw-bold text-dark">Position Needs</h4>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">Position</th>
+                                    <th scope="col" class="text-center">Has</th>
+                                    <th scope="col" class="text-center">Max</th>
+                                    <th scope="col" class="text-end">Need</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in position_breakdown %}
+                                <tr>
+                                    <td><span class="badge badge-position-{{ item.position[0].lower() }}">{{ item.position }}</span></td>
+                                    <td class="text-center fw-bold">{{ item.current }}</td>
+                                    <td class="text-center text-muted">{{ item.max }}</td>
+                                    <td class="text-end">
+                                        {% if item.need > 0 %}
+                                            <span class="badge bg-warning text-dark px-2">{{ item.need }}</span>
+                                        {% else %}
+                                            <span class="badge bg-success px-2">✓ Full</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Full-Width 20-Team Club & Big Six Exposure Dashboard -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap">
+                    <h4 class="mb-0 fw-bold text-dark">Premier League Clubs & Big Six Exposure</h4>
+                    <div class="d-flex gap-2 mt-2 mt-sm-0">
+                        <span class="badge bg-primary fs-6 px-3 py-2">Big Six: {{ big_six_count }}</span>
+                        <span class="badge bg-secondary fs-6 px-3 py-2">Other: {{ non_big_six_count }}</span>
+                        <span class="badge bg-dark fs-6 px-3 py-2">Active Clubs: {{ club_breakdown | selectattr('has_players') | list | length }}</span>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
+                        {% for item in club_breakdown %}
+                        <div class="col">
+                            <div class="card h-100 shadow-sm rounded-3 transition-all {% if not item.has_players %}opacity-50 border-secondary-subtle{% endif %}"
+                                 style="{% if item.has_players %}background-color: {{ item.bg_color }}; color: {{ item.text_color }}; border: 2px solid {{ item.border_color }};{% else %}background-color: #f8f9fa; border: 1px dashed #cccccc; color: #6c757d;{% endif %}">
+                                <div class="card-body p-3 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <span class="fw-bold fs-4">{{ item.code }}</span>
+                                            {% if item.is_big_six %}
+                                                <span class="badge {% if item.has_players %}bg-warning text-dark{% else %}bg-secondary opacity-75{% endif %} px-2 py-1">Big 6</span>
+                                            {% else %}
+                                                <span class="badge {% if item.has_players %}bg-dark text-light opacity-75{% else %}bg-secondary opacity-50{% endif %} px-2 py-1">Other</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small fw-semibold mb-2 {% if not item.has_players %}text-muted{% endif %}">{{ item.name }}</div>
+                                        
+                                        <div class="mb-2">
+                                            {% if item.has_players %}
+                                                <span class="badge bg-white text-dark border fw-bold fs-6">{{ item.count }} Player{% if item.count > 1 %}s{% endif %}</span>
+                                            {% else %}
+                                                <span class="small text-muted">0 Players</span>
+                                            {% endif %}
+                                        </div>
+
+                                        {% if item.has_players %}
+                                        <div class="pt-2 border-top border-white-50 small" style="max-height: 130px; overflow-y: auto;">
+                                            <ul class="list-unstyled mb-0 text-start">
+                                                {% for player_name in item.players %}
+                                                <li class="py-1 fw-bold text-truncate" title="{{ player_name }}">
+                                                    • {{ player_name }}
+                                                </li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         {% endfor %}
-                    </tbody>
-                </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

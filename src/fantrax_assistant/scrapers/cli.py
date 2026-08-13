@@ -66,7 +66,7 @@ def injuries():
 
 @scrape_cli.command()
 @click.option('--csv', '-c', 'csv_file',
-              type=click.Path(exists=True),
+              type=click.Path(),
               default='data/fantrax_export.csv',
               help='Path to Fantrax CSV export file')
 def adp(csv_file):
@@ -161,7 +161,7 @@ def afcon():
 
 @scrape_cli.command()
 @click.option('--csv', '-c', 'csv_file',
-              type=click.Path(exists=True),
+              type=click.Path(),
               default='data/fantrax_export.csv',
               help='Path to Fantrax CSV export file')
 def all(csv_file):

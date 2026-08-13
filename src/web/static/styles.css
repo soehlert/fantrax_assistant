@@ -6,29 +6,46 @@
     --danger-color: #dc3545;
     --warning-color: #ffc107;
     --info-color: #0dcaf0;
-    --dark-bg: #1a1a1a;
-    --card-bg: #2d2d2d;
+}
+
+/* Dark Mode Theme Tokens */
+[data-bs-theme="dark"] {
+    --bs-body-bg: #0f172a;
+    --bs-body-color: #f8fafc;
+    --bs-card-bg: #1e293b;
+    --bs-card-border-color: #334155;
+    --bs-tertiary-bg: #1e293b;
+}
+
+[data-bs-theme="dark"] body {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
 }
 
 /* Navbar Styling */
 .navbar-custom {
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-bs-theme="light"] .navbar-custom {
     background: #1e3a5f;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-bottom: none;
 }
 
 .navbar-brand {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 1.5rem;
     letter-spacing: 1px;
     color: white !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .navbar-custom .nav-link {
     color: rgba(255, 255, 255, 0.85) !important;
     transition: color 0.2s ease;
     font-weight: 500;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 .navbar-custom .nav-link:hover,
@@ -36,47 +53,57 @@
     color: #ffffff !important;
 }
 
-/* Dropdown Menu */
-.dropdown-menu-dark {
-    background: #ffffff;
-    border: 1px solid #d0d0d0;
-    border-radius: 0;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-    min-width: 220px;
-    padding: 0;
-    margin-top: 0.5rem;
+/* Card and Table Styling Overrides for Dark Mode */
+[data-bs-theme="dark"] .card {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
 }
 
-.dropdown-menu-dark .dropdown-item {
-    color: #1a1a1a;
-    padding: 0.875rem 1.25rem;
-    font-weight: 500;
-    transition: background-color 0.15s ease;
-    border-radius: 0;
-    margin: 0;
-    border-bottom: 1px solid #f0f0f0;
+[data-bs-theme="dark"] .card-header {
+    background-color: #0f172a !important;
+    border-bottom-color: #334155 !important;
+    color: #f8fafc !important;
 }
 
-.dropdown-menu-dark .dropdown-item:last-child {
-    border-bottom: none;
+[data-bs-theme="dark"] .table-light {
+    --bs-table-bg: #334155;
+    --bs-table-color: #f8fafc;
 }
 
-.dropdown-menu-dark .dropdown-item:hover {
-    background-color: #f8f9fa;
-    color: #1e3a5f;
+[data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
 }
 
-.dropdown-menu-dark .dropdown-item.active {
-    background-color: #e8f0ff;
-    color: #1e3a5f;
+[data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > * {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
 }
 
-/* Position Badges - Black text for readability */
-.badge-position-g,
-.badge-position-d,
-.badge-position-m,
-.badge-position-f {
-    color: #000000 !important;
-    font-size: 1.1rem !important;
-    font-weight: normal !important;
+[data-bs-theme="dark"] .table-hover > tbody > tr:hover > * {
+    background-color: #334155 !important;
+    color: #ffffff !important;
+}
+
+/* Autocomplete Popover */
+[data-bs-theme="dark"] .list-group-item {
+    background-color: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+[data-bs-theme="dark"] .list-group-item-action:hover {
+    background-color: #334155 !important;
+    color: #ffffff !important;
+}
+
+/* Position Badges */
+.badge-position-g { background-color: #38bdf8 !important; color: #000000 !important; }
+.badge-position-d { background-color: #818cf8 !important; color: #ffffff !important; }
+.badge-position-m { background-color: #c084fc !important; color: #ffffff !important; }
+.badge-position-f { background-color: #4ade80 !important; color: #000000 !important; }
+
+.transition-all {
+    transition: all 0.2s ease-in-out;
 }

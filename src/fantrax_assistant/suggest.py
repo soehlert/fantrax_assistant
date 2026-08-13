@@ -30,18 +30,54 @@ class PlayerRecommendationEngine:
         scoring = self.config.league_config.get('scoring_rules', {})
         return set(scoring.get('top_8_clubs', []))
 
+    def get_effective_fpg(self, player: dict) -> float:
+        """
+        Calculate effective FP/G regressed towards baseline based on sample size and potential (ADP).
+        Low sample players (< 5 games) are capped at the 2.25 baseline unless ADP shows high potential (ADP <= 60).
+        """
+        try:
+            fpts = float(player.get('fpts', 0))
+            fpg_raw = float(player.get('fpg', 0))
+            adp = float(player.get('adp', 999))
+        except (ValueError, TypeError):
+            return 0.0
+
+        if fpg_raw <= 0:
+            return 0.0
+
+        # Estimate matches played from total FPts and FP/G
+        games = fpts / fpg_raw if fpg_raw > 0 else 0
+        league_baseline_fpg = 2.25
+
+        # For low sample size (< 5 matches):
+        if games < 5:
+            # High potential player (ADP <= 60) gets full regressed rating
+            if adp <= 60:
+                prior_games = 6.0
+                effective_fpg = ((fpg_raw * games) + (league_baseline_fpg * prior_games)) / (games + prior_games)
+            else:
+                # Unproven player (high ADP): cap effective FP/G at 2.25 baseline
+                prior_games = 10.0
+                regressed = ((fpg_raw * games) + (league_baseline_fpg * prior_games)) / (games + prior_games)
+                effective_fpg = min(regressed, league_baseline_fpg)
+        else:
+            # Regular player with >= 5 matches
+            prior_games = 6.0
+            effective_fpg = ((fpg_raw * games) + (league_baseline_fpg * prior_games)) / (games + prior_games)
+
+        return effective_fpg
+
     def calculate_base_value(self, player: dict) -> float:
         """
-        Calculate base value from Fantrax FP/G (already includes league scoring).
+        Calculate base value from effective FP/G (weighted by sample size).
         Weight: 30%
         """
-        fpg = player.get('fpg', 0)
+        fpg = self.get_effective_fpg(player)
         position = player.get('position', 'M')
         pos_weight = self.get_position_weight(position)
 
-        # Normalize FP/G to 0-100 scale
-        # Assume elite player averages ~6 FP/G
-        normalized = min(fpg / 6.0 * 100, 100)
+        # Normalize FP/G to 0-100 scale (elite effective FP/G ~4.5 in this league)
+        normalized = min(fpg / 4.5 * 100, 100)
         adjusted = normalized * pos_weight
 
         return min(adjusted * 0.30, 30)
@@ -75,12 +111,6 @@ class PlayerRecommendationEngine:
                     recent_fpts = form_player.get('recent_fpg', 0)
                     normalized = min(recent_fpts / 6.0 * 100, 100)
                     return normalized * 0.20
-
-        # Check minimum starts requirement
-        min_starts = 5 if days >= 60 else 3
-
-        if starts < min_starts:
-            return None
 
         # Fallback to season stats
         stats = player.get('stats')
@@ -213,7 +243,7 @@ class PlayerRecommendationEngine:
         available players at their position.
         """
         position = player.get('position', '')
-        player_fpg = player.get('fpg', 0)
+        player_fpg = self.get_effective_fpg(player)
 
         all_players = self.config.rankings.get('rankings', [])
         position_players = [
@@ -225,7 +255,7 @@ class PlayerRecommendationEngine:
         if not position_players or len(position_players) < 2:
             return 2.5  # No scarcity data available
 
-        position_players.sort(key=lambda x: x.get('fpg', 0), reverse=True)
+        position_players.sort(key=lambda x: self.get_effective_fpg(x), reverse=True)
 
         # Find this player's rank among available
         player_rank = None
@@ -249,7 +279,7 @@ class PlayerRecommendationEngine:
             return 5.0  # Last player, high scarcity
 
         next_tier_players = position_players[next_tier_start:next_tier_end]
-        next_tier_avg = sum(p.get('fpg', 0) for p in next_tier_players) / len(next_tier_players)
+        next_tier_avg = sum(self.get_effective_fpg(p) for p in next_tier_players) / len(next_tier_players)
 
         if next_tier_avg == 0:
             return 5.0
@@ -266,11 +296,11 @@ class PlayerRecommendationEngine:
         Weight: 5%
         """
         position = player.get('position', '')
-        fpg = player.get('fpg', 0)
+        fpg = self.get_effective_fpg(player)
 
         all_players = self.config.rankings.get('rankings', [])
         position_players = [
-            p.get('fpg', 0) for p in all_players
+            self.get_effective_fpg(p) for p in all_players
             if position in p.get('position', '')
         ]
 
