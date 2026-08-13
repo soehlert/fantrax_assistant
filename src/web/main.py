@@ -725,9 +725,12 @@ async def read_player_profile(request: Request, player_name: str):
 
         for u_key, label_name, pl_key in metric_configs:
             raw_val = 0.0
-            # Official counting stats (goals, assists, tackles, cbi, recoveries, clean_sheets) MUST prioritize official FPL/Fantrax pl_stats!
-            if pl_key in {"goals", "assists", "clean_sheets", "tackles", "cbi", "recoveries"} and pl_stats and pl_key in pl_stats and pl_stats.get(pl_key) is not None:
-                raw_val = float(pl_stats.get(pl_key, 0) or 0)
+            # Official counting stats (goals, assists, tackles, cbi, recoveries, clean_sheets) MUST prioritize Fantrax first!
+            if pl_key in {"goals", "assists", "clean_sheets", "tackles", "cbi", "recoveries"}:
+                if fantrax_info and pl_key in fantrax_info and fantrax_info.get(pl_key) is not None:
+                    raw_val = float(fantrax_info.get(pl_key, 0) or 0)
+                elif pl_stats and pl_key in pl_stats and pl_stats.get(pl_key) is not None:
+                    raw_val = float(pl_stats.get(pl_key, 0) or 0)
             elif player_data and u_key in player_data and player_data.get(u_key) is not None:
                 raw_val = float(player_data.get(u_key, 0) or 0)
             elif pl_stats and pl_key in pl_stats and pl_stats.get(pl_key) is not None:
