@@ -474,6 +474,9 @@ async def read_draft_analysis(request: Request):
     if not top_steal and analysis_history:
         top_steal = best_overall
 
+    # Rolling calculation of the worst pick (lowest score)
+    worst_pick = min(analysis_history, key=lambda x: x.get("score", 100)) if analysis_history else None
+
     return templates.TemplateResponse(
         request=request,
         name="analysis.html",
@@ -481,6 +484,7 @@ async def read_draft_analysis(request: Request):
             "feed": analysis_history_sorted,
             "best_overall": best_overall,
             "top_steal": top_steal,
+            "worst_pick": worst_pick,
             "tracked_teams": list(teams_data.keys())
         }
     )
