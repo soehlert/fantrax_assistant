@@ -538,8 +538,9 @@ async def read_player_profile(request: Request, player_name: str):
     player_data = None
     chart_data = None
     try:
+        player_pos_hint = (fantrax_info.get("position") or "").split(",")[0].strip()
         player_data = understat.get_player_data_by_name(
-            player_name=player_name_clean, league="EPL", season="2024"
+            player_name=player_name_clean, league="EPL", season="2024", player_position=player_pos_hint
         )
         if player_data:
             position = player_data.get("position", "").split(" ")[0]

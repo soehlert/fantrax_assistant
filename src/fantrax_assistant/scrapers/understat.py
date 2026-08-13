@@ -47,12 +47,12 @@ class Understat:
         return data
 
     def get_player_data_by_name(
-        self, player_name: str, league: str, season: str
+        self, player_name: str, league: str, season: str, player_position: Optional[str] = None
     ) -> Optional[Dict]:
         import unicodedata
         def norm(s: str) -> str:
             return ''.join(
-                c for c in unicodedata.normalize('NFD', s)
+                c for c in unicodedata.normalize('NFD', str(s))
                 if unicodedata.category(c) != 'Mn'
             ).lower().replace('-', ' ').replace('.', '').strip()
 
@@ -64,13 +64,20 @@ class Understat:
             if norm(p["player_name"]) == target:
                 return p
 
-        # 2. Token overlap / substring match (e.g. Gabriel Magalhaes -> Gabriel)
+        # 2. Position-filtered token overlap / substring match
+        target_pos = (player_position or "").split(",")[0].strip().upper()
         target_tokens = set(target.split())
         for p in players:
             p_norm = norm(p["player_name"])
             p_tokens = set(p_norm.split())
-            if target in p_norm or p_norm in target or (len(target_tokens) > 1 and target_tokens.issubset(p_tokens)):
-                return p
+            p_pos = p.get("position", "").split(" ")[0].upper()
+
+            if len(target_tokens) > 1 and target_tokens.issubset(p_tokens):
+                if not target_pos or target_pos in p_pos or p_pos in target_pos:
+                    return p
+            elif target in p_norm:
+                if len(target_tokens) > 1 or (target_pos and (target_pos in p_pos or p_pos in target_pos)):
+                    return p
 
         return None
 
