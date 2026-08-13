@@ -183,7 +183,7 @@
     {% endfor %}
 </section>
 
-<!-- Suggestions Table Section (Includes Direct Row Clicking & Draft Buttons) -->
+<!-- Suggestions Table Section (Click Row to Open Confirmation Modal) -->
 <section class="mt-8 flex flex-col gap-6">
     <h2 class="text-headline-lg font-display text-on-surface">Suggestions</h2>
 
@@ -224,7 +224,6 @@
                         <th class="px-6 py-4">Fantasy Points</th>
                         <th class="px-6 py-4">FP/Game</th>
                         <th class="px-6 py-4">Status</th>
-                        <th class="px-6 py-4 text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody class="text-body-md text-on-surface">
@@ -251,17 +250,10 @@
                                 <span class="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">Long Term</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 text-right">
-                            <button type="button" 
-                                    onclick="event.stopPropagation(); triggerDraftConfirmModal('{{ player.player }}')" 
-                                    class="bg-primary-container hover:bg-blue-600 text-white font-bold text-xs px-3.5 py-1.5 rounded-md transition-all shadow-sm active:scale-95 inline-flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[14px]">add</span> Draft
-                            </button>
-                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="8" class="px-6 py-8 text-center text-on-surface-variant">No suggestions available for this team's needs.</td>
+                        <td colspan="7" class="px-6 py-8 text-center text-on-surface-variant">No suggestions available for this team's needs.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -271,7 +263,7 @@
     {{ render_pagination(suggestions, 'page_suggestions', '&exclude_teams=' + exclude_teams + '&exclude_positions=' + exclude_positions) }}
 </section>
 
-<!-- Draft Confirmation Modal Popup -->
+<!-- Draft Confirmation Modal Popup (Clean Transparent Outline Tag, No Solid Button) -->
 <div id="draft-confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 transition-all">
     <div class="bg-surface-container border border-outline-variant rounded-xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-5 animate-in fade-in zoom-in duration-200">
         <div class="flex items-center gap-3.5">
@@ -289,7 +281,7 @@
                 <span class="text-lg font-bold text-on-surface" id="modal-player-name">Player Name</span>
                 <span class="text-xs text-on-surface-variant mt-0.5">Drafting for team: <strong class="text-on-surface">{{ team_name }}</strong></span>
             </div>
-            <span class="bg-primary-container text-white px-3 py-1 rounded-md text-xs font-bold shadow-sm">Pick Now</span>
+            <span class="border border-outline-variant text-on-surface-variant text-xs font-semibold px-3 py-1 rounded-md bg-surface-container-high">Available Pick</span>
         </div>
 
         <form action="{{ url_for('draft_player', team_id=team_name) }}" method="post" id="modal-draft-form">

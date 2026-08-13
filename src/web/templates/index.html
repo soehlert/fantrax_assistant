@@ -34,7 +34,7 @@
 </div>
 {% endif %}
 
-<!-- Available Players Section -->
+<!-- Available Players Section (Click Row to Draft) -->
 <section class="flex flex-col gap-6 mt-6">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 class="text-headline-lg font-display text-on-surface">Available Players</h2>
@@ -65,12 +65,10 @@
                 </thead>
                 <tbody class="text-body-md text-on-surface">
                     {% for player in available.players %}
-                    <tr class="border-b border-outline-variant table-row-hover transition-colors">
+                    <tr onclick="triggerDraftConfirmModal('{{ player.player }}')" class="border-b border-outline-variant table-row-hover transition-colors cursor-pointer group">
                         <td class="px-6 py-4 font-bold text-on-surface-variant">{{ loop.index + (available.page - 1) * available.page_size }}</td>
-                        <td class="px-6 py-4 font-medium">
-                            <a href="{{ url_for('read_player_profile', player_name=player.player) }}" class="hover:text-primary transition-colors">
-                                {{ player.player }}
-                            </a>
+                        <td class="px-6 py-4 font-medium group-hover:text-primary transition-colors">
+                            {{ player.player }}
                         </td>
                         <td class="px-6 py-4">
                             {% if player.position != 'N/A' %}
@@ -96,7 +94,7 @@
     {{ render_pagination(available, 'page_available', '&page_drafted=' + drafted.page|string + '&search=' + (search_query or '')) }}
 </section>
 
-<!-- Drafted Players Section (7 Columns - FP/Game Removed to Line Up Perfectly With Available Players Above) -->
+<!-- Drafted Players Section (7 Columns) -->
 <section class="flex flex-col gap-6 mt-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 class="text-headline-lg font-display text-on-surface">Drafted Players</h2>
@@ -158,8 +156,84 @@
     {{ render_pagination(drafted, 'page_drafted', '&page_available=' + available.page|string + '&search_drafted=' + (search_drafted_query or '')) }}
 </section>
 
+<!-- Homepage Draft Confirmation Modal Popup -->
+<div id="draft-confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 transition-all">
+    <div class="bg-surface-container border border-outline-variant rounded-xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-5 animate-in fade-in zoom-in duration-200">
+        <div class="flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-full bg-primary-container/20 text-primary-container flex items-center justify-center flex-shrink-0">
+                <span class="material-symbols-outlined text-xl">person_add</span>
+            </div>
+            <div>
+                <h3 class="text-xl font-bold text-on-surface">Confirm Draft Pick</h3>
+                <p class="text-xs text-on-surface-variant mt-0.5">Select a team to draft this player for</p>
+            </div>
+        </div>
+
+        <div class="bg-surface-container-low border border-outline-variant rounded-lg p-4 flex flex-col gap-3">
+            <div class="flex items-center justify-between">
+                <span class="text-lg font-bold text-on-surface" id="modal-player-name">Player Name</span>
+                <span class="border border-outline-variant text-on-surface-variant text-xs font-semibold px-3 py-1 rounded-md bg-surface-container-high">Available Pick</span>
+            </div>
+            <div class="flex flex-col gap-1 mt-1">
+                <label class="text-xs font-semibold text-on-surface-variant">Draft for Team:</label>
+                <select id="modal-team-select" class="w-full bg-surface-container border border-outline-variant text-on-surface rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container" onchange="updateModalFormAction(this.value)">
+                    {% for t_name in tracked_teams %}
+                        <option value="{{ t_name }}">{{ t_name }}</option>
+                    {% else %}
+                        <option value="Sam">Sam</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <form action="/teams/{{ tracked_teams[0] if tracked_teams else 'Sam' }}/draft" method="post" id="modal-draft-form">
+            <input type="hidden" name="player_name" id="modal-hidden-player-input" value="">
+            <div class="flex justify-end gap-3 mt-1">
+                <button type="button" onclick="closeDraftConfirmModal()" class="bg-surface-variant hover:bg-outline-variant text-on-surface font-semibold text-sm py-2 px-5 rounded-md transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-2 px-6 rounded-md transition-colors shadow-md active:scale-95 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">check</span> Confirm Draft
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+function updateModalFormAction(teamName) {
+    const form = document.getElementById('modal-draft-form');
+    if (form) {
+        form.action = `/teams/${encodeURIComponent(teamName)}/draft`;
+    }
+}
+
+function triggerDraftConfirmModal(playerName) {
+    document.getElementById('modal-player-name').textContent = playerName;
+    document.getElementById('modal-hidden-player-input').value = playerName;
+    const teamSelect = document.getElementById('modal-team-select');
+    if (teamSelect) {
+        updateModalFormAction(teamSelect.value);
+    }
+    document.getElementById('draft-confirm-modal').classList.remove('hidden');
+}
+
+function closeDraftConfirmModal() {
+    document.getElementById('draft-confirm-modal').classList.add('hidden');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDraftConfirmModal();
+    });
+
+    const modal = document.getElementById('draft-confirm-modal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeDraftConfirmModal();
+        });
+    }
+
     // CLEAR DRAFT TOAST QUERY PARAMETERS FROM URL HISTORY AFTER RENDER (PREVENTS REPEAT ON RELOAD)
     if (window.location.search.includes('draft_status')) {
         const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
@@ -198,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                resultsContainer.classList.remove('hidden');
+                container.classList.remove('hidden');
                 data.players.forEach(name => {
                     const item = document.createElement('a');
                     item.href = '#';
