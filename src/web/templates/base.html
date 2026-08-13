@@ -112,10 +112,10 @@
             background-color: #373942;
         }
         /* 4 Distinct, High-Contrast Colors for Positions */
-        .pos-badge-g { background-color: #fbbf24; color: #000; } /* Warm Amber Gold */
-        .pos-badge-d { background-color: #06b6d4; color: #fff; } /* Electric Cyan */
-        .pos-badge-m { background-color: #a855f7; color: #fff; } /* Royal Violet Purple */
-        .pos-badge-f { background-color: #22c55e; color: #fff; } /* Emerald Green */
+        .pos-badge-g { background-color: #fbbf24; color: #000; }
+        .pos-badge-d { background-color: #06b6d4; color: #fff; }
+        .pos-badge-m { background-color: #a855f7; color: #fff; }
+        .pos-badge-f { background-color: #22c55e; color: #fff; }
         .need-badge { background-color: #facc15; color: #000; }
         .team-badge { background-color: #434655; color: #e1e2ed; }
         .adp-badge { background-color: #32343d; color: #e1e2ed; border-color: #434655; }
@@ -141,23 +141,35 @@
                 </a>
             </div>
         </div>
-        <div class="flex items-center gap-6">
-            <!-- Tracked Teams Dropdown -->
-            <div class="relative inline-block text-left" id="teams-dropdown-container">
-                <button type="button" onclick="document.getElementById('teams-menu').classList.toggle('hidden')" class="flex items-center gap-2 bg-[#333] text-on-surface hover:bg-[#444] transition-all px-4 py-2 rounded-md text-sm font-medium">
-                    <span>Tracked Teams</span>
-                    <span class="material-symbols-outlined text-[18px]">expand_more</span>
-                </button>
-                <div id="teams-menu" class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface-container border border-outline-variant ring-1 ring-black ring-opacity-5 z-50">
-                    <div class="py-1">
-                        {% for t_name in tracked_teams %}
-                            <a href="{{ url_for('read_team', team_id=t_name) }}" class="block px-4 py-2 text-sm text-on-surface hover:bg-surface-variant transition-colors">{{ t_name }}</a>
-                        {% else %}
-                            <span class="block px-4 py-2 text-sm text-on-surface-variant">No teams tracked</span>
-                        {% endfor %}
+
+        <!-- Right Side: Inline Tracked Team Links or Responsive Dropdown -->
+        <div class="flex items-center gap-4">
+            {% if tracked_teams | length <= 4 and tracked_teams | length > 0 %}
+                <div class="hidden sm:flex items-center gap-2">
+                    <span class="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mr-1">Teams:</span>
+                    {% for t_name in tracked_teams %}
+                        <a href="{{ url_for('read_team', team_id=t_name) }}" class="text-sm font-medium text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-outline-variant/60 bg-surface-container-low">
+                            <span class="material-symbols-outlined text-[16px] text-primary-container">groups</span> {{ t_name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="relative inline-block text-left" id="teams-dropdown-container">
+                    <button type="button" onclick="document.getElementById('teams-menu').classList.toggle('hidden')" class="flex items-center gap-2 bg-[#333] text-on-surface hover:bg-[#444] transition-all px-4 py-2 rounded-md text-sm font-medium">
+                        <span>Tracked Teams</span>
+                        <span class="material-symbols-outlined text-[18px]">expand_more</span>
+                    </button>
+                    <div id="teams-menu" class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface-container border border-outline-variant ring-1 ring-black ring-opacity-5 z-50">
+                        <div class="py-1">
+                            {% for t_name in tracked_teams %}
+                                <a href="{{ url_for('read_team', team_id=t_name) }}" class="block px-4 py-2 text-sm text-on-surface hover:bg-surface-variant transition-colors">{{ t_name }}</a>
+                            {% else %}
+                                <span class="block px-4 py-2 text-sm text-on-surface-variant">No teams tracked</span>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
-            </div>
+            {% endif %}
         </div>
     </div>
 </header>
