@@ -17,11 +17,20 @@
     </div>
 </section>
 
-<!-- Draft Status Alert -->
+<!-- Draft Status Alert Toast (Transparent Green Pill with Green Border & Auto-Dismiss) -->
 {% if draft_status %}
-<div class="w-full max-w-2xl mx-auto">
-    <div class="p-4 rounded-md {% if draft_status == 'success' %}bg-green-900/40 text-green-200 border border-green-700{% else %}bg-red-900/40 text-red-200 border border-red-700{% endif %} flex justify-between items-center">
-        <span>{{ message }}</span>
+<div class="w-full max-w-2xl mx-auto my-2" id="draft-toast-alert-main">
+    <div class="px-5 py-2.5 rounded-full {% if draft_status == 'success' %}bg-emerald-950/40 text-emerald-300 border border-emerald-500/70 shadow-lg backdrop-blur-sm{% else %}bg-red-950/40 text-red-300 border border-red-500/70 shadow-lg backdrop-blur-sm{% endif %} flex justify-between items-center transition-all duration-300">
+        <span class="text-sm font-medium flex items-center gap-2">
+            {% if draft_status == 'success' %}
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                {{ message }}
+            {% else %}
+                <span class="w-2 h-2 rounded-full bg-red-400"></span>
+                {{ message }}
+            {% endif %}
+        </span>
+        <button type="button" onclick="document.getElementById('draft-toast-alert-main').remove()" class="text-emerald-400 hover:text-emerald-200 text-sm font-bold ml-4">✕</button>
     </div>
 </div>
 {% endif %}
@@ -154,6 +163,15 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // AUTO-DISMISS DRAFT TOAST ALERT AFTER 4 SECONDS
+    const toastAlert = document.getElementById('draft-toast-alert-main');
+    if (toastAlert) {
+        setTimeout(() => {
+            toastAlert.style.opacity = '0';
+            setTimeout(() => toastAlert.remove(), 300);
+        }, 4000);
+    }
+
     function setupAutocomplete(inputId, resultsId, endpoint = '/api/players/autocomplete') {
         const input = document.getElementById(inputId);
         const container = document.getElementById(resultsId);

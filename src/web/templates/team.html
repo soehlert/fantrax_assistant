@@ -17,17 +17,20 @@
     </div>
 </section>
 
-<!-- Draft Status Alert -->
+<!-- Draft Status Alert Toast (Transparent Green Pill with Green Border & Auto-Dismiss) -->
 {% if draft_status %}
-<div class="w-full max-w-2xl mx-auto">
-    <div class="p-4 rounded-md {% if draft_status == 'success' %}bg-green-900/40 text-green-200 border border-green-700{% else %}bg-red-900/40 text-red-200 border border-red-700{% endif %} flex justify-between items-center">
-        <span>
+<div class="w-full max-w-2xl mx-auto my-2" id="draft-toast-alert">
+    <div class="px-5 py-2.5 rounded-full {% if draft_status == 'success' %}bg-emerald-950/40 text-emerald-300 border border-emerald-500/70 shadow-lg backdrop-blur-sm{% else %}bg-red-950/40 text-red-300 border border-red-500/70 shadow-lg backdrop-blur-sm{% endif %} flex justify-between items-center transition-all duration-300">
+        <span class="text-sm font-medium flex items-center gap-2">
             {% if draft_status == 'success' %}
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 Successfully drafted <strong>{{ drafted_player }}</strong>!
             {% else %}
+                <span class="w-2 h-2 rounded-full bg-red-400"></span>
                 <strong>Error:</strong> {{ drafted_player }}
             {% endif %}
         </span>
+        <button type="button" onclick="document.getElementById('draft-toast-alert').remove()" class="text-emerald-400 hover:text-emerald-200 text-sm font-bold ml-4">✕</button>
     </div>
 </div>
 {% endif %}
@@ -131,7 +134,7 @@
     </div>
 </section>
 
-<!-- 4x5 Grid for ALL 20 Team Cards (Pure Flexbox / Grid Layout - No Hardcoded Height Sizes) -->
+<!-- 4x5 Grid for ALL 20 Team Cards (Dynamic Flexbox/Grid Layout) -->
 <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
     {% for item in club_breakdown %}
     {% if item.has_players %}
@@ -181,33 +184,35 @@
     {% endfor %}
 </section>
 
-<!-- Suggestions Table Section (Includes Filters Inside Section) -->
+<!-- Suggestions Table Section (Heading FIRST, then Filter Row directly UNDER Heading) -->
 <section class="mt-8 flex flex-col gap-6">
-    <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form">
-        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div class="flex flex-col gap-2 flex-grow max-w-md">
-                <label class="text-sm font-medium text-on-surface">Exclude Teams</label>
-                <input name="exclude_teams" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-shadow" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
+    <h2 class="text-headline-lg font-display text-on-surface">Suggestions</h2>
+
+    <!-- Compact Filter Bar Row Directly Under Suggestions Heading (No Whitespace Gaps) -->
+    <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="bg-surface-container border border-outline-variant rounded-xl p-4 shadow-sm">
+        <div class="flex flex-wrap items-center gap-6">
+            <div class="flex items-center gap-3">
+                <label class="text-sm font-semibold text-on-surface whitespace-nowrap">Exclude Teams:</label>
+                <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-64" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
             </div>
-            <div class="flex flex-col gap-2">
-                <label class="text-sm font-medium text-on-surface">Exclude Positions</label>
-                <div class="flex items-center gap-4 py-2">
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-semibold text-on-surface whitespace-nowrap">Exclude Positions:</span>
+                <div class="flex items-center gap-3">
                     {% for pos in all_positions %}
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input class="form-checkbox position-checkbox rounded bg-surface-container border-outline-variant text-primary-container focus:ring-primary-container focus:ring-offset-background" type="checkbox" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}/>
+                    <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                        <input class="form-checkbox position-checkbox rounded bg-surface-container-low border-outline-variant text-primary-container focus:ring-primary-container" type="checkbox" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}/>
                         <span class="text-sm font-medium text-on-surface">{{ pos }}</span>
                     </label>
                     {% endfor %}
                 </div>
                 <input type="hidden" id="exclude-positions-input" name="exclude_positions" value="{{ exclude_positions }}">
             </div>
-            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-medium py-2 px-8 rounded-md transition-colors active:scale-95">
+            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-1.5 px-6 rounded-md transition-colors active:scale-95 ml-auto md:ml-0">
                 Filter
             </button>
         </div>
     </form>
 
-    <h2 class="text-headline-lg font-display text-on-surface mt-2">Suggestions</h2>
     <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
@@ -261,6 +266,15 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // AUTO-DISMISS DRAFT TOAST ALERT AFTER 4 SECONDS
+    const toastAlert = document.getElementById('draft-toast-alert');
+    if (toastAlert) {
+        setTimeout(() => {
+            toastAlert.style.opacity = '0';
+            setTimeout(() => toastAlert.remove(), 300);
+        }, 4000);
+    }
+
     // AUTOCOMPLETE FOR PLAYER INPUT
     const playerInput = document.getElementById('player-draft-input');
     const resultsContainer = document.getElementById('autocomplete-results');
