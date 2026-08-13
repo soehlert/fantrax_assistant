@@ -20,21 +20,30 @@ class DraftPickAnalyzer:
         Calculates letter grade, grade score (0-100), and rationale text for a draft pick.
         """
         adp = player_adp if (player_adp and player_adp > 0) else 100.0
-        adp_diff = overall_pick_num - adp  # Positive = Steal (taken later than ADP), Negative = Reach
+        adp_diff = overall_pick_num - adp  # Positive = Steal, Negative = Reach
 
-        score = 82.0 + (adp_diff * 0.8)
+        # Baseline score starts at 92.0 (A-) for selecting top players
         reasons = []
 
-        if adp_diff >= 15:
-            reasons.append(f"Major value steal! {player_name} (ADP #{adp:.1f}) was selected at pick #{overall_pick_num}.")
-        elif adp_diff >= 5:
-            reasons.append(f"Great value pick ({player_name}, ADP #{adp:.1f} at pick #{overall_pick_num}).")
-        elif adp_diff <= -20:
-            reasons.append(f"Significant reach. {player_name} (ADP #{adp:.1f}) was selected early at pick #{overall_pick_num}.")
-        elif adp_diff <= -8:
-            reasons.append(f"Slight reach based on consensus ADP (#{adp:.1f}).")
+        if adp_diff >= 0:
+            value_score = 92.0 + min(7.0, adp_diff * 0.7)
+            if adp_diff >= 12:
+                reasons.append(f"Major value steal! {player_name} (ADP #{adp:.1f}) was selected at pick #{overall_pick_num}.")
+            elif adp_diff >= 5:
+                reasons.append(f"Great value pick ({player_name}, ADP #{adp:.1f} at pick #{overall_pick_num}).")
+            else:
+                reasons.append(f"Solid pick right around expected ADP (#{adp:.1f}).")
         else:
-            reasons.append(f"Fair market value pick right around expected ADP (#{adp:.1f}).")
+            reach_ratio = abs(adp_diff) / max(1.0, adp)
+            penalty = min(28.0, reach_ratio * 15.0 + abs(adp_diff) * 0.25)
+            value_score = 92.0 - penalty
+
+            if adp_diff <= -25:
+                reasons.append(f"Target reach. {player_name} (ADP #{adp:.1f}) was selected ahead of consensus rank at pick #{overall_pick_num}.")
+            elif adp_diff <= -8:
+                reasons.append(f"Slight reach based on consensus ADP (#{adp:.1f}).")
+            else:
+                reasons.append(f"Fair market value pick right around expected ADP (#{adp:.1f}).")
 
         primary_pos = player_pos.split(',')[0].strip().upper() if player_pos else 'M'
         roster_rules = {"G": 2, "D": 5, "M": 5, "F": 3}
@@ -43,27 +52,27 @@ class DraftPickAnalyzer:
 
         if current_pos_count < max_pos:
             if current_pos_count == 0 and primary_pos in ('G', 'D'):
-                score += 6.0
+                value_score += 4.0
                 reasons.append(f"Fills an urgent starting {primary_pos} roster need for {team_id}.")
             else:
-                score += 3.0
+                value_score += 2.0
                 reasons.append(f"Addresses team {primary_pos} positional depth ({current_pos_count + 1}/{max_pos}).")
         else:
-            score -= 8.0
+            value_score -= 6.0
             reasons.append(f"Roster surplus pick—{team_id} already reached standard capacity ({max_pos}) for position {primary_pos}.")
 
-        score = max(50.0, min(100.0, score))
+        score = max(55.0, min(100.0, value_score))
 
-        if score >= 97: grade, grade_class = "A+", "emerald"
-        elif score >= 93: grade, grade_class = "A", "emerald"
-        elif score >= 90: grade, grade_class = "A-", "emerald"
-        elif score >= 87: grade, grade_class = "B+", "blue"
-        elif score >= 83: grade, grade_class = "B", "blue"
-        elif score >= 80: grade, grade_class = "B-", "blue"
-        elif score >= 77: grade, grade_class = "C+", "amber"
-        elif score >= 73: grade, grade_class = "C", "amber"
-        elif score >= 70: grade, grade_class = "C-", "amber"
-        elif score >= 60: grade, grade_class = "D", "red"
+        if score >= 96: grade, grade_class = "A+", "emerald"
+        elif score >= 92: grade, grade_class = "A", "emerald"
+        elif score >= 88: grade, grade_class = "A-", "emerald"
+        elif score >= 84: grade, grade_class = "B+", "blue"
+        elif score >= 80: grade, grade_class = "B", "blue"
+        elif score >= 76: grade, grade_class = "B-", "blue"
+        elif score >= 72: grade, grade_class = "C+", "amber"
+        elif score >= 68: grade, grade_class = "C", "amber"
+        elif score >= 64: grade, grade_class = "C-", "amber"
+        elif score >= 58: grade, grade_class = "D", "red"
         else: grade, grade_class = "F", "red"
 
         return {
