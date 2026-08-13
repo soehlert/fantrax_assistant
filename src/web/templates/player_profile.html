@@ -205,15 +205,15 @@
     </div>
     {% endif %}
 
-    <!-- Similar Available Alternatives Card (Moved ABOVE Understat Chart) -->
+    <!-- Similar Available Alternatives Card (Moved ABOVE Chart) -->
     {% if similar_players %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4">
         <div class="flex items-center justify-between border-b border-outline-variant pb-3">
             <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary-container text-xl">compare_arrows</span>
-                <h3 class="text-headline-sm font-bold text-on-surface">Similar Understat Alternatives</h3>
+                <h3 class="text-headline-sm font-bold text-on-surface">Similar Available Alternatives</h3>
             </div>
-            <span class="text-xs font-semibold text-on-surface-variant">Top Undrafted Options Matched by ADP Tier & Understat Profile (xG, xA, Shots, Key Passes)</span>
+            <span class="text-xs font-semibold text-on-surface-variant">Top Undrafted Options Matched by ADP Tier & Positional Role</span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -226,8 +226,6 @@
                 <div class="grid grid-cols-2 gap-2 text-xs text-on-surface-variant bg-surface-container p-2 rounded border border-outline-variant/40">
                     <span>ADP: <strong class="text-on-surface">{{ "%.1f"|format(sim.adp) if sim.adp else '—' }}</strong></span>
                     <span>FP/G: <strong class="text-on-surface">{{ "%.2f"|format(sim.fpg) if sim.fpg else '—' }}</strong></span>
-                    <span>xG/G: <strong class="text-on-surface">{{ "%.2f"|format(sim.xg_per_game) }}</strong></span>
-                    <span>xA/G: <strong class="text-on-surface">{{ "%.2f"|format(sim.xa_per_game) }}</strong></span>
                 </div>
             </a>
             {% endfor %}
@@ -235,37 +233,30 @@
     </div>
     {% endif %}
 
-    <!-- Understat Horizontal Percentile Bar Chart -->
-    {% set is_gk = (fantrax_info.get('position') == 'G' or (player_data and player_data.get('position') == 'GK')) %}
-    {% set has_understat_metrics = player_data and not is_gk and chart_data %}
-
-    {% if has_understat_metrics %}
+    <!-- 10-Metric Combined Offense & Defense Horizontal Percentile Bar Chart -->
+    {% if chart_data %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4 pb-3 border-b border-outline-variant">
             <div>
-                <h3 class="text-headline-sm font-bold text-on-surface">Understat Advanced Positional Percentiles</h3>
-                <p class="text-xs text-on-surface-variant mt-0.5">Percentile rank compared to all Premier League players at the same position</p>
+                <h3 class="text-headline-sm font-bold text-on-surface">Premier League Offense & Defense Positional Percentiles</h3>
+                <p class="text-xs text-on-surface-variant mt-0.5">Percentile rank compared to all Premier League players at the same position (0-100th percentile)</p>
             </div>
             <span class="text-xs font-bold text-primary-container bg-primary-container/10 px-3 py-1.5 rounded-full border border-primary-container/30">
                 vs EPL {{ position_display }} Peers
             </span>
         </div>
-        <div class="h-[420px] w-full">
+        <div class="h-[460px] w-full">
             <canvas id="understatChart"></canvas>
         </div>
     </div>
-    {% elif is_gk %}
-    <div class="bg-surface-container border border-outline-variant rounded-xl p-5 shadow-sm text-center">
-        <p class="text-on-surface-variant text-sm font-medium">🛡️ Goalkeepers (G) do not record outfield expected goals (xG) or key pass metrics.</p>
-    </div>
     {% else %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-5 shadow-sm text-center">
-        <p class="text-on-surface-variant text-sm font-medium">No Understat advanced metrics recorded for this player.</p>
+        <p class="text-on-surface-variant text-sm font-medium">No Premier League statistical profile recorded for this player.</p>
     </div>
     {% endif %}
 </section>
 
-{% if has_understat_metrics %}
+{% if chart_data %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('understatChart');

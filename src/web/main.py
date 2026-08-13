@@ -519,9 +519,14 @@ def safe_float(value, default=0.0):
 
 @app.get("/player/{player_name}", response_class=HTMLResponse)
 async def read_player_profile(request: Request, player_name: str):
-    import urllib.parse
+    import urllib.parse, unicodedata, json
+    from scipy.stats import percentileofscore
+    import numpy as np
     from fantrax_assistant.db import DatabaseManager
     
+    def norm(s):
+        return ''.join(c for c in unicodedata.normalize('NFD', str(s)) if unicodedata.category(c) != 'Mn').lower().replace('-', ' ').strip()
+
     clean_identifier = urllib.parse.unquote(player_name).strip()
     db = DatabaseManager("data/fantrax_assistant.db")
     state = DraftState()
@@ -553,7 +558,6 @@ async def read_player_profile(request: Request, player_name: str):
 
     # 3. Understat Data Lookup via SQLite Understat ID
     player_data = None
-    chart_data = None
     understat_id = full_profile.get("understat_id")
     
     try:
@@ -566,35 +570,13 @@ async def read_player_profile(request: Request, player_name: str):
             player_data = understat.get_player_data_by_name(
                 player_name=player_name_clean, league="EPL", season="2024", player_position=player_pos_hint
             )
-
-        if player_data:
-            position = player_data.get("position", "").split(" ")[0]
-            positional_data = understat.get_positional_data(
-                player_position=position, league="EPL", season="2024"
-            )
-            percentiles = understat.get_player_percentiles(
-                player_data=player_data, positional_data=positional_data
-            )
-            metric_keys = ["goals", "npg", "xG", "npxG", "assists", "xA", "shots", "key_passes", "xGChain", "xGBuildup"]
-            metric_labels = [
-                "Goals", "Non-Penalty Goals", "xG (Expected Goals)", "Non-Penalty xG",
-                "Assists", "xA (Expected Assists)", "Shots", "Key Passes", "xG Chain", "xG Build-Up"
-            ]
-            chart_data = {
-                "labels": metric_labels,
-                "percentiles": [round(float(percentiles.get(k, 0)), 1) for k in metric_keys],
-                "raw_values": [round(float(player_data.get(k, 0)), 2) for k in metric_keys],
-            }
     except Exception as e:
         print(f"Understat lookup info for {player_name_clean}: {e}")
 
-    # 4. PL Match Stats from DB
+    # 4. PL Match Stats from DB or current_stats.json
     pl_stats = full_profile.get("pl_stats")
     if not pl_stats:
         try:
-            import json, unicodedata
-            def norm(s):
-                return ''.join(c for c in unicodedata.normalize('NFD', str(s)) if unicodedata.category(c) != 'Mn').lower().replace('-', ' ').strip()
             with open("data/current_stats.json") as f:
                 c_db = json.load(f)
                 t_norm = norm(player_name_clean)
@@ -624,7 +606,66 @@ async def read_player_profile(request: Request, player_name: str):
         except Exception as e:
             print(f"Error loading PL stats: {e}")
 
-    # 5. Availability Status & Position Label
+    # 5. Build Combined 10-Metric Offensive & Defensive Positional Percentile Chart
+    chart_data = None
+    try:
+        with open("data/current_stats.json") as f:
+            c_db = json.load(f)
+
+        all_pl_players = c_db.get("players", [])
+        target_pl = None
+        t_norm = norm(player_name_clean)
+        for p in all_pl_players:
+            p_norm = norm(p.get("name", ""))
+            if p_norm == t_norm or t_norm in p_norm or p_norm in t_norm:
+                target_pl = p
+                break
+
+        target_pos = target_pl.get("position") if target_pl else None
+        peers = [p for p in all_pl_players if p.get("position") == target_pos] if target_pos else all_pl_players
+
+        metric_configs = [
+            ("goals", "Goals", "goals"),
+            ("xG", "xG (Expected Goals)", "xG"),
+            ("assists", "Assists", "assists"),
+            ("xA", "xA (Expected Assists)", "xA"),
+            ("key_passes", "Key Passes", "key_passes"),
+            ("shots", "Shots", "shots"),
+            ("cbi", "CBI (Clearances/Blocks/Int)", "cbi"),
+            ("tackles", "Tackles Won", "tackles"),
+            ("recoveries", "Ball Recoveries", "recoveries"),
+            ("clean_sheets", "Clean Sheets", "clean_sheets")
+        ]
+
+        labels = []
+        percentiles = []
+        raw_values = []
+
+        for u_key, label_name, pl_key in metric_configs:
+            raw_val = 0.0
+            if player_data and u_key in player_data and player_data.get(u_key) is not None:
+                raw_val = float(player_data.get(u_key, 0) or 0)
+            elif pl_stats and pl_key in pl_stats and pl_stats.get(pl_key) is not None:
+                raw_val = float(pl_stats.get(pl_key, 0) or 0)
+            elif target_pl and pl_key in target_pl:
+                raw_val = float(target_pl.get(pl_key, 0) or 0)
+
+            peer_vals = [float(p.get(pl_key, 0) or 0) for p in peers]
+            pct = round(float(percentileofscore(peer_vals, raw_val, kind='weak')), 1) if peer_vals else 50.0
+
+            labels.append(label_name)
+            percentiles.append(pct)
+            raw_values.append(round(raw_val, 2))
+
+        chart_data = {
+            "labels": labels,
+            "percentiles": percentiles,
+            "raw_values": raw_values
+        }
+    except Exception as e:
+        print(f"Error building chart data for {player_name_clean}: {e}")
+
+    # 6. Availability Status & Position Label
     inj_info = full_profile.get("injury") or {}
     injury_severity = inj_info.get("severity") or config.get_player_injury(player_name_clean).get("severity", "Healthy")
     injury_notes = inj_info.get("notes") or config.get_player_injury(player_name_clean).get("notes", "")
@@ -634,37 +675,12 @@ async def read_player_profile(request: Request, player_name: str):
     raw_pos = (fantrax_info.get("position") or (player_data.get("position") if player_data else "M")).split(",")[0].split(" ")[0].upper()
     position_display = pos_map.get(raw_pos, f"Position ({raw_pos})")
 
-    # 6. Similar Available Alternatives (Constrained by ADP Window + Understat Profile Distance)
+    # 7. Similar Available Alternatives (Constrained by ADP Window + Profile Distance)
     similar_players = []
     try:
-        import numpy as np
         player_pos = (fantrax_info.get("position") or "M").split(",")[0].strip().upper()
         target_adp = float(fantrax_info.get("adp", 50) or 50)
         target_fpg = float(fantrax_info.get("fpg", 0) or 0)
-
-        all_u_players = understat.get_all_players_data("EPL", "2024")
-        u_map = {}
-        for up in all_u_players:
-            u_map[norm(up.get("player_name", ""))] = up
-
-        def get_u_entry(pname):
-            t = norm(pname)
-            if t in u_map:
-                return u_map[t]
-            for k, v in u_map.items():
-                if t in k or k in t:
-                    return v
-            return None
-
-        metrics = ["xG", "xA", "npxG", "shots", "key_passes", "xGChain", "xGBuildup"]
-        def get_vec(up_data):
-            if not up_data:
-                return np.zeros(len(metrics))
-            gms = max(float(up_data.get("games", 1) or 1), 1.0)
-            return np.array([float(up_data.get(m, 0) or 0) / gms for m in metrics])
-
-        target_u = get_u_entry(player_name_clean)
-        target_vec = get_vec(target_u)
 
         all_available = [
             p for p in config.rankings.get("rankings", [])
@@ -677,7 +693,6 @@ async def read_player_profile(request: Request, player_name: str):
             if player_pos in p.get("position", "").upper().split(",")
         ] or all_available
 
-        # Filter candidates within ADP range window (+/- 45 spots)
         adp_candidates = [
             p for p in pos_match
             if abs(float(p.get("adp", 999) or 999) - target_adp) <= 45
@@ -685,36 +700,24 @@ async def read_player_profile(request: Request, player_name: str):
 
         scored = []
         for cand in adp_candidates:
-            cand_u = get_u_entry(cand.get("player", ""))
-            cand_vec = get_vec(cand_u)
             cand_adp = float(cand.get("adp", 999) or 999)
             cand_fpg = float(cand.get("fpg", 0) or 0)
 
-            if target_u and cand_u:
-                u_dist = float(np.linalg.norm(target_vec - cand_vec))
-            else:
-                u_dist = 2.0
-
             adp_penalty = abs(cand_adp - target_adp) / 30.0
             fpg_penalty = abs(cand_fpg - target_fpg) * 0.5
-            total_score = u_dist + adp_penalty + fpg_penalty
+            total_score = adp_penalty + fpg_penalty
 
             cand_copy = dict(cand)
             cand_copy["id"] = db.get_player_id_by_name(cand.get("player")) or cand.get("player")
-            if cand_u:
-                gms = max(float(cand_u.get("games", 1) or 1), 1.0)
-                cand_copy["xg_per_game"] = round(float(cand_u.get("xG", 0) or 0) / gms, 2)
-                cand_copy["xa_per_game"] = round(float(cand_u.get("xA", 0) or 0) / gms, 2)
-            else:
-                cand_copy["xg_per_game"] = 0.0
-                cand_copy["xa_per_game"] = 0.0
+            cand_copy["xg_per_game"] = round(float(cand.get("xg_per_game", 0) or 0), 2)
+            cand_copy["xa_per_game"] = round(float(cand.get("xa_per_game", 0) or 0), 2)
 
             scored.append((cand_copy, total_score))
 
         scored.sort(key=lambda x: x[1])
         similar_players = [item[0] for item in scored[:3]]
     except Exception as e:
-        print(f"Error finding similar Understat players: {e}")
+        print(f"Error finding similar players for {player_name_clean}: {e}")
 
     return templates.TemplateResponse(
         request=request,
