@@ -82,7 +82,19 @@ def seed_database():
                 c_data = json.load(f)
                 for sp in c_data.get("players", []):
                     sp_name = sp.get("name", "")
-                    player_id = db.get_player_id_by_name(sp_name)
+                    web_name = sp.get("web_name", "")
+                    player_id = db.get_player_id_by_name(sp_name) or db.get_player_id_by_name(web_name)
+                    
+                    if not player_id:
+                        norm_sp = normalize_name(sp_name)
+                        norm_web = normalize_name(web_name)
+                        for p_item in rankings:
+                            p_real_name = p_item.get("player", "")
+                            p_norm = normalize_name(p_real_name)
+                            if (len(p_norm) > 3 and (p_norm in norm_sp or norm_sp in p_norm)) or (len(norm_web) > 3 and norm_web in p_norm):
+                                player_id = db.get_player_id_by_name(p_real_name)
+                                break
+
                     if player_id:
                         fpl_id = str(sp.get("id", ""))
                         starts = int(sp.get("starts", 0) or 0)
@@ -97,6 +109,14 @@ def seed_database():
                             goals=int(sp.get("goals", 0) or 0),
                             assists=int(sp.get("assists", 0) or 0),
                             clean_sheets=int(sp.get("clean_sheets", 0) or 0),
+                            goals_conceded=int(sp.get("goals_conceded", 0) or 0),
+                            expected_goals_conceded=float(sp.get("expected_goals_conceded", 0) or 0),
+                            tackles=int(sp.get("tackles", 0) or 0),
+                            cbi=int(sp.get("cbi", 0) or 0),
+                            recoveries=int(sp.get("recoveries", 0) or 0),
+                            yellow_cards=int(sp.get("yellow_cards", 0) or 0),
+                            red_cards=int(sp.get("red_cards", 0) or 0),
+                            saves=int(sp.get("saves", 0) or 0),
                             ict_index=float(sp.get("ict_index", 0) or 0),
                             influence=float(sp.get("influence", 0) or 0),
                             threat=float(sp.get("threat", 0) or 0),

@@ -67,6 +67,14 @@ class DatabaseManager:
                 goals INTEGER,
                 assists INTEGER,
                 clean_sheets INTEGER,
+                goals_conceded INTEGER,
+                expected_goals_conceded REAL,
+                tackles INTEGER,
+                cbi INTEGER,
+                recoveries INTEGER,
+                yellow_cards INTEGER,
+                red_cards INTEGER,
+                saves INTEGER,
                 ict_index REAL,
                 influence REAL,
                 threat REAL,
@@ -74,6 +82,22 @@ class DatabaseManager:
                 FOREIGN KEY (player_id) REFERENCES players (id)
             )
             """)
+
+            cursor.execute("PRAGMA table_info(pl_match_stats)")
+            existing_cols = [row["name"] for row in cursor.fetchall()]
+            new_cols = [
+                ("goals_conceded", "INTEGER"),
+                ("expected_goals_conceded", "REAL"),
+                ("tackles", "INTEGER"),
+                ("cbi", "INTEGER"),
+                ("recoveries", "INTEGER"),
+                ("yellow_cards", "INTEGER"),
+                ("red_cards", "INTEGER"),
+                ("saves", "INTEGER"),
+            ]
+            for col_name, col_type in new_cols:
+                if col_name not in existing_cols:
+                    cursor.execute(f"ALTER TABLE pl_match_stats ADD COLUMN {col_name} {col_type}")
 
             # 4. Recent Form table
             cursor.execute("""
@@ -183,14 +207,14 @@ class DatabaseManager:
             cursor.execute("INSERT OR REPLACE INTO player_aliases (alias, player_id) VALUES (?, ?)", (norm_alias, player_id))
             conn.commit()
 
-    def set_pl_stats(self, player_id: str, fpl_id: str, starts: int, appearances: int, minutes: int, goals: int = 0, assists: int = 0, clean_sheets: int = 0, ict_index: float = 0.0, influence: float = 0.0, threat: float = 0.0, creativity: float = 0.0):
+    def set_pl_stats(self, player_id: str, fpl_id: str, starts: int, appearances: int, minutes: int, goals: int = 0, assists: int = 0, clean_sheets: int = 0, goals_conceded: int = 0, expected_goals_conceded: float = 0.0, tackles: int = 0, cbi: int = 0, recoveries: int = 0, yellow_cards: int = 0, red_cards: int = 0, saves: int = 0, ict_index: float = 0.0, influence: float = 0.0, threat: float = 0.0, creativity: float = 0.0):
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
             INSERT OR REPLACE INTO pl_match_stats
-            (player_id, fpl_id, starts, appearances, minutes, goals, assists, clean_sheets, ict_index, influence, threat, creativity)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (player_id, fpl_id, starts, appearances, minutes, goals, assists, clean_sheets, ict_index, influence, threat, creativity))
+            (player_id, fpl_id, starts, appearances, minutes, goals, assists, clean_sheets, goals_conceded, expected_goals_conceded, tackles, cbi, recoveries, yellow_cards, red_cards, saves, ict_index, influence, threat, creativity)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (player_id, fpl_id, starts, appearances, minutes, goals, assists, clean_sheets, goals_conceded, expected_goals_conceded, tackles, cbi, recoveries, yellow_cards, red_cards, saves, ict_index, influence, threat, creativity))
             conn.commit()
 
     def set_understat_stats(self, player_id: str, understat_id: str, season: str, games: int, minutes: int, goals: int, npg: int, xg: float, npxg: float, assists: int, xa: float, shots: int, key_passes: int, xg_chain: float, xg_buildup: float):
