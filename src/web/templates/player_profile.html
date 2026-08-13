@@ -120,12 +120,15 @@
 
     <!-- Understat Performance Chart (If Available and Outfield) -->
     {% set is_gk = (fantrax_info.get('position') == 'G' or (player_data and player_data.get('position') == 'GK')) %}
-    {% set has_understat_metrics = player_data and not is_gk and (player_data.get('xG') | float > 0 or player_data.get('xA') | float > 0 or player_data.get('shots') | float > 0) %}
+    {% set has_understat_metrics = player_data and not is_gk and chart_data %}
 
-    {% if has_understat_metrics and chart_data %}
+    {% if has_understat_metrics %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
-        <h3 class="text-headline-sm font-bold text-on-surface mb-4">Understat Advanced Metrics</h3>
-        <div class="h-64 w-full">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-headline-sm font-bold text-on-surface">Understat Positional Percentiles</h3>
+            <span class="text-xs font-semibold text-on-surface-variant bg-surface-container-low px-3 py-1 rounded-full border border-outline-variant">vs EPL {{ player_data.get('position', 'M') }} Peers</span>
+        </div>
+        <div class="h-72 w-full">
             <canvas id="understatChart"></canvas>
         </div>
     </div>
@@ -133,39 +136,47 @@
     <div class="bg-surface-container border border-outline-variant rounded-xl p-5 shadow-sm text-center">
         <p class="text-on-surface-variant text-sm font-medium">🛡️ Goalkeepers (G) do not record outfield expected goals (xG) or key pass metrics.</p>
     </div>
-    {% elif not player_data %}
+    {% else %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-5 shadow-sm text-center">
         <p class="text-on-surface-variant text-sm font-medium">No Understat advanced metrics recorded for this player.</p>
     </div>
     {% endif %}
 </section>
 
-{% if has_understat_metrics and chart_data %}
+{% if has_understat_metrics %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const ctx = document.getElementById('understatChart').getContext('2d');
-    const xG = {{ player_data.get('xG', 0) | float }};
-    const xA = {{ player_data.get('xA', 0) | float }};
-    const npxG = {{ player_data.get('npxG', 0) | float }};
+    const canvas = document.getElementById('understatChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const labels = {{ chart_data.labels | tojson }};
+    const percentiles = {{ chart_data.percentiles | tojson }};
+    const rawValues = {{ chart_data.raw_values | tojson }};
 
     new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: ['xG (Expected Goals)', 'xA (Expected Assists)', 'npxG (Non-Penalty xG)'],
+            labels: labels,
             datasets: [{
-                label: 'Per Game Metric',
-                data: [xG, xA, npxG],
+                label: 'Percentile Rank (%)',
+                data: percentiles,
                 backgroundColor: [
-                    'rgba(56, 189, 248, 0.7)',
-                    'rgba(192, 132, 252, 0.7)',
-                    'rgba(129, 140, 248, 0.7)'
+                    'rgba(56, 189, 248, 0.75)',
+                    'rgba(59, 130, 246, 0.75)',
+                    'rgba(168, 85, 247, 0.75)',
+                    'rgba(236, 72, 153, 0.75)',
+                    'rgba(16, 185, 129, 0.75)'
                 ],
                 borderColor: [
                     '#38bdf8',
-                    '#c084fc',
-                    '#818cf8'
+                    '#3b82f6',
+                    '#a855f7',
+                    '#ec4899',
+                    '#10b981'
                 ],
-                borderWidth: 1.5
+                borderWidth: 1.5,
+                borderRadius: 6
             }]
         },
         options: {
@@ -173,17 +184,31 @@ document.addEventListener('DOMContentLoaded', () => {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    labels: { color: '#e1e2ed' }
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const index = context.dataIndex;
+                            const pct = percentiles[index];
+                            const raw = rawValues[index];
+                            return ` ${pct}th Percentile (Total: ${raw})`;
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { color: '#9ca3af' },
+                    max: 100,
+                    ticks: {
+                        color: '#9ca3af',
+                        callback: function(val) { return val + '%'; }
+                    },
                     grid: { color: '#32343d' }
                 },
                 x: {
-                    ticks: { color: '#9ca3af' },
+                    ticks: { color: '#e1e2ed', font: { weight: 'bold' } },
                     grid: { color: '#32343d' }
                 }
             }

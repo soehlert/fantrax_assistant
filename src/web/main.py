@@ -552,12 +552,19 @@ async def read_player_profile(request: Request, player_name: str):
             chart_data = {
                 "labels": ["Non-Penalty Goals", "xG", "xA", "Shots", "Key Passes"],
                 "percentiles": [
-                    percentiles.get("npg", 0),
-                    percentiles.get("xG", 0),
-                    percentiles.get("xA", 0),
-                    percentiles.get("shots", 0),
-                    percentiles.get("key_passes", 0),
+                    round(float(percentiles.get("npg", 0)), 1),
+                    round(float(percentiles.get("xG", 0)), 1),
+                    round(float(percentiles.get("xA", 0)), 1),
+                    round(float(percentiles.get("shots", 0)), 1),
+                    round(float(percentiles.get("key_passes", 0)), 1),
                 ],
+                "raw_values": [
+                    round(float(player_data.get("npg", 0)), 2),
+                    round(float(player_data.get("xG", 0)), 2),
+                    round(float(player_data.get("xA", 0)), 2),
+                    round(float(player_data.get("shots", 0)), 0),
+                    round(float(player_data.get("key_passes", 0)), 0),
+                ]
             }
     except Exception as e:
         print(f"Understat lookup info for {player_name_clean}: {e}")
