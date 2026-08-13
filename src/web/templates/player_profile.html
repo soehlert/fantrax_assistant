@@ -61,11 +61,11 @@
             <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Rotation Risk</div>
             <div class="text-xl font-extrabold mt-1">
                 {% if rotation_risk_info.color == 'emerald' %}
-                    <span class="text-xs font-bold px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">{{ rotation_risk_info.badge }}</span>
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap inline-block max-w-full truncate">{{ rotation_risk_info.badge }}</span>
                 {% elif rotation_risk_info.color == 'amber' %}
-                    <span class="text-xs font-bold px-2 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">{{ rotation_risk_info.badge }}</span>
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 whitespace-nowrap inline-block max-w-full truncate">{{ rotation_risk_info.badge }}</span>
                 {% else %}
-                    <span class="text-xs font-bold px-2 py-1 rounded bg-red-500/20 text-red-300 border border-red-500/30">{{ rotation_risk_info.badge }}</span>
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30 whitespace-nowrap inline-block max-w-full truncate">{{ rotation_risk_info.badge }}</span>
                 {% endif %}
             </div>
         </div>
@@ -108,14 +108,19 @@
                 <h3 class="text-headline-sm font-bold text-on-surface">Premier League Workload & Match Index</h3>
             </div>
             {% set fpg_val = fantrax_info.get('fpg', 0) | float %}
-            {% if fpg_val >= 4.0 %}
+            {% set starts_val = pl_stats.get('starts', 0) | int %}
+            {% if fpg_val >= 4.0 and starts_val >= 15 %}
                 <span class="bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-extrabold px-3 py-1 rounded-full">🔥 Elite Dominant Form</span>
-            {% elif fpg_val >= 3.0 %}
+            {% elif fpg_val >= 4.0 and starts_val < 15 %}
+                <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-extrabold px-3 py-1 rounded-full">⚡ High Output (Low Sample)</span>
+            {% elif fpg_val >= 3.0 and starts_val >= 15 %}
                 <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-extrabold px-3 py-1 rounded-full">⚡ Strong Regular Starter</span>
+            {% elif fpg_val >= 3.0 and starts_val < 15 %}
+                <span class="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold px-3 py-1 rounded-full">📈 Good Form (Low Sample)</span>
             {% elif fpg_val >= 2.0 %}
-                <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-extrabold px-3 py-1 rounded-full">📈 Solid Rotation Contributor</span>
+                <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-semibold px-3 py-1 rounded-full">📈 Solid Contributor</span>
             {% else %}
-                <span class="bg-surface-variant text-on-surface-variant text-xs font-semibold px-3 py-1 rounded-full">💤 Bench Role / Low Volume</span>
+                <span class="bg-surface-variant text-on-surface-variant text-xs font-semibold px-3 py-1 rounded-full">💤 Low Volume / Bench Role</span>
             {% endif %}
         </div>
 
@@ -125,7 +130,7 @@
                     <span>Starts / Appearances</span>
                     <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                 </div>
-                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('starts', 0) }} / {{ pl_stats.get('total_apps') or pl_stats.get('appearances') or pl_stats.get('starts', 0) }}</div>
+                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('starts', 0) }} / {{ pl_stats.get('appearances', 0) }}</div>
             </div>
 
             <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Total minutes played on the pitch this season">
@@ -136,23 +141,23 @@
                 <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('minutes', 0) }}'</div>
             </div>
 
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Official Premier League Influence, Creativity & Threat Index evaluating overall statistical impact (Higher = Better)">
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Official Premier League ICT (Influence, Creativity, Threat) Index evaluating overall match impact. Higher score indicates greater performance.">
                 <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
                     <span>PL ICT Index</span>
                     <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                 </div>
-                <div class="text-lg font-bold text-emerald-400 mt-0.5">{{ pl_stats.get('ict_index', '0.0') }}</div>
+                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('ict_index', '0.0') }}</div>
             </div>
 
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Influence (passes/tackles) & Threat (shots/box touches). Higher numbers indicate greater match impact.">
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Influence: Measures match event impact (passes, tackles, assists). Threat: Measures goalscoring threat (shots, box touches). Higher numbers = greater impact.">
                 <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
                     <span>Influence & Threat</span>
                     <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                 </div>
                 <div class="text-base font-bold text-on-surface mt-0.5">
-                    <span class="text-emerald-400">{{ pl_stats.get('influence', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">Infl</span>
+                    <span>{{ pl_stats.get('influence', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">Infl</span>
                     <span class="text-outline-variant mx-1">•</span>
-                    <span class="text-emerald-400">{{ pl_stats.get('threat', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">Thr</span>
+                    <span>{{ pl_stats.get('threat', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">Thr</span>
                 </div>
             </div>
         </div>

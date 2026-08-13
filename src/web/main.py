@@ -618,7 +618,10 @@ async def read_player_profile(request: Request, player_name: str):
 
     # 4. PL Match Stats from DB or current_stats.json
     pl_stats = full_profile.get("pl_stats")
-    if not pl_stats:
+    if pl_stats:
+        if "appearances" not in pl_stats and "total_apps" in pl_stats:
+            pl_stats["appearances"] = pl_stats["total_apps"]
+    else:
         try:
             with open("data/current_stats.json") as f:
                 c_db = json.load(f)
@@ -630,7 +633,7 @@ async def read_player_profile(request: Request, player_name: str):
                         matches = int(p.get("matches_played", 0) or 0)
                         pl_stats = {
                             "starts": starts,
-                            "total_apps": max(starts, matches),
+                            "appearances": max(starts, matches),
                             "minutes": int(p.get("minutes", 0) or 0),
                             "tackles": int(p.get("tackles", 0) or 0),
                             "cbi": int(p.get("cbi", 0) or 0),
@@ -772,13 +775,13 @@ async def read_player_profile(request: Request, player_name: str):
     mins = pl_stats.get("minutes", 0) if pl_stats else 0
 
     if starts >= 30 or mins >= 2500:
-        rotation_risk_info = {"level": "Low", "badge": "Nailed Core Starter", "sub": "100% Season Floor", "color": "emerald"}
+        rotation_risk_info = {"level": "Low", "badge": "Nailed Starter", "sub": "100% Floor", "color": "emerald"}
     elif starts >= 22 or mins >= 1800:
-        rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "95% Season Floor", "color": "emerald"}
+        rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "95% Floor", "color": "emerald"}
     elif starts >= 14 or mins >= 1200:
-        rotation_risk_info = {"level": "Medium", "badge": "Moderate Workload Risk", "sub": "12% Discount", "color": "amber"}
+        rotation_risk_info = {"level": "Medium", "badge": "Moderate Risk", "sub": "12% Discount", "color": "amber"}
     else:
-        rotation_risk_info = {"level": "High", "badge": "Low Season Volume", "sub": "20% Discount", "color": "red"}
+        rotation_risk_info = {"level": "High", "badge": "Low Volume", "sub": "20% Discount", "color": "red"}
 
     return templates.TemplateResponse(
         request=request,
