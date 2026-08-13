@@ -841,19 +841,17 @@ async def read_player_profile(request: Request, player_name: str):
 
     is_new_team = bool(fantrax_info.get("is_new_signing") or (full_profile and full_profile.get("is_new_transfer")) or (starts == 0 and apps == 0 and adp_val < 150))
 
-    if starts >= 18 and apps > 0 and starts >= 0.85 * apps:
+    if (starts >= 18 and apps > 0 and starts >= 0.85 * apps) or starts >= 30 or mins >= 2400:
         rotation_risk_info = {"level": "Low", "badge": "Nailed on when fit", "sub": "100% Fit Start Rate", "color": "emerald"}
-    elif starts >= 30 or mins >= 2400:
-        rotation_risk_info = {"level": "Low", "badge": "Nailed Starter", "sub": "100% Value Floor", "color": "emerald"}
-    elif starts >= 22 or mins >= 1800:
-        rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "95% Value Floor", "color": "emerald"}
+    elif starts >= 15 or mins >= 1800:
+        rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "15-29 Starts (95% Floor)", "color": "emerald"}
     elif is_new_team and starts <= 14:
         rotation_risk_info = {"level": "Medium", "badge": "New Team", "sub": "10%-15% Integration Risk", "color": "amber"}
     elif starts <= 14 and apps > 0 and starts >= 0.75 * apps:
-        rotation_risk_info = {"level": "Medium", "badge": "Small Sample", "sub": "<=14 Starts (Injured/Fit)", "color": "amber"}
-    elif starts >= 14 and apps > 0 and starts < 0.50 * apps:
+        rotation_risk_info = {"level": "Medium", "badge": "Small Sample", "sub": "<=14 Starts (High Fit Start Rate)", "color": "amber"}
+    elif starts >= 15 and apps > 0 and starts < 0.50 * apps:
         rotation_risk_info = {"level": "High", "badge": "Large Rotation Risk", "sub": "Healthy-Benched >50%", "color": "red"}
-    elif starts >= 14 or mins >= 1200:
+    elif starts >= 15 or mins >= 1200:
         rotation_risk_info = {"level": "Medium", "badge": "Moderate Rotation Risk", "sub": "Benched 25%-50%", "color": "amber"}
     else:
         rotation_risk_info = {"level": "High", "badge": "Large Rotation Risk", "sub": "Low Games / Heavy Risk", "color": "red"}
