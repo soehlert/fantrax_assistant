@@ -45,14 +45,8 @@
                 <tbody class="text-body-md text-on-surface">
                     {% for player in weekly_lineup.starters %}
                     <tr class="border-b border-outline-variant table-row-hover transition-colors">
-                        <td class="px-6 py-3 font-bold text-sm">
-                            <span class="px-2 py-0.5 rounded text-xs font-bold
-                                {% if player.primary_pos == 'G' %}pos-badge-g
-                                {% elif player.primary_pos == 'D' %}pos-badge-d
-                                {% elif player.primary_pos == 'M' %}pos-badge-m
-                                {% else %}pos-badge-f{% endif %}">
-                                {{ player.primary_pos }}
-                            </span>
+                        <td class="px-6 py-3 font-bold text-sm text-on-surface">
+                            {{ player.primary_pos }}
                         </td>
                         <td class="px-6 py-3 font-bold text-base">
                             <a href="/player/{{ player.id or player.player }}" class="hover:text-primary-container transition-colors">
