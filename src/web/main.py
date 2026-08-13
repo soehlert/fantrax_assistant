@@ -510,19 +510,26 @@ def safe_float(value, default=0.0):
 @app.get("/player/{player_name}", response_class=HTMLResponse)
 async def read_player_profile(request: Request, player_name: str):
     import urllib.parse
-    player_name_clean = urllib.parse.unquote(player_name).strip()
+    from fantrax_assistant.db import DatabaseManager
     
+    player_name_clean = urllib.parse.unquote(player_name).strip()
+    db = DatabaseManager("data/fantrax_assistant.db")
     state = DraftState()
     draft_state_dict = get_draft_state_dict()
 
-    # 1. Fantrax Master Info Lookup
+    # 1. Fetch Full Player Profile from SQLite DB
+    full_profile = db.get_full_player_profile(player_name_clean) or {}
+    
     fantrax_info = config.get_player_adp(player_name_clean)
-    if not fantrax_info:
-        for p in config.rankings.get('rankings', []):
-            if p.get('player', '').lower() == player_name_clean.lower():
-                fantrax_info = p
-                player_name_clean = p.get('player')
-                break
+    if not fantrax_info and full_profile:
+        fantrax_info = {
+            "player": full_profile.get("name"),
+            "position": full_profile.get("position"),
+            "team": full_profile.get("team"),
+            "adp": full_profile.get("adp"),
+            "fpts": full_profile.get("fpts"),
+            "fpg": full_profile.get("fpg")
+        }
 
     # 2. Draft Status & Pick Analysis
     drafted_by_team = None
@@ -534,14 +541,23 @@ async def read_player_profile(request: Request, player_name: str):
     analysis_history = analyzer.backfill_retroactive_analysis(state)
     pick_analysis = next((a for a in analysis_history if a.get("player") == player_name_clean), None)
 
-    # 3. Understat Data Lookup (Graceful Fallback)
+    # 3. Understat Data Lookup via SQLite Understat ID
     player_data = None
     chart_data = None
+    understat_id = full_profile.get("understat_id")
+    
     try:
-        player_pos_hint = (fantrax_info.get("position") or "").split(",")[0].strip()
-        player_data = understat.get_player_data_by_name(
-            player_name=player_name_clean, league="EPL", season="2024", player_position=player_pos_hint
-        )
+        if understat_id:
+            # Look up by explicit Understat ID first
+            all_u = understat.get_all_players_data("EPL", "2024")
+            player_data = next((u for u in all_u if str(u.get("id")) == str(understat_id)), None)
+
+        if not player_data:
+            player_pos_hint = (fantrax_info.get("position") or "").split(",")[0].strip()
+            player_data = understat.get_player_data_by_name(
+                player_name=player_name_clean, league="EPL", season="2024", player_position=player_pos_hint
+            )
+
         if player_data:
             position = player_data.get("position", "").split(" ")[0]
             positional_data = understat.get_positional_data(
@@ -563,9 +579,38 @@ async def read_player_profile(request: Request, player_name: str):
     except Exception as e:
         print(f"Understat lookup info for {player_name_clean}: {e}")
 
-    # 4. Availability Status & Position Label
-    injury = config.get_player_injury(player_name_clean)
-    afcon = config.get_player_afcon_status(player_name_clean)
+    # 4. PL Match Stats from DB
+    pl_stats = full_profile.get("pl_stats")
+    if not pl_stats:
+        try:
+            import json, unicodedata
+            def norm(s):
+                return ''.join(c for c in unicodedata.normalize('NFD', str(s)) if unicodedata.category(c) != 'Mn').lower().replace('-', ' ').strip()
+            with open("data/current_stats.json") as f:
+                c_db = json.load(f)
+                t_norm = norm(player_name_clean)
+                for p in c_db.get("players", []):
+                    p_norm = norm(p.get("name", ""))
+                    if p_norm == t_norm or t_norm in p_norm or p_norm in t_norm:
+                        starts = int(p.get("starts", 0) or 0)
+                        matches = int(p.get("matches_played", 0) or 0)
+                        pl_stats = {
+                            "starts": starts,
+                            "total_apps": max(starts, matches),
+                            "minutes": int(p.get("minutes", 0) or 0),
+                            "ict_index": float(p.get("ict_index", 0) or 0),
+                            "influence": float(p.get("influence", 0) or 0),
+                            "threat": float(p.get("threat", 0) or 0),
+                        }
+                        break
+        except Exception as e:
+            print(f"Error loading PL stats: {e}")
+
+    # 5. Availability Status & Position Label
+    inj_info = full_profile.get("injury") or {}
+    injury_severity = inj_info.get("severity") or config.get_player_injury(player_name_clean).get("severity", "Healthy")
+    injury_notes = inj_info.get("notes") or config.get_player_injury(player_name_clean).get("notes", "")
+    at_afcon = bool(inj_info.get("at_afcon")) if "at_afcon" in inj_info else config.get_player_afcon_status(player_name_clean).get("at_afcon", False)
 
     pos_map = {"D": "Defender (D)", "M": "Midfielder (M)", "F": "Forward (F)", "G": "Goalkeeper (G)", "GK": "Goalkeeper (G)"}
     raw_pos = (fantrax_info.get("position") or (player_data.get("position") if player_data else "M")).split(",")[0].split(" ")[0].upper()
