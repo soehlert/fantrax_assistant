@@ -450,7 +450,10 @@ async def read_draft_analysis(request: Request):
     analysis_history_sorted = list(reversed(analysis_history))
     teams_data = state.teams
 
-    # Rolling calculation of the highest value steal (biggest pick_number - adp diff or highest score)
+    # Rolling calculation of the best overall pick (highest evaluation score)
+    best_overall = max(analysis_history, key=lambda x: x.get("score", 0)) if analysis_history else None
+
+    # Rolling calculation of the highest value steal (biggest pick_number - adp diff)
     top_steal = None
     best_steal_diff = -999.0
 
@@ -464,13 +467,14 @@ async def read_draft_analysis(request: Request):
                 top_steal = item
 
     if not top_steal and analysis_history:
-        top_steal = max(analysis_history, key=lambda x: x.get("score", 0))
+        top_steal = best_overall
 
     return templates.TemplateResponse(
         request=request,
         name="analysis.html",
         context={
             "feed": analysis_history_sorted,
+            "best_overall": best_overall,
             "top_steal": top_steal,
             "tracked_teams": list(teams_data.keys())
         }
