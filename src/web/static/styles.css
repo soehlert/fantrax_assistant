@@ -10,22 +10,22 @@
 
 /* Dark Mode Theme Tokens (Matched to Dashboard Mockup Image 1) */
 [data-bs-theme="dark"] {
-    --bs-body-bg: #111318;
+    --bs-body-bg: #1e2026;
     --bs-body-color: #f1f5f9;
-    --bs-card-bg: #1a1d24;
-    --bs-card-border-color: #282c36;
-    --bs-tertiary-bg: #1a1d24;
+    --bs-card-bg: #242730;
+    --bs-card-border-color: #313542;
+    --bs-tertiary-bg: #242730;
 }
 
 [data-bs-theme="dark"] body {
-    background-color: #111318 !important;
+    background-color: #1e2026 !important;
     color: #f1f5f9 !important;
 }
 
 /* Navbar Styling */
 .navbar-custom {
-    background: #1e222b;
-    border-bottom: 1px solid #282c36;
+    background: #232731;
+    border-bottom: 1px solid #313542;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
