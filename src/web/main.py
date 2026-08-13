@@ -210,29 +210,29 @@ async def read_team(
             "position": pos, "current": current_val, "max": max_val, "need": max(0, max_val - current_val)
         })
 
-    # Premier League Club Color Scheme and Metadata
+    # Premier League Club Colors & Metadata
     CLUB_COLORS = {
-        "MCI": {"bg": "#6CABDD", "text": "#FFFFFF", "border": "#1C2C5B", "name": "Man City"},
-        "ARS": {"bg": "#EF0107", "text": "#FFFFFF", "border": "#000000", "name": "Arsenal"},
-        "LIV": {"bg": "#C8102E", "text": "#FFFFFF", "border": "#00B2A9", "name": "Liverpool"},
-        "MUN": {"bg": "#DA291C", "text": "#FFFFFF", "border": "#FBE122", "name": "Man United"},
-        "CHE": {"bg": "#034694", "text": "#FFFFFF", "border": "#DBA111", "name": "Chelsea"},
-        "TOT": {"bg": "#132257", "text": "#FFFFFF", "border": "#132257", "name": "Tottenham"},
-        "AVL": {"bg": "#95BFE5", "text": "#111111", "border": "#670E36", "name": "Aston Villa"},
-        "BOU": {"bg": "#DA291C", "text": "#FFFFFF", "border": "#000000", "name": "Bournemouth"},
-        "BHA": {"bg": "#0057B8", "text": "#FFFFFF", "border": "#FFCD00", "name": "Brighton"},
-        "CRY": {"bg": "#1B458F", "text": "#FFFFFF", "border": "#A71930", "name": "Crystal Palace"},
-        "EVE": {"bg": "#003399", "text": "#FFFFFF", "border": "#003399", "name": "Everton"},
-        "FUL": {"bg": "#241F20", "text": "#FFFFFF", "border": "#CC0000", "name": "Fulham"},
-        "NEW": {"bg": "#241F20", "text": "#FFFFFF", "border": "#41B6E6", "name": "Newcastle"},
-        "NOT": {"bg": "#DD0000", "text": "#FFFFFF", "border": "#DD0000", "name": "Nott'm Forest"},
-        "SUN": {"bg": "#EB172B", "text": "#FFFFFF", "border": "#000000", "name": "Sunderland"},
-        "IPS": {"bg": "#0054A6", "text": "#FFFFFF", "border": "#E30613", "name": "Ipswich"},
-        "LEE": {"bg": "#1D428A", "text": "#FFFFFF", "border": "#FFCD00", "name": "Leeds"},
-        "COV": {"bg": "#00A3E0", "text": "#FFFFFF", "border": "#111111", "name": "Coventry"},
-        "WOL": {"bg": "#FDB913", "text": "#111111", "border": "#231F20", "name": "Wolves"},
-        "WHU": {"bg": "#7A263A", "text": "#FFFFFF", "border": "#1BB1E7", "name": "West Ham"},
-        "BRE": {"bg": "#D20000", "text": "#FFFFFF", "border": "#FBB800", "name": "Brentford"}
+        "MCI": {"color": "#6CABDD", "name": "Man City"},
+        "ARS": {"color": "#EF0107", "name": "Arsenal"},
+        "LIV": {"color": "#C8102E", "name": "Liverpool"},
+        "MUN": {"color": "#DA291C", "name": "Man United"},
+        "CHE": {"color": "#034694", "name": "Chelsea"},
+        "TOT": {"color": "#38bdf8", "name": "Tottenham"},
+        "AVL": {"color": "#95BFE5", "name": "Aston Villa"},
+        "BOU": {"color": "#DA291C", "name": "Bournemouth"},
+        "BHA": {"color": "#0057B8", "name": "Brighton"},
+        "CRY": {"color": "#1B458F", "name": "Crystal Palace"},
+        "EVE": {"color": "#003399", "name": "Everton"},
+        "FUL": {"color": "#CC0000", "name": "Fulham"},
+        "NEW": {"color": "#41B6E6", "name": "Newcastle"},
+        "NOT": {"color": "#DD0000", "name": "Nott'm Forest"},
+        "SUN": {"color": "#EB172B", "name": "Sunderland"},
+        "IPS": {"color": "#0054A6", "name": "Ipswich"},
+        "LEE": {"color": "#FFCD00", "name": "Leeds"},
+        "COV": {"color": "#00A3E0", "name": "Coventry"},
+        "WOL": {"color": "#FDB913", "name": "Wolves"},
+        "WHU": {"color": "#7A263A", "name": "West Ham"},
+        "BRE": {"color": "#D20000", "name": "Brentford"}
     }
 
     PL_CLUBS_ORDER = [
@@ -242,7 +242,7 @@ async def read_team(
 
     BIG_SIX = {"MCI", "ARS", "LIV", "MUN", "CHE", "TOT"}
 
-    # Map player names by club for current roster
+    # Map player names and positions by club for current roster
     players_by_club = {}
     big_six_count = 0
     non_big_six_count = 0
@@ -251,7 +251,10 @@ async def read_team(
         club = player.get("team", "UNKNOWN").upper()
         if club not in players_by_club:
             players_by_club[club] = []
-        players_by_club[club].append(player.get("player"))
+        players_by_club[club].append({
+            "name": player.get("player"),
+            "position": player.get("position", "")
+        })
 
         if club in BIG_SIX:
             big_six_count += 1
@@ -264,7 +267,7 @@ async def read_team(
     club_breakdown = []
     for club in all_known_clubs:
         rostered_players = players_by_club.get(club, [])
-        color_info = CLUB_COLORS.get(club, {"bg": "#6c757d", "text": "#FFFFFF", "border": "#495057", "name": club})
+        color_info = CLUB_COLORS.get(club, {"color": "#6c757d", "name": club})
         club_breakdown.append({
             "code": club,
             "name": color_info.get("name", club),
@@ -272,9 +275,7 @@ async def read_team(
             "players": rostered_players,
             "is_big_six": club in BIG_SIX,
             "has_players": len(rostered_players) > 0,
-            "bg_color": color_info["bg"],
-            "text_color": color_info["text"],
-            "border_color": color_info["border"]
+            "accent_color": color_info["color"]
         })
 
     # Sort so active clubs appear first (by player count), then Big Six, then inactive

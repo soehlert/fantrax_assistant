@@ -8,25 +8,25 @@
     --info-color: #0dcaf0;
 }
 
-/* Dark Mode Theme Tokens */
+/* Dark Mode Theme Tokens (Matched to Dashboard Mockup) */
 [data-bs-theme="dark"] {
-    --bs-body-bg: #0f172a;
-    --bs-body-color: #f8fafc;
-    --bs-card-bg: #1e293b;
-    --bs-card-border-color: #334155;
-    --bs-tertiary-bg: #1e293b;
+    --bs-body-bg: #141518;
+    --bs-body-color: #f1f5f9;
+    --bs-card-bg: #1c1e24;
+    --bs-card-border-color: #2d313c;
+    --bs-tertiary-bg: #1c1e24;
 }
 
 [data-bs-theme="dark"] body {
-    background-color: #0f172a !important;
-    color: #f8fafc !important;
+    background-color: #141518 !important;
+    color: #f1f5f9 !important;
 }
 
 /* Navbar Styling */
 .navbar-custom {
-    background: #0f172a;
-    border-bottom: 1px solid #334155;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    background: #20242e;
+    border-bottom: 1px solid #2d3340;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 [data-bs-theme="light"] .navbar-custom {
@@ -55,34 +55,34 @@
 
 /* Card and Table Styling Overrides for Dark Mode */
 [data-bs-theme="dark"] .card {
-    background-color: #1e293b !important;
-    border-color: #334155 !important;
-    color: #f8fafc !important;
+    background-color: #1c1e24 !important;
+    border-color: #2d313c !important;
+    color: #f1f5f9 !important;
 }
 
 [data-bs-theme="dark"] .card-header {
-    background-color: #0f172a !important;
-    border-bottom-color: #334155 !important;
-    color: #f8fafc !important;
+    background-color: #242832 !important;
+    border-bottom-color: #2d313c !important;
+    color: #f1f5f9 !important;
 }
 
 [data-bs-theme="dark"] .table-light {
-    --bs-table-bg: #334155;
-    --bs-table-color: #f8fafc;
+    --bs-table-bg: #242832;
+    --bs-table-color: #f1f5f9;
 }
 
 [data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
-    background-color: #1e293b !important;
-    color: #f8fafc !important;
+    background-color: #1c1e24 !important;
+    color: #f1f5f9 !important;
 }
 
 [data-bs-theme="dark"] .table-striped > tbody > tr:nth-of-type(even) > * {
-    background-color: #0f172a !important;
-    color: #f8fafc !important;
+    background-color: #141518 !important;
+    color: #f1f5f9 !important;
 }
 
 [data-bs-theme="dark"] .table-hover > tbody > tr:hover > * {
-    background-color: #334155 !important;
+    background-color: #2d313c !important;
     color: #ffffff !important;
 }
 

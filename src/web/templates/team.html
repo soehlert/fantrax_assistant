@@ -132,34 +132,37 @@
                     <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
                         {% for item in club_breakdown %}
                         <div class="col">
-                            <div class="card h-100 shadow-sm rounded-3 transition-all {% if not item.has_players %}opacity-50 border-secondary-subtle{% endif %}"
-                                 style="{% if item.has_players %}background-color: {{ item.bg_color }}; color: {{ item.text_color }}; border: 2px solid {{ item.border_color }};{% else %}background-color: #f8f9fa; border: 1px dashed #cccccc; color: #6c757d;{% endif %}">
+                            <div class="card h-100 shadow-sm rounded-3 transition-all {% if not item.has_players %}opacity-40{% endif %}"
+                                 style="background-color: var(--bs-card-bg); {% if item.has_players %}border: 2px solid {{ item.accent_color }}; box-shadow: 0 0 12px {{ item.accent_color }}25;{% else %}border: 1px dashed #334155;{% endif %}">
                                 <div class="card-body p-3 d-flex flex-column justify-content-between">
                                     <div>
                                         <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <span class="fw-bold fs-4">{{ item.code }}</span>
+                                            <span class="fw-bold fs-4" style="{% if item.has_players %}color: {{ item.accent_color }};{% else %}color: var(--bs-body-color);{% endif %}">{{ item.code }}</span>
                                             {% if item.is_big_six %}
-                                                <span class="badge {% if item.has_players %}bg-warning text-dark{% else %}bg-secondary opacity-75{% endif %} px-2 py-1">Big 6</span>
+                                                <span class="badge bg-warning text-dark px-2 py-1">Big 6</span>
                                             {% else %}
-                                                <span class="badge {% if item.has_players %}bg-dark text-light opacity-75{% else %}bg-secondary opacity-50{% endif %} px-2 py-1">Other</span>
+                                                <span class="badge bg-secondary text-light opacity-75 px-2 py-1">Other</span>
                                             {% endif %}
                                         </div>
-                                        <div class="small fw-semibold mb-2 {% if not item.has_players %}text-muted{% endif %}">{{ item.name }}</div>
+                                        <div class="small text-muted fw-semibold mb-2">{{ item.name }}</div>
                                         
                                         <div class="mb-2">
                                             {% if item.has_players %}
-                                                <span class="badge bg-white text-dark border fw-bold fs-6">{{ item.count }} Player{% if item.count > 1 %}s{% endif %}</span>
+                                                <span class="badge bg-dark border text-light fw-bold fs-6" style="border-color: {{ item.accent_color }} !important;">{{ item.count }} Player{% if item.count > 1 %}s{% endif %}</span>
                                             {% else %}
                                                 <span class="small text-muted">0 Players</span>
                                             {% endif %}
                                         </div>
 
                                         {% if item.has_players %}
-                                        <div class="pt-2 border-top border-white-50 small" style="max-height: 130px; overflow-y: auto;">
+                                        <div class="pt-2 border-top border-secondary small" style="max-height: 130px; overflow-y: auto;">
                                             <ul class="list-unstyled mb-0 text-start">
-                                                {% for player_name in item.players %}
-                                                <li class="py-1 fw-bold text-truncate" title="{{ player_name }}">
-                                                    • {{ player_name }}
+                                                {% for p in item.players %}
+                                                <li class="py-1 fw-semibold text-truncate d-flex align-items-center justify-content-between" title="{{ p.name }}">
+                                                    <span>• {{ p.name }}</span>
+                                                    {% if p.position %}
+                                                        <span class="badge badge-position-{{ p.position[0].lower() }} ms-1" style="font-size: 0.75rem !important;">{{ p.position }}</span>
+                                                    {% endif %}
                                                 </li>
                                                 {% endfor %}
                                             </ul>
