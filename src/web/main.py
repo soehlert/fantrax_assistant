@@ -195,7 +195,7 @@ async def read_root(
             "sort_available": sort_available,
             "sort_drafted": sort_drafted,
             "min_games": min_games,
-            "tracked_teams": list(teams_data.keys())
+            "tracked_teams": [t for t in teams_data.keys() if t != 'Other']
         }
     )
 
@@ -317,7 +317,7 @@ async def read_team(
     team_name = team_id
 
     if team_name not in teams_data:
-        team_name = list(teams_data.keys())[0] if teams_data else "Team 1"
+        team_name = [t for t in teams_data.keys() if t != 'Other'][0] if teams_data else "Team 1"
 
     roster = teams_data.get(team_name, [])
 
@@ -442,7 +442,7 @@ async def read_team(
             "suggestions": suggestions_pagination,
             "draft_status": draft_status,
             "drafted_player": drafted_player,
-            "tracked_teams": list(teams_data.keys()),
+            "tracked_teams": [t for t in teams_data.keys() if t != 'Other'],
             "exclude_teams": exclude_teams,
             "exclude_positions": exclude_positions,
             "all_positions": ["G", "D", "M", "F"]
@@ -540,7 +540,7 @@ async def read_draft_analysis(request: Request):
             "best_overall": best_overall,
             "top_steal": top_steal,
             "worst_pick": worst_pick,
-            "tracked_teams": list(teams_data.keys())
+            "tracked_teams": [t for t in teams_data.keys() if t != 'Other']
         }
     )
 
@@ -775,7 +775,7 @@ async def read_player_profile(request: Request, player_name: str):
             "injury_severity": injury_severity,
             "injury_notes": injury_notes,
             "at_afcon": at_afcon,
-            "tracked_teams": list(draft_state_dict.get("teams", {}).keys()),
+            "tracked_teams": [t for t in draft_state_dict.get("teams", {}).keys() if t != 'Other'],
         }
     )
 
