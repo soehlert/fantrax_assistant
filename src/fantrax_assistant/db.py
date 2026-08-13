@@ -232,6 +232,7 @@ class DatabaseManager:
                 return None
             
             p_dict = dict(p_row)
+            player_id = p_dict["id"]
 
             # Join PL Match Stats
             cursor.execute("SELECT * FROM pl_match_stats WHERE player_id = ?", (player_id,))

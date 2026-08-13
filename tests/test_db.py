@@ -50,5 +50,21 @@ class TestDatabaseManager(unittest.TestCase):
         fetched_id = self.db.get_player_id_by_name("Gabriel")
         self.assertEqual(player_id, fetched_id)
 
+    def test_get_full_player_profile_by_uuid(self):
+        player_id = self.db.upsert_player(
+            name="Erling Haaland",
+            position="F",
+            team="MCI",
+            adp=1.5,
+            fpts=220.0,
+            fpg=5.8,
+            understat_id="8260"
+        )
+        # Verify direct lookup by UUID (prevent UnboundLocalError)
+        profile = self.db.get_full_player_profile(player_id)
+        self.assertIsNotNone(profile)
+        self.assertEqual(profile["id"], player_id)
+        self.assertEqual(profile["name"], "Erling Haaland")
+
 if __name__ == "__main__":
     unittest.main()
