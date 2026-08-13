@@ -48,14 +48,9 @@
                             <span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">{{ player.adp }}</span>
                         </td>
                         <td class="px-6 py-2.5 font-bold text-on-surface text-base">
-                            {% if player.pick_number %}
-                                <a href="/draft/analysis#pick-card-{{ player.pick_number }}" class="hover:text-primary-container hover:underline transition-colors flex items-center gap-1.5 group">
-                                    <span>{{ player.player }}</span>
-                                    <span class="material-symbols-outlined text-xs opacity-0 group-hover:opacity-100 transition-opacity text-on-surface-variant">open_in_new</span>
-                                </a>
-                            {% else %}
+                            <a href="/player/{{ player.player }}" class="hover:text-primary-container transition-colors">
                                 {{ player.player }}
-                            {% endif %}
+                            </a>
                         </td>
                         <td class="px-6 py-2.5">
                             <div class="flex gap-1.5 font-bold text-on-surface text-base">

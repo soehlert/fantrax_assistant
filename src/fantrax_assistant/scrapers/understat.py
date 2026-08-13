@@ -49,10 +49,29 @@ class Understat:
     def get_player_data_by_name(
         self, player_name: str, league: str, season: str
     ) -> Optional[Dict]:
+        import unicodedata
+        def norm(s: str) -> str:
+            return ''.join(
+                c for c in unicodedata.normalize('NFD', s)
+                if unicodedata.category(c) != 'Mn'
+            ).lower().replace('-', ' ').replace('.', '').strip()
+
         players = self.get_all_players_data(league=league, season=season)
-        for player in players:
-            if player["player_name"] == player_name:
-                return player
+        target = norm(player_name)
+
+        # 1. Exact normalized match
+        for p in players:
+            if norm(p["player_name"]) == target:
+                return p
+
+        # 2. Token overlap / substring match (e.g. Gabriel Magalhaes -> Gabriel)
+        target_tokens = set(target.split())
+        for p in players:
+            p_norm = norm(p["player_name"])
+            p_tokens = set(p_norm.split())
+            if target in p_norm or p_norm in target or (len(target_tokens) > 1 and target_tokens.issubset(p_tokens)):
+                return p
+
         return None
 
     def get_positional_data(

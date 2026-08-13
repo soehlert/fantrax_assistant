@@ -288,7 +288,7 @@ async def read_team(
         player["grade_class"] = a_data.get("grade_class", "blue")
         player["pick_number"] = a_data.get("pick_number")
 
-    roster_rules = {"G": 2, "D": 5, "M": 5, "F": 3}
+    roster_rules = {"G": 1, "D": 5, "M": 5, "F": 4}
     all_drafted_player_names = list(draft_state.get("drafted_players", []))
     for t_name, t_roster in teams_data.items():
         for p in t_roster:

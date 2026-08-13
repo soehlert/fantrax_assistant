@@ -89,7 +89,7 @@ class DraftPickAnalyzer:
 
         # 3. Positional Need Fit
         primary_pos = player_pos.split(',')[0].strip().upper() if player_pos else 'M'
-        roster_rules = {"G": 2, "D": 5, "M": 5, "F": 3}
+        roster_rules = {"G": 1, "D": 5, "M": 5, "F": 4}
         current_pos_count = sum(1 for p in team_roster if p.get('position', '').split(',')[0].strip().upper() == primary_pos)
         max_pos = roster_rules.get(primary_pos, 5)
 

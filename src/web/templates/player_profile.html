@@ -31,7 +31,7 @@
                     <span class="bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-bold px-3 py-1 rounded-full">Long Term Injury</span>
                 {% endif %}
 
-                {% set team_code = fantrax_info.get('team') or (player_data.get('team_title') if player_data else 'N/A') %}
+                {% set team_code = fantrax_info.get('team') or (player_data.get('team_title') if player_data else '') %}
                 {% if team_code %}
                     <span class="text-sm font-bold text-on-surface-variant flex items-center gap-1">
                         Club: <strong class="text-on-surface">{{ team_code }}</strong>
@@ -105,7 +105,7 @@
     </div>
     {% endif %}
 
-    <!-- Injury / AFCON Details -->
+    <!-- Availability Details -->
     {% if injury_notes or at_afcon %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
         <h3 class="text-headline-sm font-bold text-on-surface mb-3">Availability Details</h3>
@@ -118,18 +118,29 @@
     </div>
     {% endif %}
 
-    <!-- Understat Performance Chart (If Available) -->
-    {% if chart_data and player_data %}
+    <!-- Understat Performance Chart (If Available and Outfield) -->
+    {% set is_gk = (fantrax_info.get('position') == 'G' or (player_data and player_data.get('position') == 'GK')) %}
+    {% set has_understat_metrics = player_data and not is_gk and (player_data.get('xG') | float > 0 or player_data.get('xA') | float > 0 or player_data.get('shots') | float > 0) %}
+
+    {% if has_understat_metrics and chart_data %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
         <h3 class="text-headline-sm font-bold text-on-surface mb-4">Understat Advanced Metrics</h3>
         <div class="h-64 w-full">
             <canvas id="understatChart"></canvas>
         </div>
     </div>
+    {% elif is_gk %}
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-5 shadow-sm text-center">
+        <p class="text-on-surface-variant text-sm font-medium">🛡️ Goalkeepers (G) do not record outfield expected goals (xG) or key pass metrics.</p>
+    </div>
+    {% elif not player_data %}
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-5 shadow-sm text-center">
+        <p class="text-on-surface-variant text-sm font-medium">No Understat advanced metrics recorded for this player.</p>
+    </div>
     {% endif %}
 </section>
 
-{% if chart_data and player_data %}
+{% if has_understat_metrics and chart_data %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const ctx = document.getElementById('understatChart').getContext('2d');
