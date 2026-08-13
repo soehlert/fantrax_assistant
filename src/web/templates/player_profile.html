@@ -7,15 +7,6 @@
         <div>
             <div class="flex items-center gap-3 flex-wrap">
                 <h1 class="text-display font-display text-on-surface">{{ player_name }}</h1>
-                {% if drafted_by_team %}
-                    <a href="{{ url_for('read_team', team_id=drafted_by_team) }}" class="bg-primary-container/20 text-primary-container border border-primary-container/30 px-3 py-1 rounded-full text-xs font-bold hover:bg-primary-container/30 transition-colors">
-                        Drafted by {{ drafted_by_team }}
-                    </a>
-                {% else %}
-                    <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-bold">
-                        Available / Undrafted
-                    </span>
-                {% endif %}
             </div>
             
             <div class="mt-3 flex items-center gap-3 flex-wrap">
@@ -32,17 +23,32 @@
                 {% endif %}
 
                 {% set team_code = fantrax_info.get('team') or (player_data.get('team_title') if player_data else '') %}
+                {% set pos_str = fantrax_info.get('position', player_data.get('position', 'M') if player_data else 'M') %}
                 {% if team_code %}
-                    <span class="text-sm font-bold text-on-surface-variant flex items-center gap-1">
-                        Club: <strong class="text-on-surface">{{ team_code }}</strong>
+                    <span class="text-sm font-bold text-on-surface-variant flex items-center gap-1.5">
+                        <span>Club: <strong class="text-on-surface">{{ team_code }}</strong></span>
+                        <span class="text-outline-variant">•</span>
+                        <span>Position: <strong class="text-on-surface bg-surface-container-high px-2 py-0.5 rounded text-xs border border-outline-variant/60">{{ pos_str }}</strong></span>
+                    </span>
+                {% else %}
+                    <span class="text-sm font-bold text-on-surface-variant">
+                        Position: <strong class="text-on-surface bg-surface-container-high px-2 py-0.5 rounded text-xs border border-outline-variant/60">{{ pos_str }}</strong>
                     </span>
                 {% endif %}
             </div>
         </div>
 
-        <a href="{{ url_for('read_root') }}" class="bg-surface-variant hover:bg-outline-variant text-on-surface font-medium py-2.5 px-5 rounded-lg transition-colors inline-flex items-center gap-2 w-fit shadow-sm">
-            <span class="material-symbols-outlined text-[18px]">arrow_back</span> Back to Draft Board
-        </a>
+        <div class="flex items-center">
+            {% if drafted_by_team %}
+                <a href="{{ url_for('read_team', team_id=drafted_by_team) }}" class="bg-primary-container/20 text-primary-container border border-primary-container/30 px-4 py-2 rounded-full text-xs font-bold hover:bg-primary-container/30 transition-colors shadow-sm">
+                    Drafted by {{ drafted_by_team }}
+                </a>
+            {% else %}
+                <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-full text-xs font-bold shadow-sm">
+                    Available
+                </span>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Key Fantasy & Stats Cards Grid -->
@@ -52,9 +58,15 @@
             <div class="text-xl font-extrabold text-on-surface mt-1">{{ fantrax_info.get('adp', 'N/A') }}</div>
         </div>
         <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center">
-            <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Position</div>
-            <div class="text-xl font-extrabold text-on-surface mt-1">
-                <span class="text-sm font-bold px-2 py-0.5 rounded bg-surface-container-low text-on-surface border border-outline-variant">{{ fantrax_info.get('position', player_data.get('position', 'M') if player_data else 'M') }}</span>
+            <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Rotation Risk</div>
+            <div class="text-xl font-extrabold mt-1">
+                {% if rotation_risk_info.color == 'emerald' %}
+                    <span class="text-xs font-bold px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">{{ rotation_risk_info.badge }}</span>
+                {% elif rotation_risk_info.color == 'amber' %}
+                    <span class="text-xs font-bold px-2 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">{{ rotation_risk_info.badge }}</span>
+                {% else %}
+                    <span class="text-xs font-bold px-2 py-1 rounded bg-red-500/20 text-red-300 border border-red-500/30">{{ rotation_risk_info.badge }}</span>
+                {% endif %}
             </div>
         </div>
         <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center">

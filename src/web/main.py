@@ -766,6 +766,28 @@ async def read_player_profile(request: Request, player_name: str):
     except Exception as e:
         print(f"Error finding similar players for {player_name_clean}: {e}")
 
+    # 8. Rotation Risk Score & Status for Player Profile
+    team_code = (fantrax_info.get("team") or (player_data.get("team_title") if player_data else "")).upper()
+    fpg_val = safe_float(fantrax_info.get("fpg", 0))
+    starts = pl_stats.get("starts", 0) if pl_stats else 0
+    apps = pl_stats.get("total_apps", 0) if pl_stats else 0
+    mins = pl_stats.get("minutes", 0) if pl_stats else 0
+
+    if fpg_val >= 4.2 and (apps == 0 or (starts / max(1, apps)) >= 0.8):
+        rotation_risk_info = {"level": "Low", "badge": "Nailed Starter", "sub": "100% Floor", "color": "emerald"}
+    elif team_code in {'MCI', 'ARS', 'CHE', 'LIV'}:
+        avg_mins = (mins / apps) if apps > 0 else 0
+        if avg_mins > 0 and avg_mins < 65:
+            rotation_risk_info = {"level": "High", "badge": "Heavy Risk", "sub": "20% Discount", "color": "red"}
+        elif avg_mins > 0 and avg_mins < 78:
+            rotation_risk_info = {"level": "Medium", "badge": "Moderate Risk", "sub": "10% Discount", "color": "amber"}
+        elif fpg_val < 3.8:
+            rotation_risk_info = {"level": "Medium", "badge": "Moderate Risk", "sub": "15% Discount", "color": "amber"}
+        else:
+            rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "100% Floor", "color": "emerald"}
+    else:
+        rotation_risk_info = {"level": "Low", "badge": "Nailed Starter", "sub": "100% Floor", "color": "emerald"}
+
     return templates.TemplateResponse(
         request=request,
         name="player_profile.html",
@@ -783,6 +805,7 @@ async def read_player_profile(request: Request, player_name: str):
             "injury_severity": injury_severity,
             "injury_notes": injury_notes,
             "at_afcon": at_afcon,
+            "rotation_risk_info": rotation_risk_info,
             "tracked_teams": [t for t in draft_state_dict.get("teams", {}).keys() if t != 'Other'],
         }
     )

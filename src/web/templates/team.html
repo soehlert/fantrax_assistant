@@ -61,15 +61,18 @@
                         </td>
                         <td class="px-6 py-3">{{ render_team_badge(player.team) }}</td>
                         <td class="px-6 py-3 text-sm font-bold">
-                            <span class="flex items-center gap-1.5">
-                                <span>{{ 'vs' if player.fixture.is_home else '@' }} {{ player.fixture.opponent }}</span>
-                                <span class="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center gap-1 min-w-[68px]">
+                                    <span class="w-5 text-center text-xs text-on-surface-variant font-mono font-extrabold">{{ 'vs' if player.fixture.is_home else '@' }}</span>
+                                    <span class="font-bold text-on-surface">{{ player.fixture.opponent }}</span>
+                                </span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold whitespace-nowrap
                                     {% if player.fixture.fdr <= 2 %}bg-emerald-950 text-emerald-300 border border-emerald-500/50
                                     {% elif player.fixture.fdr == 3 %}bg-amber-950 text-amber-300 border border-amber-500/50
                                     {% else %}bg-red-950 text-red-300 border border-red-500/50{% endif %}">
                                     FDR {{ player.fixture.fdr }}
                                 </span>
-                            </span>
+                            </div>
                         </td>
                         <td class="px-6 py-3 text-xs text-on-surface-variant font-medium">{{ player.fixture.display_time }}</td>
                         <td class="px-6 py-3 text-right font-bold text-emerald-400 text-base">{{ "%.2f"|format(player.proj_fpts) }}</td>
