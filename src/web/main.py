@@ -598,12 +598,14 @@ async def read_player_profile(request: Request, player_name: str):
     except Exception as e:
         print(f"Error loading PL stats: {e}")
 
-    # 6. Similar Available Alternatives Based on Understat Profile Distance
+    # 6. Similar Available Alternatives (Constrained by ADP Window + Understat Profile Distance)
     similar_players = []
     try:
         import numpy as np
         player_pos = (fantrax_info.get("position") or "M").split(",")[0].strip().upper()
-        
+        target_adp = float(fantrax_info.get("adp", 50) or 50)
+        target_fpg = float(fantrax_info.get("fpg", 0) or 0)
+
         all_u_players = understat.get_all_players_data("EPL", "2024")
         u_map = {}
         for up in all_u_players:
@@ -639,15 +641,27 @@ async def read_player_profile(request: Request, player_name: str):
             if player_pos in p.get("position", "").upper().split(",")
         ] or all_available
 
+        # Filter candidates within ADP range window (+/- 45 spots)
+        adp_candidates = [
+            p for p in pos_match
+            if abs(float(p.get("adp", 999) or 999) - target_adp) <= 45
+        ] or pos_match
+
         scored = []
-        for cand in pos_match:
+        for cand in adp_candidates:
             cand_u = get_u_entry(cand.get("player", ""))
             cand_vec = get_vec(cand_u)
-            
+            cand_adp = float(cand.get("adp", 999) or 999)
+            cand_fpg = float(cand.get("fpg", 0) or 0)
+
             if target_u and cand_u:
-                dist = float(np.linalg.norm(target_vec - cand_vec))
+                u_dist = float(np.linalg.norm(target_vec - cand_vec))
             else:
-                dist = abs(float(cand.get("adp", 999) or 999) - float(fantrax_info.get("adp", 999) or 999)) * 0.1
+                u_dist = 2.0
+
+            adp_penalty = abs(cand_adp - target_adp) / 30.0
+            fpg_penalty = abs(cand_fpg - target_fpg) * 0.5
+            total_score = u_dist + adp_penalty + fpg_penalty
 
             cand_copy = dict(cand)
             if cand_u:
@@ -658,7 +672,7 @@ async def read_player_profile(request: Request, player_name: str):
                 cand_copy["xg_per_game"] = 0.0
                 cand_copy["xa_per_game"] = 0.0
 
-            scored.append((cand_copy, dist))
+            scored.append((cand_copy, total_score))
 
         scored.sort(key=lambda x: x[1])
         similar_players = [item[0] for item in scored[:3]]
