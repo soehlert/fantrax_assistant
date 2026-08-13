@@ -289,8 +289,8 @@ async def read_team(
             "accent_color": color_info["color"]
         })
 
-    # Sort so active clubs appear first (by player count), then Big Six, then inactive
-    club_breakdown.sort(key=lambda x: (not x["has_players"], -x["count"], not x["is_big_six"]))
+    # Sort club breakdown in alphabetical order by team code
+    club_breakdown.sort(key=lambda x: x["code"])
 
     # Get suggestions using the backend engine
     drafted_names = set(all_drafted_player_names)
