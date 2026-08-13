@@ -13,11 +13,13 @@ from fantrax_assistant.scrapers.understat import Understat
 from fantrax_assistant.suggest import PlayerRecommendationEngine
 from fantrax_assistant.draft_state import DraftState
 from fantrax_assistant.analysis import DraftPickAnalyzer
+from fantrax_assistant.db import DatabaseManager
 
 # --- App Setup ---
 config = DraftConfig()
 understat = Understat()
 analyzer = DraftPickAnalyzer(config=config)
+db_mgr = DatabaseManager("data/fantrax_assistant.db")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -471,6 +473,7 @@ async def read_draft_analysis(request: Request):
     best_steal_diff = -999.0
 
     for item in analysis_history:
+        item["id"] = db_mgr.get_player_id_by_name(item.get("player")) or item.get("player")
         p_adp = item.get("adp")
         p_pick = item.get("pick_number", 0)
         if p_adp and p_adp > 0:
