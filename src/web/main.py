@@ -518,29 +518,29 @@ async def read_player_profile(request: Request, player_name: str):
     import urllib.parse
     from fantrax_assistant.db import DatabaseManager
     
-    player_name_clean = urllib.parse.unquote(player_name).strip()
+    clean_identifier = urllib.parse.unquote(player_name).strip()
     db = DatabaseManager("data/fantrax_assistant.db")
     state = DraftState()
     draft_state_dict = get_draft_state_dict()
 
-    # 1. Fetch Full Player Profile from SQLite DB
-    full_profile = db.get_full_player_profile(player_name_clean) or {}
-    
-    fantrax_info = config.get_player_adp(player_name_clean)
-    if not fantrax_info and full_profile:
-        fantrax_info = {
-            "player": full_profile.get("name"),
-            "position": full_profile.get("position"),
-            "team": full_profile.get("team"),
-            "adp": full_profile.get("adp"),
-            "fpts": full_profile.get("fpts"),
-            "fpg": full_profile.get("fpg")
-        }
+    # 1. Fetch Full Player Profile from SQLite DB using UUID or Name
+    full_profile = db.get_full_player_profile(clean_identifier) or {}
+    player_name_clean = full_profile.get("name") or clean_identifier
+    player_uuid = full_profile.get("id") or clean_identifier
+
+    fantrax_info = config.get_player_adp(player_name_clean) or {
+        "player": full_profile.get("name", player_name_clean),
+        "position": full_profile.get("position", "M"),
+        "team": full_profile.get("team", ""),
+        "adp": full_profile.get("adp"),
+        "fpts": full_profile.get("fpts"),
+        "fpg": full_profile.get("fpg")
+    }
 
     # 2. Draft Status & Pick Analysis
     drafted_by_team = None
     for team_id, roster in state.teams.items():
-        if any(p.get('player') == player_name_clean for p in roster):
+        if any(p.get('player') == player_name_clean or p.get('id') == player_uuid for p in roster):
             drafted_by_team = team_id
             break
 
@@ -554,7 +554,6 @@ async def read_player_profile(request: Request, player_name: str):
     
     try:
         if understat_id:
-            # Look up by explicit Understat ID first
             all_u = understat.get_all_players_data("EPL", "2024")
             player_data = next((u for u in all_u if str(u.get("id")) == str(understat_id)), None)
 
@@ -621,34 +620,6 @@ async def read_player_profile(request: Request, player_name: str):
     pos_map = {"D": "Defender (D)", "M": "Midfielder (M)", "F": "Forward (F)", "G": "Goalkeeper (G)", "GK": "Goalkeeper (G)"}
     raw_pos = (fantrax_info.get("position") or (player_data.get("position") if player_data else "M")).split(",")[0].split(" ")[0].upper()
     position_display = pos_map.get(raw_pos, f"Position ({raw_pos})")
-
-    # 5. Premier League Official Match Stats (current_stats.json)
-    pl_stats = None
-    try:
-        import json, unicodedata
-        def norm(s):
-            return ''.join(c for c in unicodedata.normalize('NFD', str(s)) if unicodedata.category(c) != 'Mn').lower().replace('-', ' ').strip()
-        
-        with open("data/current_stats.json") as f:
-            c_db = json.load(f)
-            t_norm = norm(player_name_clean)
-            for p in c_db.get("players", []):
-                p_norm = norm(p.get("name", ""))
-                if p_norm == t_norm or t_norm in p_norm or p_norm in t_norm:
-                    starts = int(p.get("starts", 0) or 0)
-                    matches = int(p.get("matches_played", 0) or 0)
-                    total_apps = max(starts, matches)
-                    pl_stats = {
-                        "starts": starts,
-                        "total_apps": total_apps,
-                        "minutes": int(p.get("minutes", 0) or 0),
-                        "ict_index": float(p.get("ict_index", 0) or 0),
-                        "influence": float(p.get("influence", 0) or 0),
-                        "threat": float(p.get("threat", 0) or 0),
-                    }
-                    break
-    except Exception as e:
-        print(f"Error loading PL stats: {e}")
 
     # 6. Similar Available Alternatives (Constrained by ADP Window + Understat Profile Distance)
     similar_players = []
@@ -737,6 +708,7 @@ async def read_player_profile(request: Request, player_name: str):
         name="player_profile.html",
         context={
             "player_name": player_name_clean,
+            "player_id": player_uuid,
             "fantrax_info": fantrax_info or {},
             "position_display": position_display,
             "drafted_by_team": drafted_by_team,
@@ -745,9 +717,9 @@ async def read_player_profile(request: Request, player_name: str):
             "chart_data": chart_data,
             "pl_stats": pl_stats,
             "similar_players": similar_players,
-            "injury_severity": injury.get('severity', 'Healthy'),
-            "injury_notes": injury.get('notes', ''),
-            "at_afcon": afcon.get('at_afcon', False),
+            "injury_severity": injury_severity,
+            "injury_notes": injury_notes,
+            "at_afcon": at_afcon,
             "tracked_teams": list(draft_state_dict.get("teams", {}).keys()),
         }
     )
