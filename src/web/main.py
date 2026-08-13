@@ -626,11 +626,15 @@ async def read_player_profile(request: Request, player_name: str):
 
         metric_configs = [
             ("goals", "Goals", "goals"),
+            ("npg", "Non-Penalty Goals", "goals"),
             ("xG", "xG (Expected Goals)", "xG"),
+            ("npxG", "Non-Penalty xG", "xG"),
             ("assists", "Assists", "assists"),
             ("xA", "xA (Expected Assists)", "xA"),
-            ("key_passes", "Key Passes", "key_passes"),
             ("shots", "Shots", "shots"),
+            ("key_passes", "Key Passes", "key_passes"),
+            ("xGChain", "xG Chain", "ict_index"),
+            ("xGBuildup", "xG Build-Up", "creativity"),
             ("cbi", "CBI (Clearances/Blocks/Int)", "cbi"),
             ("tackles", "Tackles Won", "tackles"),
             ("recoveries", "Ball Recoveries", "recoveries"),
