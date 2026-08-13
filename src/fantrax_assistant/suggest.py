@@ -185,9 +185,11 @@ class PlayerRecommendationEngine:
 
     def calculate_rotation_risk_penalty(self, player: dict) -> float:
         """
-        Calculate tactical rotation risk (sub appearances vs starts when fit).
-        - If a player starts 100% of matches when fit (starts == apps), they have 0 tactical rotation risk.
-        - Tactical rotation discount applies when managers frequently bench/sub a player (starts < 0.75 * apps).
+        Calculate rotation risk and season availability penalty based on total season starts out of 38 matches.
+        - Core starters (>=30 starts or >=2500 mins) retain 100% floor.
+        - Regular starters (22-29 starts or >=1800 mins) receive 5% discount (95% floor).
+        - Moderate workload/rotation (14-21 starts) receive 12% discount.
+        - Heavy workload/low sample risk (<14 starts or <1200 mins) receive 20% discount.
         """
         team = str(player.get('team', '')).upper()
         fpg = float(player.get('fpg', 0) or 0)
@@ -197,23 +199,20 @@ class PlayerRecommendationEngine:
         apps = int(stats.get('matches_played', 0) or 0)
         mins = int(stats.get('minutes', 0) or 0)
 
-        # 1. 100% Fit Start Rate: Zero tactical rotation penalty when healthy!
-        if apps > 0 and starts == apps and fpg >= 3.0:
+        # 1. Nailed Core Starters (30+ starts / 38, or 2500+ mins)
+        if starts >= 30 or mins >= 2500:
             return 1.0
 
-        # 2. Nailed Core Starters (high total starts/minutes)
-        if starts >= 25 or mins >= 2100:
-            return 1.0
+        # 2. Regular Starters (22-29 starts / 38, or 1800+ mins)
+        if starts >= 22 or mins >= 1800:
+            return 0.95
 
-        # 3. Tactical Rotation Penalty for players on top clubs (MCI, ARS, CHE, LIV) who frequently come off bench
-        if team in {'MCI', 'ARS', 'CHE', 'LIV'} and apps >= 5:
-            fit_start_rate = starts / max(1, apps)
-            if fit_start_rate < 0.60:
-                return 0.82  # Heavy tactical rotation (e.g. 8 starts, 20 appearances)
-            elif fit_start_rate < 0.78:
-                return 0.90  # Moderate tactical rotation
+        # 3. Moderate Workload / Rotation (14-21 starts)
+        if starts >= 14 or mins >= 1200:
+            return 0.88
 
-        return 1.0
+        # 4. Low Season Workload / Low Sample / Heavy Rotation (<14 starts or <1200 mins)
+        return 0.80  # 20% discount for low season volume (e.g. 7/38 starts)
 
     def position_multiplier(self, player: dict) -> float:
         """

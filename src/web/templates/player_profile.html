@@ -125,7 +125,7 @@
                     <span>Starts / Appearances</span>
                     <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                 </div>
-                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('starts', 0) }} / {{ pl_stats.get('total_apps', 0) }}</div>
+                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('starts', 0) }} / {{ pl_stats.get('total_apps') or pl_stats.get('appearances') or pl_stats.get('starts', 0) }}</div>
             </div>
 
             <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Total minutes played on the pitch this season">
@@ -136,20 +136,24 @@
                 <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('minutes', 0) }}'</div>
             </div>
 
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Official Premier League Influence, Creativity & Threat Index evaluating overall statistical impact">
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Official Premier League Influence, Creativity & Threat Index evaluating overall statistical impact (Higher = Better)">
                 <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
                     <span>PL ICT Index</span>
                     <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                 </div>
-                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('ict_index', '0.0') }}</div>
+                <div class="text-lg font-bold text-emerald-400 mt-0.5">{{ pl_stats.get('ict_index', '0.0') }}</div>
             </div>
 
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Influence measures key match event impact (passes, tackles). Threat measures goal-scoring threat (shots, box touches).">
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Influence (passes/tackles) & Threat (shots/box touches). Higher numbers indicate greater match impact.">
                 <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
-                    <span>Influence / Threat</span>
+                    <span>Influence & Threat</span>
                     <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                 </div>
-                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('influence', 0) }} / {{ pl_stats.get('threat', 0) }}</div>
+                <div class="text-base font-bold text-on-surface mt-0.5">
+                    <span class="text-emerald-400">{{ pl_stats.get('influence', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">Infl</span>
+                    <span class="text-outline-variant mx-1">•</span>
+                    <span class="text-emerald-400">{{ pl_stats.get('threat', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">Thr</span>
+                </div>
             </div>
         </div>
 
