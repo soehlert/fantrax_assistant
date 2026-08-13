@@ -37,6 +37,7 @@
                         <th class="px-6 py-3 font-bold">ADP</th>
                         <th class="px-6 py-3 font-bold">Name</th>
                         <th class="px-6 py-3 font-bold">Position</th>
+                        <th class="px-6 py-3 font-bold text-center">Grade</th>
                         <th class="px-6 py-3 font-bold text-right">Team</th>
                     </tr>
                 </thead>
@@ -54,13 +55,29 @@
                                 {% endfor %}
                             </div>
                         </td>
+                        <td class="px-6 py-2.5 text-center">
+                            {% if player.grade and player.grade != '—' %}
+                                {% set gclass = player.grade_class or 'blue' %}
+                                {% if gclass == 'emerald' %}
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Grade: {{ player.grade }}</span>
+                                {% elif gclass == 'blue' %}
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-blue-500/20 text-blue-400 border border-blue-500/30">Grade: {{ player.grade }}</span>
+                                {% elif gclass == 'amber' %}
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-400 border border-amber-500/30">Grade: {{ player.grade }}</span>
+                                {% else %}
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-red-500/20 text-red-400 border border-red-500/30">Grade: {{ player.grade }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-xs text-on-surface-variant font-semibold">—</span>
+                            {% endif %}
+                        </td>
                         <td class="px-6 py-2.5 text-right">
                             {{ render_team_badge(player.team) }}
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="px-6 py-6 text-center text-on-surface-variant text-sm">This team's roster is empty.</td>
+                        <td colspan="5" class="px-6 py-6 text-center text-on-surface-variant text-sm">This team's roster is empty.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

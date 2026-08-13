@@ -278,6 +278,15 @@ async def read_team(
 
     roster = teams_data.get(team_name, [])
 
+    state = DraftState()
+    analysis_history = analyzer.backfill_retroactive_analysis(state)
+    grade_lookup = {a["player"]: a for a in analysis_history}
+
+    for player in roster:
+        a_data = grade_lookup.get(player.get("player"), {})
+        player["grade"] = a_data.get("grade", "—")
+        player["grade_class"] = a_data.get("grade_class", "blue")
+
     roster_rules = {"G": 2, "D": 5, "M": 5, "F": 3}
     all_drafted_player_names = list(draft_state.get("drafted_players", []))
     for t_name, t_roster in teams_data.items():
