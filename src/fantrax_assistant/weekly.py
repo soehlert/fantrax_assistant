@@ -44,43 +44,100 @@ class WeeklyManagerEngine:
     def __init__(self, fixture_schedule: Optional[Dict[str, Dict[str, Any]]] = None):
         self.fixtures = fixture_schedule or DEFAULT_FIXTURE_SCHEDULE
 
+    def _get_eligible_positions(self, pos_str: str) -> List[str]:
+        """Extract all eligible position codes (G, D, M, F) for multi-position players."""
+        if not pos_str:
+            return ['M']
+        tokens = [p.strip().upper() for p in str(pos_str).split(',')]
+        valid = []
+        for p in ['G', 'GK', 'D', 'DEF', 'M', 'MID', 'F', 'FWD']:
+            if p in tokens:
+                code = 'G' if p in {'G', 'GK'} else ('D' if p in {'D', 'DEF'} else ('M' if p in {'M', 'MID'} else 'F'))
+                if code not in valid:
+                    valid.append(code)
+        return valid or ['M']
+
     def _get_primary_position(self, pos_str: str) -> str:
         """Extract primary position code (G, D, M, F)."""
-        if not pos_str:
-            return 'M'
-        positions = [p.strip() for p in pos_str.split(',')]
-        for p in ['G', 'D', 'M', 'F']:
-            if p in positions:
-                return p
-        return 'M'
+        eligible = self._get_eligible_positions(pos_str)
+        return eligible[0] if eligible else 'M'
+
+    def get_player_fixture_display(self, team_code: str) -> Dict[str, Any]:
+        """Format team fixture info, handling single matches and Double Gameweeks (DGW)."""
+        fixture_data = self.fixtures.get(team_code)
+        if not fixture_data:
+            return {
+                'opponent': 'TBD',
+                'is_home': True,
+                'fdr': 3,
+                'kickoff_time': '2026-08-16T15:00:00Z',
+                'display_time': 'Sun Aug 16, 3:00 PM',
+                'is_double': False
+            }
+
+        if isinstance(fixture_data, list):
+            opponents = [f"{'vs' if f.get('is_home') else '@'} {f.get('opponent')}" for f in fixture_data]
+            display_times = [f.get('display_time', '') for f in fixture_data]
+            fdrs = [f.get('fdr', 3) for f in fixture_data]
+
+            return {
+                'opponent': " • ".join(opponents),
+                'is_home': fixture_data[0].get('is_home', True),
+                'fdr': min(fdrs),
+                'fdr_avg': round(sum(fdrs)/len(fdrs), 1),
+                'kickoff_time': fixture_data[0].get('kickoff_time', ''),
+                'display_time': " • ".join(display_times),
+                'is_double': True,
+                'games': fixture_data
+            }
+
+        return {
+            'opponent': f"{'vs' if fixture_data.get('is_home') else '@'} {fixture_data.get('opponent')}",
+            'is_home': fixture_data.get('is_home', True),
+            'fdr': fixture_data.get('fdr', 3),
+            'kickoff_time': fixture_data.get('kickoff_time', ''),
+            'display_time': fixture_data.get('display_time', ''),
+            'is_double': False,
+            'games': [fixture_data]
+        }
 
     def calculate_projected_points(self, player: Dict[str, Any]) -> float:
-        """Calculate projected weekly fantasy points based on form, fixture difficulty, home advantage, and starting probability."""
+        """
+        Calculate projected weekly fantasy points across all fixtures in the gameweek (handles Double Gameweeks).
+        Positional scoring weights (e.g. Defender goals = +6 FPts vs Forward goals = +4 FPts) are directly 
+        embedded in historical player FP/G (fpg).
+        """
         fpg = float(player.get('fpg', 0) or 0)
         team_code = player.get('team', '')
-        fixture = self.fixtures.get(team_code, {})
+        fixture_data = self.fixtures.get(team_code)
 
-        fdr = fixture.get('fdr', 3)
-        is_home = fixture.get('is_home', False)
+        if not fixture_data:
+            return round(fpg * 0.97, 2)
 
-        # FDR multiplier: FDR 1 (1.15), FDR 2 (1.08), FDR 3 (1.00), FDR 4 (0.90), FDR 5 (0.80)
-        fdr_multiplier = {1: 1.15, 2: 1.08, 3: 1.00, 4: 0.90, 5: 0.80}.get(fdr, 1.0)
-        home_boost = 1.05 if is_home else 0.97
+        fixtures_list = fixture_data if isinstance(fixture_data, list) else [fixture_data]
 
-        # Starting Probability & Rotation Risk Factor
-        # High-depth clubs (ARS, MCI, CHE, LIV) carry rotation penalties for non-guaranteed starters
-        rotation_penalty = 1.0
-        if team_code in {'MCI', 'ARS', 'CHE', 'LIV'}:
-            # If player hasn't locked 80+ minutes per start or is in heavy competition
-            if fpg < 3.8:
-                rotation_penalty = 0.88  # 12% discount for rotational uncertainty
+        total_proj = 0.0
+        for fixture in fixtures_list:
+            fdr = fixture.get('fdr', 3)
+            is_home = fixture.get('is_home', False)
 
-        proj = fpg * fdr_multiplier * home_boost * rotation_penalty
-        return round(proj, 2)
+            fdr_multiplier = {1: 1.15, 2: 1.08, 3: 1.00, 4: 0.90, 5: 0.80}.get(fdr, 1.0)
+            home_boost = 1.05 if is_home else 0.97
+
+            rotation_penalty = 1.0
+            if team_code in {'MCI', 'ARS', 'CHE', 'LIV'}:
+                if fpg < 3.8:
+                    rotation_penalty = 0.88
+
+            game_proj = fpg * fdr_multiplier * home_boost * rotation_penalty
+            total_proj += game_proj
+
+        return round(total_proj, 2)
 
     def get_optimal_lineup(self, roster: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Formulate optimal starting 11 (1 G, 3-5 D, 3-5 M, 1-3 F) and bench order.
+        Formulate optimal starting 11 (1 G, 3-5 D, 3-5 M, 1-3 F) and bench order,
+        supporting multi-position flex eligibility (e.g. D,M or M,F).
         """
         if not roster:
             return {
@@ -90,20 +147,15 @@ class WeeklyManagerEngine:
                 'total_projected_fpts': 0.0
             }
 
-        # Enrich roster with projected points & primary position
+        # Enrich roster with projected points, primary position, eligible flex positions, and fixture display
         enriched = []
         for p in roster:
             p_copy = dict(p)
-            p_copy['primary_pos'] = self.primary_pos = self._get_primary_position(p_copy.get('position', ''))
+            p_copy['eligible_positions'] = self._get_eligible_positions(p_copy.get('position', ''))
+            p_copy['primary_pos'] = p_copy['eligible_positions'][0]
             p_copy['proj_fpts'] = self.calculate_projected_points(p_copy)
             team_code = p_copy.get('team', '')
-            p_copy['fixture'] = self.fixtures.get(team_code, {
-                'opponent': 'TBD',
-                'is_home': True,
-                'fdr': 3,
-                'kickoff_time': '2026-08-16T15:00:00Z',
-                'display_time': 'Sun Aug 16, 3:00 PM'
-            })
+            p_copy['fixture'] = self.get_player_fixture_display(team_code)
             enriched.append(p_copy)
 
         # Sort by projected points descending
@@ -135,7 +187,7 @@ class WeeklyManagerEngine:
         for _ in range(min(1, len(f_candidates))):
             starters.append(f_candidates.pop(0))
 
-        # 3. Fill remaining outfield starter spots (up to total 11 starters)
+        # 3. Fill remaining outfield starter spots (up to total 11 starters) using multi-position flex eligibility
         remaining = d_candidates + m_candidates + f_candidates
         remaining.sort(key=lambda x: x['proj_fpts'], reverse=True)
 
@@ -150,18 +202,25 @@ class WeeklyManagerEngine:
                 bench.append(p)
                 continue
 
-            pos = p['primary_pos']
-            max_allowed = POSITION_LIMITS[pos]['max']
+            # Try primary position first, then flex secondary positions
+            assigned = False
+            for pos in p['eligible_positions']:
+                if pos == 'G':
+                    continue
+                max_allowed = POSITION_LIMITS[pos]['max']
+                if pos_counts[pos] < max_allowed:
+                    p['assigned_pos'] = pos
+                    starters.append(p)
+                    pos_counts[pos] += 1
+                    assigned = True
+                    break
 
-            if pos_counts[pos] < max_allowed:
-                starters.append(p)
-                pos_counts[pos] += 1
-            else:
+            if not assigned:
                 bench.append(p)
 
         # Sort starters & bench logically
         pos_order = {'G': 0, 'D': 1, 'M': 2, 'F': 3}
-        starters.sort(key=lambda x: (pos_order.get(x['primary_pos'], 4), -x['proj_fpts']))
+        starters.sort(key=lambda x: (pos_order.get(x.get('assigned_pos', x['primary_pos']), 4), -x['proj_fpts']))
         bench.sort(key=lambda x: -x['proj_fpts'])
 
         d_cnt = pos_counts['D']
