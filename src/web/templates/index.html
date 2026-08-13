@@ -34,16 +34,16 @@
 </div>
 {% endif %}
 
-<!-- Available Players Section (Click Row to Draft) -->
+<!-- Available Players Section (Click Row to Draft - Auto Live Search) -->
 <section class="flex flex-col gap-6 mt-6">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 class="text-headline-lg font-display text-on-surface">Available Players</h2>
-        <form action="{{ url_for('read_root') }}" method="get" class="flex items-center gap-2 max-w-md w-full">
+        <form action="{{ url_for('read_root') }}" method="get" class="flex items-center gap-2 max-w-md w-full" id="available-search-form">
             <div class="relative flex-grow">
-                <input type="text" name="search" id="available-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Search available players..." value="{{ search_query or '' }}" autocomplete="off"/>
+                <input type="text" name="search" id="available-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 text-[15px] focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Search available players..." value="{{ search_query or '' }}" autocomplete="off"/>
                 <div id="autocomplete-results-search" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
-            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md transition-colors">
+            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-md text-[15px] transition-colors">
                 Search
             </button>
         </form>
@@ -53,7 +53,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface uppercase tracking-wider">
+                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-[13px] text-on-surface uppercase tracking-wider">
                         <th class="px-6 py-4 font-bold">Rank</th>
                         <th class="px-6 py-4 font-bold">Name</th>
                         <th class="px-6 py-4 font-bold">Position</th>
@@ -63,20 +63,20 @@
                         <th class="px-6 py-4 font-bold">FP/Game</th>
                     </tr>
                 </thead>
-                <tbody class="text-body-md text-on-surface">
+                <tbody class="text-[15px] text-on-surface">
                     {% for player in available.players %}
                     <tr onclick="triggerDraftConfirmModal('{{ player.player }}')" class="border-b border-outline-variant table-row-hover transition-colors cursor-pointer group">
                         <td class="px-6 py-4 font-bold text-on-surface-variant">{{ loop.index + (available.page - 1) * available.page_size }}</td>
-                        <td class="px-6 py-4 font-medium group-hover:text-primary transition-colors">
+                        <td class="px-6 py-4 font-semibold group-hover:text-primary transition-colors">
                             {{ player.player }}
                         </td>
-                        <td class="px-6 py-4 font-bold text-on-surface text-sm">
+                        <td class="px-6 py-4 font-bold text-on-surface text-base">
                             {{ player.position }}
                         </td>
                         <td class="px-6 py-4">{{ render_team_badge(player.team) }}</td>
-                        <td class="px-6 py-4"><span class="adp-badge text-xs font-bold px-2 py-1 rounded inline-block w-12 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
-                        <td class="px-6 py-4">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
-                        <td class="px-6 py-4">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
+                        <td class="px-6 py-4"><span class="adp-badge text-sm font-bold px-2 py-1 rounded inline-block w-13 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
+                        <td class="px-6 py-4 font-medium">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
+                        <td class="px-6 py-4 font-medium">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
                     </tr>
                     {% else %}
                     <tr>
@@ -90,16 +90,16 @@
     {{ render_pagination(available, 'page_available', '&page_drafted=' + drafted.page|string + '&search=' + (search_query or '')) }}
 </section>
 
-<!-- Drafted Players Section (7 Columns - Most Recent Picks At Top) -->
+<!-- Drafted Players Section (7 Columns - Auto Live Search) -->
 <section class="flex flex-col gap-6 mt-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 class="text-headline-lg font-display text-on-surface">Drafted Players</h2>
-        <form action="{{ url_for('read_root') }}" method="get" class="flex items-center gap-2 max-w-md w-full">
+        <form action="{{ url_for('read_root') }}" method="get" class="flex items-center gap-2 max-w-md w-full" id="drafted-search-form">
             <div class="relative flex-grow">
-                <input type="text" name="search_drafted" id="drafted-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Search drafted players..." value="{{ search_drafted_query or '' }}" autocomplete="off"/>
+                <input type="text" name="search_drafted" id="drafted-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 text-[15px] focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Search drafted players..." value="{{ search_drafted_query or '' }}" autocomplete="off"/>
                 <div id="autocomplete-results-drafted" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
-            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md transition-colors">
+            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-md text-[15px] transition-colors">
                 Search
             </button>
         </form>
@@ -109,7 +109,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface uppercase tracking-wider">
+                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-[13px] text-on-surface uppercase tracking-wider">
                         <th class="px-6 py-4 font-bold">Rank</th>
                         <th class="px-6 py-4 font-bold">Name</th>
                         <th class="px-6 py-4 font-bold">Position</th>
@@ -119,22 +119,22 @@
                         <th class="px-6 py-4 font-bold">Owner</th>
                     </tr>
                 </thead>
-                <tbody class="text-body-md text-on-surface">
+                <tbody class="text-[15px] text-on-surface">
                     {% for player in drafted.players %}
                     <tr class="border-b border-outline-variant table-row-hover transition-colors">
                         <td class="px-6 py-4 font-bold text-on-surface-variant">{{ loop.index + (drafted.page - 1) * drafted.page_size }}</td>
-                        <td class="px-6 py-4 font-medium">
+                        <td class="px-6 py-4 font-semibold">
                             <a href="{{ url_for('read_player_profile', player_name=player.player) }}" class="hover:text-primary transition-colors">
                                 {{ player.player }}
                             </a>
                         </td>
-                        <td class="px-6 py-4 font-bold text-on-surface text-sm">
+                        <td class="px-6 py-4 font-bold text-on-surface text-base">
                             {{ player.position }}
                         </td>
                         <td class="px-6 py-4">{{ render_team_badge(player.team) }}</td>
-                        <td class="px-6 py-4"><span class="adp-badge text-xs font-bold px-2 py-1 rounded inline-block w-12 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
-                        <td class="px-6 py-4">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
-                        <td class="px-6 py-4"><span class="bg-surface-variant text-on-surface text-xs font-bold px-3 py-1 rounded-full">{{ player.owner or 'Drafted' }}</span></td>
+                        <td class="px-6 py-4"><span class="adp-badge text-sm font-bold px-2 py-1 rounded inline-block w-13 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
+                        <td class="px-6 py-4 font-medium">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
+                        <td class="px-6 py-4"><span class="bg-surface-variant text-on-surface text-sm font-bold px-3 py-1 rounded-full">{{ player.owner or 'Drafted' }}</span></td>
                     </tr>
                     {% else %}
                     <tr>
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // CLEAR DRAFT TOAST QUERY PARAMETERS FROM URL HISTORY AFTER RENDER (PREVENTS REPEAT ON RELOAD)
+    // CLEAR DRAFT TOAST QUERY PARAMETERS FROM URL HISTORY AFTER RENDER
     if (window.location.search.includes('draft_status')) {
         const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
         window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
@@ -239,6 +239,31 @@ document.addEventListener('DOMContentLoaded', () => {
             toastAlert.style.opacity = '0';
             setTimeout(() => toastAlert.remove(), 500);
         }, 3500);
+    }
+
+    // LIVE AUTO-SEARCH ON INPUT WITHOUT CLICKING SEARCH BUTTON
+    let availDebounceTimer;
+    const availInput = document.getElementById('available-player-search');
+    const availForm = document.getElementById('available-search-form');
+    if (availInput && availForm) {
+        availInput.addEventListener('input', () => {
+            clearTimeout(availDebounceTimer);
+            availDebounceTimer = setTimeout(() => {
+                availForm.submit();
+            }, 350);
+        });
+    }
+
+    let draftedDebounceTimer;
+    const draftedInput = document.getElementById('drafted-player-search');
+    const draftedForm = document.getElementById('drafted-search-form');
+    if (draftedInput && draftedForm) {
+        draftedInput.addEventListener('input', () => {
+            clearTimeout(draftedDebounceTimer);
+            draftedDebounceTimer = setTimeout(() => {
+                draftedForm.submit();
+            }, 350);
+        });
     }
 
     function setupAutocomplete(inputId, resultsId, endpoint = '/api/players/autocomplete') {
@@ -275,6 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         input.value = name;
                         container.innerHTML = '';
                         container.classList.add('hidden');
+                        input.closest('form').submit();
                     });
                     container.appendChild(item);
                 });

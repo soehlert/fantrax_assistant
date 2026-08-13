@@ -124,16 +124,16 @@
 <!-- TopNavBar (Shared Component) -->
 <header class="bg-[#1e1f22] border-b border-[#333] w-full top-0 z-50">
     <div class="flex justify-between items-center w-full px-6 py-4 max-w-container-max mx-auto">
-        <div class="flex items-center gap-2">
-            <a href="{{ url_for('read_root') }}" class="flex items-center gap-2">
-                <svg class="w-8 h-8 text-on-surface" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <div class="flex items-center gap-3">
+            <a href="{{ url_for('read_root') }}" class="flex items-center gap-2.5">
+                <svg class="w-9 h-9 text-on-surface" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" stroke-linecap="round" stroke-linejoin="round"></path>
                 </svg>
-                <span class="text-xl font-extrabold text-on-surface tracking-wider">PEP</span>
+                <span class="text-2xl font-extrabold text-on-surface tracking-wider">PEP</span>
             </a>
-            <div class="flex gap-6 ml-6 text-sm font-medium">
+            <div class="flex gap-6 ml-6 text-base font-bold">
                 <a class="transition-colors flex items-center gap-2 {% if request.url.path == '/' %}text-on-surface border-b-2 border-primary-container pb-1{% else %}text-on-surface-variant hover:text-on-surface{% endif %}" href="{{ url_for('read_root') }}">
-                    <span class="material-symbols-outlined text-[18px]">list_alt</span> Draft Board
+                    <span class="material-symbols-outlined text-[20px]">list_alt</span> Draft Board
                 </a>
             </div>
         </div>
@@ -144,23 +144,23 @@
                 <div class="hidden sm:flex items-center gap-6">
                     {% for t_name in tracked_teams %}
                         {% set t_url = url_for('read_team', team_id=t_name) %}
-                        <a href="{{ t_url }}" class="transition-colors flex items-center gap-2 text-sm font-medium {% if request.url.path == t_url %}text-on-surface border-b-2 border-primary-container pb-1{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
-                            <span class="material-symbols-outlined text-[18px]">groups</span> {{ t_name }}
+                        <a href="{{ t_url }}" class="transition-colors flex items-center gap-2 text-base font-bold {% if request.url.path == t_url %}text-on-surface border-b-2 border-primary-container pb-1{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
+                            <span class="material-symbols-outlined text-[20px]">groups</span> {{ t_name }}
                         </a>
                     {% endfor %}
                 </div>
             {% else %}
                 <div class="relative inline-block text-left" id="teams-dropdown-container">
-                    <button type="button" onclick="document.getElementById('teams-menu').classList.toggle('hidden')" class="flex items-center gap-2 bg-[#333] text-on-surface hover:bg-[#444] transition-all px-4 py-2 rounded-md text-sm font-medium">
+                    <button type="button" onclick="document.getElementById('teams-menu').classList.toggle('hidden')" class="flex items-center gap-2 bg-[#333] text-on-surface hover:bg-[#444] transition-all px-4 py-2 rounded-md text-base font-bold">
                         <span>Tracked Teams</span>
-                        <span class="material-symbols-outlined text-[18px]">expand_more</span>
+                        <span class="material-symbols-outlined text-[20px]">expand_more</span>
                     </button>
                     <div id="teams-menu" class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-surface-container border border-outline-variant ring-1 ring-black ring-opacity-5 z-50">
                         <div class="py-1">
                             {% for t_name in tracked_teams %}
-                                <a href="{{ url_for('read_team', team_id=t_name) }}" class="block px-4 py-2 text-sm text-on-surface hover:bg-surface-variant transition-colors">{{ t_name }}</a>
+                                <a href="{{ url_for('read_team', team_id=t_name) }}" class="block px-4 py-2 text-base text-on-surface hover:bg-surface-variant transition-colors font-medium">{{ t_name }}</a>
                             {% else %}
-                                <span class="block px-4 py-2 text-sm text-on-surface-variant">No teams tracked</span>
+                                <span class="block px-4 py-2 text-base text-on-surface-variant">No teams tracked</span>
                             {% endfor %}
                         </div>
                     </div>

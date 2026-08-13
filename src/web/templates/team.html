@@ -33,22 +33,22 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface-variant uppercase tracking-wider">
+                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-[13px] text-on-surface-variant uppercase tracking-wider">
                         <th class="px-6 py-3">ADP</th>
                         <th class="px-6 py-3">Name</th>
                         <th class="px-6 py-3">Position</th>
                         <th class="px-6 py-3 text-right">Team</th>
                     </tr>
                 </thead>
-                <tbody class="text-body-md text-on-surface">
+                <tbody class="text-[15px] text-on-surface">
                     {% for player in roster %}
                     <tr class="border-b border-outline-variant table-row-hover transition-colors">
                         <td class="px-6 py-4">
-                            <span class="adp-badge text-xs font-bold px-2 py-1 rounded inline-block w-13 text-center shadow-sm border">{{ player.adp }}</span>
+                            <span class="adp-badge text-sm font-bold px-2 py-1 rounded inline-block w-13 text-center shadow-sm border">{{ player.adp }}</span>
                         </td>
-                        <td class="px-6 py-4 font-medium text-on-surface">{{ player.player }}</td>
+                        <td class="px-6 py-4 font-semibold text-on-surface">{{ player.player }}</td>
                         <td class="px-6 py-4">
-                            <div class="flex gap-1.5 font-bold text-on-surface text-sm">
+                            <div class="flex gap-1.5 font-bold text-on-surface text-base">
                                 {% for pos_char in player.position.split(',') %}
                                     <span>{{ pos_char }}</span>
                                 {% endfor %}
@@ -76,26 +76,26 @@
         <div class="overflow-x-auto flex-grow">
             <table class="w-full text-left border-collapse h-full">
                 <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface-variant uppercase tracking-wider">
+                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-[13px] text-on-surface-variant uppercase tracking-wider">
                         <th class="px-6 py-3">Position</th>
                         <th class="px-4 py-3 text-center">Has</th>
                         <th class="px-4 py-3 text-center">Max</th>
                         <th class="px-6 py-3 text-right">Need</th>
                     </tr>
                 </thead>
-                <tbody class="text-body-md text-on-surface">
+                <tbody class="text-[15px] text-on-surface">
                     {% for item in position_breakdown %}
                     <tr class="border-b border-outline-variant table-row-hover transition-colors">
-                        <td class="px-6 py-3.5 font-bold text-on-surface text-sm">
+                        <td class="px-6 py-3.5 font-bold text-on-surface text-base">
                             {{ item.position }}
                         </td>
                         <td class="px-4 py-3.5 text-center font-bold text-on-surface">{{ item.current }}</td>
                         <td class="px-4 py-3.5 text-center text-on-surface-variant">{{ item.max }}</td>
                         <td class="px-6 py-3.5 text-right font-bold text-on-surface">
                             {% if item.need > 0 %}
-                                <span class="text-sm font-bold text-on-surface">{{ item.need }}</span>
+                                <span class="text-base font-bold text-on-surface">{{ item.need }}</span>
                             {% else %}
-                                <span class="text-emerald-400 font-bold text-sm">✓</span>
+                                <span class="text-emerald-400 font-bold text-base">✓</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -158,7 +158,7 @@
         <div class="absolute top-0 left-0 w-full h-1 bg-[#d4d4d4]"></div>
         <div class="flex items-center justify-between mb-4 mt-1">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[#f0f0f0]">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-[#f0f0f0]">
                     <span class="text-xs font-bold text-gray-500">{{ item.code }}</span>
                 </div>
                 <h3 class="text-xl font-bold text-on-surface">{{ item.code }}</h3>
@@ -222,7 +222,7 @@
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
-                    <tr class="border-b border-outline-variant font-sans font-bold text-xs text-on-surface-variant uppercase tracking-wider">
+                    <tr class="border-b border-outline-variant font-sans font-bold text-[13px] text-on-surface-variant uppercase tracking-wider">
                         <th class="px-6 py-4">Score</th>
                         <th class="px-6 py-4">Name</th>
                         <th class="px-6 py-4">Position</th>
@@ -232,17 +232,17 @@
                         <th class="px-6 py-4">Status</th>
                     </tr>
                 </thead>
-                <tbody id="suggestions-tbody" class="text-body-md text-on-surface">
+                <tbody id="suggestions-tbody" class="text-[15px] text-on-surface">
                     {% for player in suggestions.players %}
                     <tr onclick="triggerDraftConfirmModal('{{ player.player }}')" class="border-b border-outline-variant table-row-hover transition-colors cursor-pointer group">
-                        <td class="px-6 py-4 font-bold text-blue-400">{{ player.recommendation_score | round(0) }}</td>
-                        <td class="px-6 py-4 font-medium group-hover:text-primary transition-colors">{{ player.player }}</td>
-                        <td class="px-6 py-4 font-bold text-on-surface text-sm">
+                        <td class="px-6 py-4 font-bold text-blue-400 text-[17px]">{{ player.recommendation_score | round(0) }}</td>
+                        <td class="px-6 py-4 font-semibold group-hover:text-primary transition-colors">{{ player.player }}</td>
+                        <td class="px-6 py-4 font-bold text-on-surface text-base">
                             {{ player.position }}
                         </td>
                         <td class="px-6 py-4">{{ render_team_badge(player.team) }}</td>
-                        <td class="px-6 py-4">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
-                        <td class="px-6 py-4">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
+                        <td class="px-6 py-4 font-medium">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
+                        <td class="px-6 py-4 font-medium">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
                         <td class="px-6 py-4">
                             {% if player.at_afcon %}
                                 <span class="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">AFCON</span>
@@ -402,19 +402,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // EXCLUDE POSITIONS CHECKBOX HANDLER
+    // EXCLUDE POSITIONS CHECKBOX & LIVE AUTO-FILTER HANDLERS
     const filterForm = document.getElementById('filter-form');
+    const excludeTeamsInput = document.querySelector('input[name="exclude_teams"]');
     const excludePositionsInput = document.getElementById('exclude-positions-input');
     const positionCheckboxes = document.querySelectorAll('.position-checkbox');
 
-    if (filterForm && excludePositionsInput) {
+    function updateExcludedPositionsValue() {
+        if (!excludePositionsInput) return;
+        const selectedPositions = Array.from(positionCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value)
+            .join(',');
+        excludePositionsInput.value = selectedPositions;
+    }
+
+    if (filterForm) {
         filterForm.addEventListener('submit', (e) => {
-            const selectedPositions = Array.from(positionCheckboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.value)
-                .join(',');
-            excludePositionsInput.value = selectedPositions;
+            updateExcludedPositionsValue();
         });
+
+        // AUTO-SUBMIT ON CHECKBOX TOGGLE
+        positionCheckboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+                updateExcludedPositionsValue();
+                filterForm.submit();
+            });
+        });
+
+        // AUTO-SUBMIT ON EXCLUDE TEAMS TYPING (DEBOUNCED)
+        if (excludeTeamsInput) {
+            let excludeTeamsDebounceTimer;
+            excludeTeamsInput.addEventListener('input', () => {
+                clearTimeout(excludeTeamsDebounceTimer);
+                excludeTeamsDebounceTimer = setTimeout(() => {
+                    updateExcludedPositionsValue();
+                    filterForm.submit();
+                }, 400);
+            });
+        }
     }
 
     // INFINITE SCROLL IMPLEMENTATION FOR SUGGESTIONS TABLE
@@ -475,12 +501,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     tr.onclick = () => triggerDraftConfirmModal(p.player);
                     tr.className = 'border-b border-outline-variant table-row-hover transition-colors cursor-pointer group';
                     tr.innerHTML = `
-                        <td class="px-6 py-4 font-bold text-blue-400">${Math.round(p.recommendation_score || 0)}</td>
-                        <td class="px-6 py-4 font-medium group-hover:text-primary transition-colors">${p.player}</td>
-                        <td class="px-6 py-4 font-bold text-on-surface text-sm">${p.position || ''}</td>
+                        <td class="px-6 py-4 font-bold text-blue-400 text-[17px]">${Math.round(p.recommendation_score || 0)}</td>
+                        <td class="px-6 py-4 font-semibold group-hover:text-primary transition-colors">${p.player}</td>
+                        <td class="px-6 py-4 font-bold text-on-surface text-base">${p.position || ''}</td>
                         <td class="px-6 py-4">${renderTeamBadge(p.team || '')}</td>
-                        <td class="px-6 py-4">${p.fpts ? p.fpts.toFixed(1) : '—'}</td>
-                        <td class="px-6 py-4">${p.fpg ? p.fpg.toFixed(2) : '—'}</td>
+                        <td class="px-6 py-4 font-medium">${p.fpts ? p.fpts.toFixed(1) : '—'}</td>
+                        <td class="px-6 py-4 font-medium">${p.fpg ? p.fpg.toFixed(2) : '—'}</td>
                         <td class="px-6 py-4">${renderStatusBadge(p)}</td>
                     `;
                     tbody.appendChild(tr);
