@@ -10,9 +10,10 @@ import json
 import urllib.request
 from pathlib import Path
 
-# Add project root to sys.path
+# Add project root and scripts dir to sys.path
 root_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(root_dir / "src"))
+sys.path.insert(0, str(root_dir / "scripts"))
 
 DATA_DIR = root_dir / "data"
 DATA_DIR.mkdir(exist_ok=True)

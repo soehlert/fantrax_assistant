@@ -1,6 +1,6 @@
 """Main draft assistant CLI."""
 
-from typing import Annotated
+from typing import Annotated, Optional
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -317,22 +317,58 @@ def reset():
 
 
 @app.command()
+def setup(
+    teams: Annotated[Optional[str], typer.Option(
+        "--teams", "-t",
+        help='Comma-separated team names (e.g., "Sam,Scott,Hayden")'
+    )] = None,
+):
+    """Fetch live stats, initialize optional data files, seed SQLite database, and initialize draft teams."""
+    import sys
+    from pathlib import Path
+    root_dir = Path(__file__).resolve().parent.parent.parent
+    sys.path.insert(0, str(root_dir))
+
+    from scripts.fetch_all_data import fetch_fpl_current_stats, ensure_optional_json_files, run_db_seeder
+    console.print(f"[{COLORS['header']}]🚀 Running Master Setup & Data Pipeline...[/{COLORS['header']}]\n")
+    fetch_fpl_current_stats()
+    ensure_optional_json_files()
+    run_db_seeder()
+    console.print(f"\n[{COLORS['success']}]✓ Setup complete! SQLite database & data files are ready.[/{COLORS['success']}]")
+
+    # Prompt for team names if not passed via option
+    if not teams:
+        teams = typer.prompt(
+            "\nEnter draft team names (comma-separated)",
+            default="Sam,Scott,Hayden"
+        )
+
+    init(teams=teams, fetch_data=False)
+
+
+@app.command()
 def init(
     teams: Annotated[str, typer.Option(
         "--teams", "-t",
         help='Comma-separated team names (e.g., "Sam,Scott,Hayden")'
-    )] = "My Team",
+    )] = "Sam,Scott,Hayden",
+    fetch_data: Annotated[bool, typer.Option(
+        "--fetch-data/--no-fetch-data", "-f",
+        help="Fetch live stats, initialize JSON files, and seed SQLite database during init"
+    )] = False,
 ):
     """Initialize draft with specified teams."""
-    state = DraftState()
+    if fetch_data:
+        setup(teams=teams)
+        return
 
-    team_list = [t.strip() for t in teams.split(',')]
+    state = DraftState()
+    team_list = [t.strip() for t in teams.split(',') if t.strip()]
     state.teams = {team: [] for team in team_list}
     state.drafted_players = set()
     state.save()
 
-    console.print(f"[{COLORS['success']}]✓[/{COLORS['success']}] Draft initialized with {len(team_list)} teams:\n")
-
+    console.print(f"\n[{COLORS['success']}]✓[/{COLORS['success']}] Draft initialized with {len(team_list)} teams:")
     for team_name in state.teams.keys():
         console.print(f"  [{COLORS['info']}]{team_name}[/{COLORS['info']}]")
 
