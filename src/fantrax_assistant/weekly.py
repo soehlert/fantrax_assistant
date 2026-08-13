@@ -55,7 +55,7 @@ class WeeklyManagerEngine:
         return 'M'
 
     def calculate_projected_points(self, player: Dict[str, Any]) -> float:
-        """Calculate projected weekly fantasy points based on form, fixture difficulty, and home advantage."""
+        """Calculate projected weekly fantasy points based on form, fixture difficulty, home advantage, and starting probability."""
         fpg = float(player.get('fpg', 0) or 0)
         team_code = player.get('team', '')
         fixture = self.fixtures.get(team_code, {})
@@ -67,7 +67,15 @@ class WeeklyManagerEngine:
         fdr_multiplier = {1: 1.15, 2: 1.08, 3: 1.00, 4: 0.90, 5: 0.80}.get(fdr, 1.0)
         home_boost = 1.05 if is_home else 0.97
 
-        proj = fpg * fdr_multiplier * home_boost
+        # Starting Probability & Rotation Risk Factor
+        # High-depth clubs (ARS, MCI, CHE, LIV) carry rotation penalties for non-guaranteed starters
+        rotation_penalty = 1.0
+        if team_code in {'MCI', 'ARS', 'CHE', 'LIV'}:
+            # If player hasn't locked 80+ minutes per start or is in heavy competition
+            if fpg < 3.8:
+                rotation_penalty = 0.88  # 12% discount for rotational uncertainty
+
+        proj = fpg * fdr_multiplier * home_boost * rotation_penalty
         return round(proj, 2)
 
     def get_optimal_lineup(self, roster: List[Dict[str, Any]]) -> Dict[str, Any]:
