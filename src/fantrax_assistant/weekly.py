@@ -13,28 +13,28 @@ POSITION_LIMITS = {
 }
 
 # Premier League Team Match Schedule Mock / Live Fixture Map
-# Format: team_code -> {'opponent': 'ARS', 'is_home': True, 'fdr': 2, 'kickoff_time': '2026-08-16T15:00:00Z', 'display_time': 'Sun 3:00 PM'}
+# Format: team_code -> {'opponent': 'ARS', 'is_home': True, 'fdr': 2, 'kickoff_time': '2026-08-16T15:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'}
 DEFAULT_FIXTURE_SCHEDULE = {
-    'ARS': {'opponent': 'WOL', 'is_home': True, 'fdr': 2, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun 3:00 PM'},
-    'AVL': {'opponent': 'WHU', 'is_home': False, 'fdr': 3, 'kickoff_time': '2026-08-16T16:30:00Z', 'display_time': 'Sun 5:30 PM'},
-    'BOU': {'opponent': 'NFO', 'is_home': False, 'fdr': 2, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun 3:00 PM'},
-    'BRE': {'opponent': 'CRY', 'is_home': True, 'fdr': 3, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun 3:00 PM'},
-    'BHA': {'opponent': 'EVE', 'is_home': False, 'fdr': 2, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun 3:00 PM'},
-    'CHE': {'opponent': 'MCI', 'is_home': True, 'fdr': 4, 'kickoff_time': '2026-08-16T16:30:00Z', 'display_time': 'Sun 5:30 PM'},
-    'CRY': {'opponent': 'BRE', 'is_home': False, 'fdr': 3, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun 3:00 PM'},
-    'EVE': {'opponent': 'BHA', 'is_home': True, 'fdr': 3, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun 3:00 PM'},
-    'FUL': {'opponent': 'MUN', 'is_home': False, 'fdr': 4, 'kickoff_time': '2026-08-15T19:00:00Z', 'display_time': 'Sat 8:00 PM'},
-    'IPS': {'opponent': 'LIV', 'is_home': True, 'fdr': 5, 'kickoff_time': '2026-08-16T11:30:00Z', 'display_time': 'Sun 12:30 PM'},
-    'LEI': {'opponent': 'TOT', 'is_home': True, 'fdr': 4, 'kickoff_time': '2026-08-17T19:00:00Z', 'display_time': 'Mon 8:00 PM'},
-    'LIV': {'opponent': 'IPS', 'is_home': False, 'fdr': 2, 'kickoff_time': '2026-08-16T11:30:00Z', 'display_time': 'Sun 12:30 PM'},
-    'MCI': {'opponent': 'CHE', 'is_home': False, 'fdr': 3, 'kickoff_time': '2026-08-16T16:30:00Z', 'display_time': 'Sun 5:30 PM'},
-    'MUN': {'opponent': 'FUL', 'is_home': True, 'fdr': 2, 'kickoff_time': '2026-08-15T19:00:00Z', 'display_time': 'Sat 8:00 PM'},
-    'NEW': {'opponent': 'SOU', 'is_home': True, 'fdr': 2, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun 3:00 PM'},
-    'NFO': {'opponent': 'BOU', 'is_home': True, 'fdr': 3, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun 3:00 PM'},
-    'SOU': {'opponent': 'NEW', 'is_home': False, 'fdr': 4, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun 3:00 PM'},
-    'TOT': {'opponent': 'LEI', 'is_home': False, 'fdr': 2, 'kickoff_time': '2026-08-17T19:00:00Z', 'display_time': 'Mon 8:00 PM'},
-    'WHU': {'opponent': 'AVL', 'is_home': True, 'fdr': 3, 'kickoff_time': '2026-08-16T16:30:00Z', 'display_time': 'Sun 5:30 PM'},
-    'WOL': {'opponent': 'ARS', 'is_home': False, 'fdr': 5, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun 3:00 PM'},
+    'ARS': {'opponent': 'WOL', 'is_home': True, 'fdr': 2, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'},
+    'AVL': {'opponent': 'WHU', 'is_home': False, 'fdr': 3, 'kickoff_time': '2026-08-16T16:30:00Z', 'display_time': 'Sun Aug 16, 5:30 PM'},
+    'BOU': {'opponent': 'NFO', 'is_home': False, 'fdr': 2, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'},
+    'BRE': {'opponent': 'CRY', 'is_home': True, 'fdr': 3, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'},
+    'BHA': {'opponent': 'EVE', 'is_home': False, 'fdr': 2, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'},
+    'CHE': {'opponent': 'MCI', 'is_home': True, 'fdr': 4, 'kickoff_time': '2026-08-16T16:30:00Z', 'display_time': 'Sun Aug 16, 5:30 PM'},
+    'CRY': {'opponent': 'BRE', 'is_home': False, 'fdr': 3, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'},
+    'EVE': {'opponent': 'BHA', 'is_home': True, 'fdr': 3, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'},
+    'FUL': {'opponent': 'MUN', 'is_home': False, 'fdr': 4, 'kickoff_time': '2026-08-15T19:00:00Z', 'display_time': 'Sat Aug 15, 8:00 PM'},
+    'IPS': {'opponent': 'LIV', 'is_home': True, 'fdr': 5, 'kickoff_time': '2026-08-16T11:30:00Z', 'display_time': 'Sun Aug 16, 12:30 PM'},
+    'LEI': {'opponent': 'TOT', 'is_home': True, 'fdr': 4, 'kickoff_time': '2026-08-17T19:00:00Z', 'display_time': 'Mon Aug 17, 8:00 PM'},
+    'LIV': {'opponent': 'IPS', 'is_home': False, 'fdr': 2, 'kickoff_time': '2026-08-16T11:30:00Z', 'display_time': 'Sun Aug 16, 12:30 PM'},
+    'MCI': {'opponent': 'CHE', 'is_home': False, 'fdr': 3, 'kickoff_time': '2026-08-16T16:30:00Z', 'display_time': 'Sun Aug 16, 5:30 PM'},
+    'MUN': {'opponent': 'FUL', 'is_home': True, 'fdr': 2, 'kickoff_time': '2026-08-15T19:00:00Z', 'display_time': 'Sat Aug 15, 8:00 PM'},
+    'NEW': {'opponent': 'SOU', 'is_home': True, 'fdr': 2, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'},
+    'NFO': {'opponent': 'BOU', 'is_home': True, 'fdr': 3, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'},
+    'SOU': {'opponent': 'NEW', 'is_home': False, 'fdr': 4, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'},
+    'TOT': {'opponent': 'LEI', 'is_home': False, 'fdr': 2, 'kickoff_time': '2026-08-17T19:00:00Z', 'display_time': 'Mon Aug 17, 8:00 PM'},
+    'WHU': {'opponent': 'AVL', 'is_home': True, 'fdr': 3, 'kickoff_time': '2026-08-16T16:30:00Z', 'display_time': 'Sun Aug 16, 5:30 PM'},
+    'WOL': {'opponent': 'ARS', 'is_home': False, 'fdr': 5, 'kickoff_time': '2026-08-16T14:00:00Z', 'display_time': 'Sun Aug 16, 3:00 PM'},
 }
 
 
@@ -102,7 +102,7 @@ class WeeklyManagerEngine:
                 'is_home': True,
                 'fdr': 3,
                 'kickoff_time': '2026-08-16T15:00:00Z',
-                'display_time': 'Sun 3:00 PM'
+                'display_time': 'Sun Aug 16, 3:00 PM'
             })
             enriched.append(p_copy)
 
