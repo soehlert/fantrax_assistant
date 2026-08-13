@@ -185,19 +185,26 @@ class PlayerRecommendationEngine:
 
     def calculate_rotation_risk_penalty(self, player: dict) -> float:
         """
-        Calculate rotation risk and season availability penalty based on total season starts out of 38 matches.
+        Calculate rotation risk, season availability, and new team integration penalty.
         - Core starters (>=30 starts or >=2500 mins) retain 100% floor.
         - Regular starters (22-29 starts or >=1800 mins) receive 5% discount (95% floor).
+        - New team transfers carrying tactical integration risk receive 10%-15% discount.
         - Moderate workload/rotation (14-21 starts) receive 12% discount.
         - Heavy workload/low sample risk (<14 starts or <1200 mins) receive 20% discount.
         """
         team = str(player.get('team', '')).upper()
         fpg = float(player.get('fpg', 0) or 0)
+        adp = float(player.get('adp', 999) or 999)
 
         stats = player.get('stats') or {}
         starts = int(stats.get('starts', 0) or 0)
         apps = int(stats.get('matches_played', 0) or 0)
         mins = int(stats.get('minutes', 0) or 0)
+
+        # Check for New Team Transfer status (0 starts/apps with active ADP or explicitly flagged)
+        is_new_team = bool(player.get('is_new_signing') or player.get('is_new_transfer') or (starts == 0 and apps == 0 and adp < 150))
+        if is_new_team and starts < 10:
+            return 0.90 if adp < 50 else 0.85
 
         # 1. Nailed Core Starters (30+ starts / 38, or 2500+ mins)
         if starts >= 30 or mins >= 2500:
@@ -212,7 +219,7 @@ class PlayerRecommendationEngine:
             return 0.88
 
         # 4. Low Season Workload / Low Sample / Heavy Rotation (<14 starts or <1200 mins)
-        return 0.80  # 20% discount for low season volume (e.g. 7/38 starts)
+        return 0.80  # 20% discount for low season volume
 
     def position_multiplier(self, player: dict) -> float:
         """

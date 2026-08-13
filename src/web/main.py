@@ -827,15 +827,22 @@ async def read_player_profile(request: Request, player_name: str):
     except Exception as e:
         print(f"Error finding similar players for {player_name_clean}: {e}")
 
-    # 8. Rotation Risk Score & Status for Player Profile (season availability & rotation)
+    # 8. Rotation Risk Score & Status for Player Profile (season availability, rotation & new team risk)
     starts = pl_stats.get("starts", 0) if pl_stats else 0
     apps = pl_stats.get("total_apps") or pl_stats.get("appearances") if pl_stats else 0
     mins = pl_stats.get("minutes", 0) if pl_stats else 0
+    adp_val = safe_float(fantrax_info.get("adp", 999))
 
-    if starts >= 30 or mins >= 2500:
+    is_new_team = bool(fantrax_info.get("is_new_signing") or (full_profile and full_profile.get("is_new_transfer")) or (starts == 0 and apps == 0 and adp_val < 150))
+
+    if apps > 0 and starts == apps and mins >= 500:
+        rotation_risk_info = {"level": "Low", "badge": "Nailed When Fit", "sub": "100% Fit Start Rate", "color": "emerald"}
+    elif starts >= 30 or mins >= 2500:
         rotation_risk_info = {"level": "Low", "badge": "Nailed Starter", "sub": "100% Floor", "color": "emerald"}
     elif starts >= 22 or mins >= 1800:
         rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "95% Floor", "color": "emerald"}
+    elif is_new_team and starts < 10:
+        rotation_risk_info = {"level": "Medium", "badge": "New Team Adaption", "sub": "10%-15% Integration Risk", "color": "amber"}
     elif starts >= 14 or mins >= 1200:
         rotation_risk_info = {"level": "Medium", "badge": "Moderate Risk", "sub": "12% Discount", "color": "amber"}
     else:

@@ -73,22 +73,23 @@
             </div>
 
             <!-- Custom Floating Tooltip for Rotation Risk -->
-            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 p-3.5 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl text-left hidden group-hover:block z-50 pointer-events-none">
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-84 p-3.5 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl text-left hidden group-hover:block z-50 pointer-events-none">
                 <div class="text-xs font-bold text-on-surface mb-2 border-b border-outline-variant/60 pb-1.5 flex items-center gap-1">
                     <span class="material-symbols-outlined text-sm text-primary">autorenew</span>
-                    <span>Rotation Risk vs. Injury Misses</span>
+                    <span>Rotation Risk, Injuries & New Signings</span>
                 </div>
                 <div class="space-y-2 text-[11px] text-on-surface-variant leading-relaxed">
                     <div class="bg-surface-container-low p-2 rounded border border-outline-variant/40">
-                        <span class="font-bold text-on-surface">Tactical Rotation vs. Injuries:</span>
+                        <span class="font-bold text-on-surface">Tactical Rotation vs. Injuries & Transfers:</span>
                         <div class="text-[10.5px] mt-0.5 text-on-surface-variant">
-                            Rotation risk specifically measures when a manager <span class="text-amber-300 font-semibold">healthy-benches</span> a player. A player who misses 20 games with an injury but starts 100% when healthy is <span class="text-emerald-400 font-semibold">Nailed When Fit</span>.
+                            Rotation risk measures healthy manager benchings and new club transfers. A player missing 20 games with an injury who starts 100% when healthy is <span class="text-emerald-400 font-semibold">Nailed When Fit</span>. New transfers carry initial bedding-in risk.
                         </div>
                     </div>
                     <div class="space-y-1 text-[10.5px]">
                         <div><span class="font-bold text-emerald-400">Nailed Starter / Fit:</span> 30+ starts OR 100% fit start rate (100% floor).</div>
-                        <div><span class="font-bold text-emerald-400">Regular Starter:</span> 22-29 season starts (95% value floor).</div>
-                        <div><span class="font-bold text-amber-300">Moderate Risk:</span> 14-21 season starts (12% rotation discount).</div>
+                        <div><span class="font-bold text-emerald-400">Regular Starter:</span> 22-29 starts OR 75%+ fit start rate (95% floor).</div>
+                        <div><span class="font-bold text-amber-300">New Team Adaption:</span> New signing changing clubs (10-15% integration risk).</div>
+                        <div><span class="font-bold text-amber-300">Moderate Rotation Risk:</span> Benched 25%-50% when fit (12% discount).</div>
                         <div><span class="font-bold text-red-400">Low Volume / Injury:</span> &lt;14 starts (20% sample/durability discount).</div>
                     </div>
                 </div>
