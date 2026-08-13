@@ -13,6 +13,7 @@ class DraftState:
         self.my_team: str = "Team 1"
         self.state_file = Path(state_file)
         self.drafted_players: set[str] = set()
+        self.draft_history: list[str] = []
         self.load()
 
     def load(self):
@@ -24,17 +25,19 @@ class DraftState:
                     self.teams = {k: v for k, v in state.get('teams', {}).items()}
                     self.my_team = state.get('my_team', "Team 1")
                     self.drafted_players = set(state.get('drafted_players', []))
+                    self.draft_history = state.get('draft_history', list(self.drafted_players))
             else:
-                # File doesn't exist (first run), create default
                 self.teams = {"Team 1": []}
                 self.my_team = "Team 1"
                 self.drafted_players = set()
+                self.draft_history = []
                 self.save()
         except Exception as e:
             print(f"Error loading draft state: {e}")
             self.teams = {"Team 1": []}
             self.my_team = "Team 1"
             self.drafted_players = set()
+            self.draft_history = []
             self.save()
 
     def save(self) -> bool:
@@ -46,6 +49,7 @@ class DraftState:
                 'last_updated': datetime.now().isoformat(),
                 'my_team': self.my_team,
                 'drafted_players': list(self.drafted_players),
+                'draft_history': self.draft_history,
                 'teams': self.teams
             }
 
@@ -69,15 +73,12 @@ class DraftState:
 
         player_name = player.get('player')
 
-        # If already on this specific team, prevent duplicate entry
         if any(p['player'] == player_name for p in self.teams[team_name]):
             print(f"{player_name} is already on {team_name}")
             return False
 
-        # Remove from any other team roster if present (reassignment)
         self.remove_from_teams(player_name)
 
-        # Add player
         player_data = {
             'player': player.get('player'),
             'position': player.get('position'),
@@ -88,13 +89,26 @@ class DraftState:
         }
         self.teams[team_name].append(player_data)
         self.drafted_players.add(player_name)
+        if player_name in self.draft_history:
+            self.draft_history.remove(player_name)
+        self.draft_history.append(player_name)
         self.save()
         return True
+
+    def mark_drafted(self, player_name: str):
+        """Mark a player as drafted by an untracked team."""
+        self.drafted_players.add(player_name)
+        if player_name in self.draft_history:
+            self.draft_history.remove(player_name)
+        self.draft_history.append(player_name)
+        self.save()
 
     def undraft_player(self, player_name: str):
         """Remove player from drafted_players set and all team rosters."""
         self.remove_from_teams(player_name)
         self.drafted_players.discard(player_name)
+        if player_name in self.draft_history:
+            self.draft_history.remove(player_name)
         self.save()
 
 

@@ -1,20 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Header & Draft Input Section -->
-<section class="flex flex-col items-center gap-6">
+<!-- Team Name Header -->
+<section class="flex flex-col items-center gap-2">
     <h1 class="text-display font-display text-on-surface">{{ team_name }}</h1>
-    <div class="w-full max-w-2xl">
-        <form action="{{ url_for('draft_player', team_id=team_name) }}" method="post" class="flex items-center gap-4" id="draft-form">
-            <div class="relative flex-grow">
-                <input type="text" name="player_name" id="player-draft-input" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-3 px-4 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Enter player name to draft" required autocomplete="off"/>
-                <div id="autocomplete-results" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
-            </div>
-            <button type="submit" class="bg-primary-container hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md transition-colors shadow-md active:scale-95">
-                Draft
-            </button>
-        </form>
-    </div>
 </section>
 
 <!-- Draft Status Alert Toast (Transparent Green Pill with Green Border & Pure Auto-Dismiss) -->
@@ -59,9 +48,9 @@
                         </td>
                         <td class="px-6 py-4 font-medium text-on-surface">{{ player.player }}</td>
                         <td class="px-6 py-4">
-                            <div class="flex gap-1">
+                            <div class="flex gap-1.5 font-bold text-on-surface text-sm">
                                 {% for pos_char in player.position.split(',') %}
-                                    <span class="pos-badge-{{ pos_char[0].lower() }} text-xs font-bold px-2 py-1 rounded inline-flex items-center justify-center min-w-[28px]">{{ pos_char }}</span>
+                                    <span>{{ pos_char }}</span>
                                 {% endfor %}
                             </div>
                         </td>
@@ -97,16 +86,16 @@
                 <tbody class="text-body-md text-on-surface">
                     {% for item in position_breakdown %}
                     <tr class="border-b border-outline-variant table-row-hover transition-colors">
-                        <td class="px-6 py-3.5">
-                            <span class="pos-badge-{{ item.position[0].lower() }} text-xs font-bold w-6 h-6 rounded flex items-center justify-center shadow-sm">{{ item.position }}</span>
+                        <td class="px-6 py-3.5 font-bold text-on-surface text-sm">
+                            {{ item.position }}
                         </td>
                         <td class="px-4 py-3.5 text-center font-bold text-on-surface">{{ item.current }}</td>
                         <td class="px-4 py-3.5 text-center text-on-surface-variant">{{ item.max }}</td>
-                        <td class="px-6 py-3.5 text-right">
+                        <td class="px-6 py-3.5 text-right font-bold text-on-surface">
                             {% if item.need > 0 %}
-                                <span class="need-badge text-xs font-bold w-6 h-6 rounded inline-flex items-center justify-center shadow-sm ml-auto">{{ item.need }}</span>
+                                <span class="text-sm font-bold text-on-surface">{{ item.need }}</span>
                             {% else %}
-                                <span class="bg-emerald-600 text-white text-xs font-bold px-2 py-1 rounded inline-flex items-center justify-center shadow-sm ml-auto">✓</span>
+                                <span class="text-emerald-400 font-bold text-sm">✓</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -133,7 +122,7 @@
     </div>
 </section>
 
-<!-- 4x5 Grid for ALL 20 Team Cards in ALPHABETICAL ORDER (Bigger & Uniform Size Cards) -->
+<!-- 4x5 Grid for ALL 20 Team Cards in ALPHABETICAL ORDER -->
 <section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
     {% for item in club_breakdown %}
     {% if item.has_players %}
@@ -183,34 +172,49 @@
     {% endfor %}
 </section>
 
-<!-- Suggestions Table Section (Click Row to Open Confirmation Modal) -->
+<!-- Suggestions Table Section (Includes Integrated Draft Input Bar on Far Right of Filter Container) -->
 <section class="mt-8 flex flex-col gap-6">
     <h2 class="text-headline-lg font-display text-on-surface">Suggestions</h2>
 
-    <!-- Filter Bar Row -->
-    <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="bg-surface-container border border-outline-variant rounded-xl p-4 shadow-sm">
-        <div class="flex flex-col md:flex-row items-center justify-evenly gap-4">
-            <div class="flex items-center gap-3">
-                <label class="text-sm font-bold text-on-surface whitespace-nowrap">Exclude Teams:</label>
-                <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-52" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
-            </div>
-            <div class="flex items-center gap-3">
-                <span class="text-sm font-bold text-on-surface whitespace-nowrap">Exclude Positions:</span>
+    <!-- Integrated Filter & Draft Search Container Row -->
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-4 shadow-sm">
+        <div class="flex flex-col xl:flex-row items-center justify-between gap-6">
+
+            <!-- Left / Center: Filter Controls (Exclude Teams & Positions) -->
+            <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="flex flex-col md:flex-row items-center gap-6 w-full xl:w-auto">
                 <div class="flex items-center gap-3">
-                    {% for pos in all_positions %}
-                    <label class="flex items-center gap-1.5 cursor-pointer select-none">
-                        <input class="form-checkbox position-checkbox rounded bg-surface-container-low border-outline-variant text-primary-container focus:ring-primary-container" type="checkbox" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}/>
-                        <span class="text-sm font-medium text-on-surface">{{ pos }}</span>
-                    </label>
-                    {% endfor %}
+                    <label class="text-sm font-bold text-on-surface whitespace-nowrap">Exclude Teams:</label>
+                    <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-44" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
                 </div>
-                <input type="hidden" id="exclude-positions-input" name="exclude_positions" value="{{ exclude_positions }}">
-            </div>
-            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-1.5 px-7 rounded-md transition-colors active:scale-95 shadow-sm">
-                Filter
-            </button>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-bold text-on-surface whitespace-nowrap">Exclude Positions:</span>
+                    <div class="flex items-center gap-2.5">
+                        {% for pos in all_positions %}
+                        <label class="flex items-center gap-1 cursor-pointer select-none">
+                            <input class="form-checkbox position-checkbox rounded bg-surface-container-low border-outline-variant text-primary-container focus:ring-primary-container" type="checkbox" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}/>
+                            <span class="text-sm font-bold text-on-surface">{{ pos }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" id="exclude-positions-input" name="exclude_positions" value="{{ exclude_positions }}">
+                </div>
+                <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-1.5 px-5 rounded-md transition-colors active:scale-95 shadow-sm">
+                    Filter
+                </button>
+            </form>
+
+            <!-- Far Right: Player Draft Search Bar & Button -->
+            <form action="{{ url_for('draft_player', team_id=team_name) }}" method="post" class="flex items-center gap-3 w-full xl:w-auto" id="draft-form">
+                <div class="relative flex-grow xl:w-64">
+                    <input type="text" name="player_name" id="player-draft-input" class="w-full bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container transition-all" placeholder="Enter player name to draft" required autocomplete="off"/>
+                    <div id="autocomplete-results" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
+                </div>
+                <button type="submit" class="bg-primary-container hover:bg-blue-700 text-white font-bold py-1.5 px-5 rounded-md text-sm transition-colors shadow-md active:scale-95 whitespace-nowrap">
+                    Draft
+                </button>
+            </form>
         </div>
-    </form>
+    </div>
 
     <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div class="overflow-x-auto">
@@ -231,8 +235,8 @@
                     <tr onclick="triggerDraftConfirmModal('{{ player.player }}')" class="border-b border-outline-variant table-row-hover transition-colors cursor-pointer group">
                         <td class="px-6 py-4 font-bold text-blue-400">{{ player.recommendation_score | round(0) }}</td>
                         <td class="px-6 py-4 font-medium group-hover:text-primary transition-colors">{{ player.player }}</td>
-                        <td class="px-6 py-4">
-                            <span class="pos-badge-{{ player.position[0].lower() }} text-xs font-bold px-2 py-1 rounded inline-flex items-center justify-center min-w-[28px]">{{ player.position }}</span>
+                        <td class="px-6 py-4 font-bold text-on-surface text-sm">
+                            {{ player.position }}
                         </td>
                         <td class="px-6 py-4">{{ render_team_badge(player.team) }}</td>
                         <td class="px-6 py-4">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>

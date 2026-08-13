@@ -125,8 +125,12 @@ async def read_root(
         else:
             available_players.append(enriched_player)
 
-    # Sort by FPTS (descending)
-    drafted_players.sort(key=lambda p: p.get('fpts', 0), reverse=True)
+    # Sort available players by FPTS (descending) and drafted players by most recent draft pick
+    state_obj = DraftState()
+    draft_history = state_obj.draft_history
+    draft_order_map = {name: i for i, name in enumerate(draft_history)}
+
+    drafted_players.sort(key=lambda p: draft_order_map.get(p.get('player', ''), -1), reverse=True)
     available_players.sort(key=lambda p: p.get('fpts', 0), reverse=True)
 
     # Apply search filters

@@ -70,12 +70,8 @@
                         <td class="px-6 py-4 font-medium group-hover:text-primary transition-colors">
                             {{ player.player }}
                         </td>
-                        <td class="px-6 py-4">
-                            {% if player.position != 'N/A' %}
-                                <span class="pos-badge-{{ player.position[0].lower() }} text-xs font-bold px-2 py-1 rounded inline-flex items-center justify-center min-w-[28px]">{{ player.position }}</span>
-                            {% else %}
-                                <span class="text-on-surface-variant text-sm">N/A</span>
-                            {% endif %}
+                        <td class="px-6 py-4 font-bold text-on-surface text-sm">
+                            {{ player.position }}
                         </td>
                         <td class="px-6 py-4">{{ render_team_badge(player.team) }}</td>
                         <td class="px-6 py-4"><span class="adp-badge text-xs font-bold px-2 py-1 rounded inline-block w-12 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
@@ -94,7 +90,7 @@
     {{ render_pagination(available, 'page_available', '&page_drafted=' + drafted.page|string + '&search=' + (search_query or '')) }}
 </section>
 
-<!-- Drafted Players Section (7 Columns) -->
+<!-- Drafted Players Section (7 Columns - Most Recent Picks At Top) -->
 <section class="flex flex-col gap-6 mt-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 class="text-headline-lg font-display text-on-surface">Drafted Players</h2>
@@ -132,12 +128,8 @@
                                 {{ player.player }}
                             </a>
                         </td>
-                        <td class="px-6 py-4">
-                            {% if player.position != 'N/A' %}
-                                <span class="pos-badge-{{ player.position[0].lower() }} text-xs font-bold px-2 py-1 rounded inline-flex items-center justify-center min-w-[28px]">{{ player.position }}</span>
-                            {% else %}
-                                <span class="text-on-surface-variant text-sm">N/A</span>
-                            {% endif %}
+                        <td class="px-6 py-4 font-bold text-on-surface text-sm">
+                            {{ player.position }}
                         </td>
                         <td class="px-6 py-4">{{ render_team_badge(player.team) }}</td>
                         <td class="px-6 py-4"><span class="adp-badge text-xs font-bold px-2 py-1 rounded inline-block w-12 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
