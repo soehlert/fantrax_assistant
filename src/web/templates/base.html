@@ -175,7 +175,7 @@
 <!-- Mini Team Card Badge Macro (Matches Team Cards Below with Padding) -->
 {% macro render_team_badge(team_code) %}
     {% set accent_color = CLUB_COLORS_MAP.get(team_code, '#434655') %}
-    <span class="relative overflow-hidden inline-flex items-center justify-center min-w-[58px] px-2.5 py-1 h-7 rounded-md bg-[#1a2130] text-on-surface text-xs font-bold tracking-wider uppercase shadow-sm pt-1" style="border: 1px solid {{ accent_color }};">
+    <span class="relative overflow-hidden inline-flex items-center justify-center min-w-[58px] px-2.5 h-7 rounded-md bg-[#1a2130] text-on-surface text-[11px] font-bold tracking-wider uppercase shadow-sm pt-[2px]" style="border: 1px solid {{ accent_color }}; font-family: 'Hanken Grotesk', sans-serif;">
         <span class="absolute top-0 left-0 w-full h-[3.5px]" style="background-color: {{ accent_color }};"></span>
         {{ team_code }}
     </span>
