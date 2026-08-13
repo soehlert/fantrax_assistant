@@ -224,37 +224,45 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                 <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Clearances, Blocks, and Interceptions combined total (CBI)">
                     <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
-                        <span>CBI (Clearances/Blocks/Int)</span>
+                        <span>CBI (Actions)</span>
                         <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                     </div>
                     <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('cbi', 0) }}</div>
                 </div>
 
-                <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Successful tackles won and loose ball recoveries">
+                <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Successful tackles won and ball recoveries">
                     <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
-                        <span>Tackles / Recoveries</span>
+                        <span>Tackles & Recoveries</span>
                         <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                     </div>
-                    <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('tackles', 0) }} / {{ pl_stats.get('recoveries', 0) }}</div>
+                    <div class="text-base font-bold text-on-surface mt-0.5">
+                        <span>{{ pl_stats.get('tackles', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">Tkl</span>
+                        <span class="text-outline-variant mx-1">•</span>
+                        <span>{{ pl_stats.get('recoveries', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">Rec</span>
+                    </div>
                 </div>
 
-                <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Clean Sheets kept and Goals Conceded during match appearances">
+                <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Clean Sheets kept and Goals Conceded">
                     <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
-                        <span>Clean Sheets / Conceded</span>
+                        <span>Clean Sheets & Conceded</span>
                         <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                     </div>
-                    <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('clean_sheets', 0) }} / {{ pl_stats.get('goals_conceded', 0) }}</div>
+                    <div class="text-base font-bold text-on-surface mt-0.5">
+                        <span>{{ pl_stats.get('clean_sheets', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">CS</span>
+                        <span class="text-outline-variant mx-1">•</span>
+                        <span>{{ pl_stats.get('goals_conceded', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">GC</span>
+                    </div>
                 </div>
 
                 <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Yellow and Red cards accumulated during match appearances">
                     <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
-                        <span>Discipline (Cards)</span>
+                        <span>Discipline</span>
                         <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                     </div>
-                    <div class="text-lg font-bold text-on-surface mt-0.5 flex items-center justify-center gap-1">
-                        <span class="text-amber-400 font-extrabold">{{ pl_stats.get('yellow_cards', 0) }} 🟨</span>
-                        <span class="text-on-surface-variant text-xs">/</span>
-                        <span class="text-red-400 font-extrabold">{{ pl_stats.get('red_cards', 0) }} 🟥</span>
+                    <div class="text-base font-bold text-on-surface mt-0.5 flex items-center justify-center gap-1">
+                        <span>{{ pl_stats.get('yellow_cards', 0) }} 🟨</span>
+                        <span class="text-outline-variant mx-1">•</span>
+                        <span>{{ pl_stats.get('red_cards', 0) }} 🟥</span>
                     </div>
                 </div>
             </div>

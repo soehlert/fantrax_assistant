@@ -667,8 +667,15 @@ async def read_player_profile(request: Request, player_name: str):
                 target_pl = p
                 break
 
-        target_pos = target_pl.get("position") if target_pl else None
-        peers = [p for p in all_pl_players if p.get("position") == target_pos] if target_pos else all_pl_players
+        # Map position string (e.g. M, F, D, G) to FPL element_type integer (1=GK, 2=DEF, 3=MID, 4=FWD)
+        pos_str = (fantrax_info.get("position") or (player_data.get("position") if player_data else "") or (target_pl.get("position") if target_pl else "M")).split(",")[0].strip().upper()
+        fpl_pos_map = {"G": 1, "GK": 1, "GOALKEEPER": 1, "D": 2, "DEF": 2, "DEFENDER": 2, "M": 3, "MID": 3, "MIDFIELDER": 3, "F": 4, "FWD": 4, "FORWARD": 4}
+        target_pos_id = fpl_pos_map.get(pos_str, 3)
+
+        # Filter peer players by matching FPL position integer
+        peers = [p for p in all_pl_players if p.get("position") == target_pos_id]
+        if not peers:
+            peers = all_pl_players
 
         metric_configs = [
             ("goals", "Goals", "goals"),
@@ -701,7 +708,11 @@ async def read_player_profile(request: Request, player_name: str):
                 raw_val = float(target_pl.get(pl_key, 0) or 0)
 
             peer_vals = [float(p.get(pl_key, 0) or 0) for p in peers]
-            pct = round(float(percentileofscore(peer_vals, raw_val, kind='weak')), 1) if peer_vals else 50.0
+
+            if raw_val == 0 or not peer_vals or all(v == 0 for v in peer_vals):
+                pct = 0.0
+            else:
+                pct = round(float(percentileofscore(peer_vals, raw_val, kind='weak')), 1)
 
             labels.append(label_name)
             percentiles.append(pct)
