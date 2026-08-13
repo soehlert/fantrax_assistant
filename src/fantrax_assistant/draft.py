@@ -317,13 +317,8 @@ def reset():
 
 
 @app.command()
-def setup(
-    teams: Annotated[Optional[str], typer.Option(
-        "--teams", "-t",
-        help='Comma-separated team names (e.g., "Sam,Scott,Hayden")'
-    )] = None,
-):
-    """Fetch live stats, initialize optional data files, seed SQLite database, and initialize draft teams."""
+def setup():
+    """Fetch live stats, initialize optional data files, and seed SQLite database without touching active draft state."""
     import sys
     from pathlib import Path
     root_dir = Path(__file__).resolve().parent.parent.parent
@@ -335,15 +330,6 @@ def setup(
     ensure_optional_json_files()
     run_db_seeder()
     console.print(f"\n[{COLORS['success']}]✓ Setup complete! SQLite database & data files are ready.[/{COLORS['success']}]")
-
-    # Prompt for team names if not passed via option
-    if not teams:
-        teams = typer.prompt(
-            "\nEnter draft team names (comma-separated)",
-            default="Sam,Scott,Hayden"
-        )
-
-    init(teams=teams, fetch_data=False)
 
 
 @app.command()
@@ -357,10 +343,9 @@ def init(
         help="Fetch live stats, initialize JSON files, and seed SQLite database during init"
     )] = False,
 ):
-    """Initialize draft with specified teams."""
+    """Initialize or reset draft state with specified teams (WARNING: clears active picks)."""
     if fetch_data:
-        setup(teams=teams)
-        return
+        setup()
 
     state = DraftState()
     team_list = [t.strip() for t in teams.split(',') if t.strip()]
