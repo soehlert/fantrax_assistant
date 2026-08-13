@@ -37,20 +37,7 @@
 <!-- Available Players Section (Click Row to Draft - Sleek Compact Vertical Spacing) -->
 <section class="flex flex-col gap-6 mt-6">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div class="flex flex-wrap items-center gap-3">
-            <h2 class="text-headline-lg font-display text-on-surface">Available Players</h2>
-            <div class="flex items-center bg-surface-container border border-outline-variant/60 rounded-lg p-1 text-xs font-semibold">
-                <a href="{{ url_for('read_root') }}?sort_available=adp&search={{ search_query or '' }}&search_drafted={{ search_drafted_query or '' }}" class="px-3 py-1.5 rounded-md transition-all flex items-center gap-1 {% if sort_available == 'adp' %}bg-primary-container text-white font-bold shadow-sm{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
-                    <span>ADP Rank</span>
-                </a>
-                <a href="{{ url_for('read_root') }}?sort_available=fpts&search={{ search_query or '' }}&search_drafted={{ search_drafted_query or '' }}" class="px-3 py-1.5 rounded-md transition-all flex items-center gap-1 {% if sort_available == 'fpts' %}bg-primary-container text-white font-bold shadow-sm{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
-                    <span>Total Points</span>
-                </a>
-                <a href="{{ url_for('read_root') }}?sort_available=fpg&search={{ search_query or '' }}&search_drafted={{ search_drafted_query or '' }}" class="px-3 py-1.5 rounded-md transition-all flex items-center gap-1 {% if sort_available == 'fpg' %}bg-primary-container text-white font-bold shadow-sm{% else %}text-on-surface-variant hover:text-on-surface{% endif %}" title="Fantasy Points per game (minimum {{ min_games }} games threshold)">
-                    <span>FP/Game (Min {{ min_games }}G)</span>
-                </a>
-            </div>
-        </div>
+        <h2 class="text-headline-lg font-display text-on-surface">Available Players</h2>
         <form action="{{ url_for('read_root') }}" method="get" class="flex items-center gap-2 max-w-md w-full" id="available-search-form">
             <input type="hidden" name="sort_available" value="{{ sort_available }}"/>
             <input type="hidden" name="sort_drafted" value="{{ sort_drafted }}"/>
@@ -125,23 +112,7 @@
 <!-- Drafted Players Section (7 Columns - Sleek Compact Vertical Spacing) -->
 <section class="flex flex-col gap-6 mt-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div class="flex flex-wrap items-center gap-3">
-            <h2 class="text-headline-lg font-display text-on-surface">Drafted Players</h2>
-            <div class="flex items-center bg-surface-container border border-outline-variant/60 rounded-lg p-1 text-xs font-semibold">
-                <a href="{{ url_for('read_root') }}?sort_drafted=recent&search={{ search_query or '' }}&search_drafted={{ search_drafted_query or '' }}&sort_available={{ sort_available }}" class="px-3 py-1.5 rounded-md transition-all flex items-center gap-1 {% if sort_drafted == 'recent' %}bg-primary-container text-white font-bold shadow-sm{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
-                    <span>Draft Order</span>
-                </a>
-                <a href="{{ url_for('read_root') }}?sort_drafted=adp&search={{ search_query or '' }}&search_drafted={{ search_drafted_query or '' }}&sort_available={{ sort_available }}" class="px-3 py-1.5 rounded-md transition-all flex items-center gap-1 {% if sort_drafted == 'adp' %}bg-primary-container text-white font-bold shadow-sm{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
-                    <span>ADP Rank</span>
-                </a>
-                <a href="{{ url_for('read_root') }}?sort_drafted=fpts&search={{ search_query or '' }}&search_drafted={{ search_drafted_query or '' }}&sort_available={{ sort_available }}" class="px-3 py-1.5 rounded-md transition-all flex items-center gap-1 {% if sort_drafted == 'fpts' %}bg-primary-container text-white font-bold shadow-sm{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
-                    <span>Total Points</span>
-                </a>
-                <a href="{{ url_for('read_root') }}?sort_drafted=fpg&search={{ search_query or '' }}&search_drafted={{ search_drafted_query or '' }}&sort_available={{ sort_available }}" class="px-3 py-1.5 rounded-md transition-all flex items-center gap-1 {% if sort_drafted == 'fpg' %}bg-primary-container text-white font-bold shadow-sm{% else %}text-on-surface-variant hover:text-on-surface{% endif %}" title="Fantasy Points per game (minimum {{ min_games }} games threshold)">
-                    <span>FP/Game</span>
-                </a>
-            </div>
-        </div>
+        <h2 class="text-headline-lg font-display text-on-surface">Drafted Players</h2>
         <form action="{{ url_for('read_root') }}" method="get" class="flex items-center gap-2 max-w-md w-full" id="drafted-search-form">
             <input type="hidden" name="sort_available" value="{{ sort_available }}"/>
             <input type="hidden" name="sort_drafted" value="{{ sort_drafted }}"/>
