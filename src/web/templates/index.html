@@ -77,7 +77,7 @@
                                 <span class="text-on-surface-variant text-sm">N/A</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4"><span class="team-badge text-[11px] font-bold px-2 py-1 rounded inline-block w-12 text-center uppercase tracking-wider">{{ player.team }}</span></td>
+                        <td class="px-6 py-4">{{ render_team_badge(player.team) }}</td>
                         <td class="px-6 py-4"><span class="adp-badge text-xs font-bold px-2 py-1 rounded inline-block w-12 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
                         <td class="px-6 py-4">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
                         <td class="px-6 py-4">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
@@ -139,7 +139,7 @@
                                 <span class="text-on-surface-variant text-sm">N/A</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4"><span class="team-badge text-[11px] font-bold px-2 py-1 rounded inline-block w-12 text-center uppercase tracking-wider">{{ player.team }}</span></td>
+                        <td class="px-6 py-4">{{ render_team_badge(player.team) }}</td>
                         <td class="px-6 py-4"><span class="adp-badge text-xs font-bold px-2 py-1 rounded inline-block w-12 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
                         <td class="px-6 py-4">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
                         <td class="px-6 py-4"><span class="bg-surface-variant text-on-surface text-xs font-bold px-3 py-1 rounded-full">{{ player.owner or 'Drafted' }}</span></td>

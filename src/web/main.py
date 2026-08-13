@@ -30,6 +30,16 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
 templates = Jinja2Templates(directory="src/web/templates")
 
+CLUB_COLORS_MAP = {
+    "MCI": "#6CABDD", "ARS": "#EF0107", "LIV": "#C8102E", "MUN": "#DA291C",
+    "CHE": "#034694", "TOT": "#38bdf8", "AVL": "#95BFE5", "BOU": "#DA291C",
+    "BHA": "#0057B8", "CRY": "#1B458F", "EVE": "#003399", "FUL": "#CC0000",
+    "NEW": "#41B6E6", "NOT": "#DD0000", "NFO": "#DD0000", "SUN": "#EB172B",
+    "IPS": "#0054A6", "LEE": "#FFCD00", "COV": "#00A3E0", "WOL": "#FDB913",
+    "WHU": "#7A263A", "BRE": "#D20000", "BRF": "#D20000"
+}
+templates.env.globals["CLUB_COLORS_MAP"] = CLUB_COLORS_MAP
+
 def get_draft_state_dict() -> dict:
     state = DraftState()
     return {

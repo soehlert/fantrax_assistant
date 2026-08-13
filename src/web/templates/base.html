@@ -117,7 +117,6 @@
         .pos-badge-m { background-color: #a855f7; color: #fff; }
         .pos-badge-f { background-color: #22c55e; color: #fff; }
         .need-badge { background-color: #facc15; color: #000; }
-        .team-badge { background-color: #434655; color: #e1e2ed; width: 3.25rem; display: inline-block; text-align: center; }
         .adp-badge { background-color: #32343d; color: #e1e2ed; border-color: #434655; width: 3.25rem; display: inline-block; text-align: center; }
     </style>
 </head>
@@ -172,6 +171,15 @@
         </div>
     </div>
 </header>
+
+<!-- Mini Team Card Badge Macro (Matches Team Cards Below) -->
+{% macro render_team_badge(team_code) %}
+    {% set accent_color = CLUB_COLORS_MAP.get(team_code, '#434655') %}
+    <span class="relative overflow-hidden inline-flex items-center justify-center w-13 h-6 rounded bg-[#1a2130] text-on-surface text-[11px] font-bold tracking-wider uppercase shadow-sm pt-0.5" style="border: 1px solid {{ accent_color }};">
+        <span class="absolute top-0 left-0 w-full h-[3px]" style="background-color: {{ accent_color }};"></span>
+        {{ team_code }}
+    </span>
+{% endmacro %}
 
 {% macro render_pagination(pagination, url_param_name, other_params) %}
     {% set window = 2 %}
