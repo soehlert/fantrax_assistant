@@ -172,11 +172,11 @@
     {% endfor %}
 </section>
 
-<!-- Suggestions Table Section (Includes Integrated Draft Input Bar on Far Right of Filter Container) -->
+<!-- Suggestions Table Section (Infinite Scroll Enabled) -->
 <section class="mt-8 flex flex-col gap-6">
     <h2 class="text-headline-lg font-display text-on-surface">Suggestions</h2>
 
-    <!-- Integrated Filter & Draft Search Container Row (Spaced out & Balanced Layout) -->
+    <!-- Integrated Filter & Draft Search Container Row -->
     <div class="bg-surface-container border border-outline-variant rounded-xl p-4 shadow-sm">
         <div class="flex flex-col xl:flex-row items-center justify-between gap-6">
 
@@ -232,7 +232,7 @@
                         <th class="px-6 py-4">Status</th>
                     </tr>
                 </thead>
-                <tbody class="text-body-md text-on-surface">
+                <tbody id="suggestions-tbody" class="text-body-md text-on-surface">
                     {% for player in suggestions.players %}
                     <tr onclick="triggerDraftConfirmModal('{{ player.player }}')" class="border-b border-outline-variant table-row-hover transition-colors cursor-pointer group">
                         <td class="px-6 py-4 font-bold text-blue-400">{{ player.recommendation_score | round(0) }}</td>
@@ -266,7 +266,12 @@
             </table>
         </div>
     </div>
-    {{ render_pagination(suggestions, 'page_suggestions', '&exclude_teams=' + exclude_teams + '&exclude_positions=' + exclude_positions) }}
+
+    <!-- Infinite Scroll Sentinel & Loading Spinner -->
+    <div id="suggestions-sentinel" class="py-6 text-center text-on-surface-variant text-sm font-medium flex items-center justify-center gap-2">
+        <span id="suggestions-spinner" class="hidden w-4 h-4 border-2 border-primary-container border-t-transparent rounded-full animate-spin"></span>
+        <span id="suggestions-sentinel-text">{% if suggestions.has_next %}Scroll down to load more suggestions...{% else %}All suggestions loaded{% endif %}</span>
+    </div>
 </section>
 
 <!-- Draft Confirmation Modal Popup -->
@@ -410,6 +415,105 @@ document.addEventListener('DOMContentLoaded', () => {
                 .join(',');
             excludePositionsInput.value = selectedPositions;
         });
+    }
+
+    // INFINITE SCROLL IMPLEMENTATION FOR SUGGESTIONS TABLE
+    const CLUB_COLORS_MAP = {{ CLUB_COLORS_MAP | tojson }};
+    let currentPage = {{ suggestions.page }};
+    let totalPages = {{ suggestions.total_pages }};
+    let isLoading = false;
+
+    function renderTeamBadge(teamCode) {
+        const accentColor = CLUB_COLORS_MAP[teamCode] || '#434655';
+        return `<span class="relative overflow-hidden inline-flex items-center justify-center min-w-[58px] px-2.5 h-7 rounded-md bg-[#1a2130] text-on-surface text-[11px] font-bold tracking-wider uppercase shadow-sm pt-[2px]" style="border: 1px solid ${accentColor}; font-family: 'Hanken Grotesk', sans-serif;">
+            <span class="absolute top-0 left-0 w-full h-[3.5px]" style="background-color: ${accentColor};"></span>
+            ${teamCode}
+        </span>`;
+    }
+
+    function renderStatusBadge(player) {
+        if (player.at_afcon) {
+            return `<span class="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">AFCON</span>`;
+        }
+        const sev = player.injury_severity || 'Healthy';
+        if (sev === 'Healthy') {
+            return `<span class="bg-[#059669] text-white text-xs font-bold px-2.5 py-1 rounded-full">Healthy</span>`;
+        } else if (sev.includes('Short Term')) {
+            return `<span class="bg-cyan-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">Short Term</span>`;
+        } else if (sev.includes('Medium Term')) {
+            return `<span class="bg-amber-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">Medium Term</span>`;
+        } else {
+            return `<span class="bg-red-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">Long Term</span>`;
+        }
+    }
+
+    async function loadNextPage() {
+        if (isLoading || currentPage >= totalPages) return;
+        isLoading = true;
+
+        const spinner = document.getElementById('suggestions-spinner');
+        const sentinelText = document.getElementById('suggestions-sentinel-text');
+        if (spinner) spinner.classList.remove('hidden');
+        if (sentinelText) sentinelText.textContent = 'Loading more suggestions...';
+
+        const nextPage = currentPage + 1;
+        const teamId = "{{ team_name }}";
+        const excludeTeams = "{{ exclude_teams }}";
+        const excludePositions = "{{ exclude_positions }}";
+
+        try {
+            const url = `/api/teams/${encodeURIComponent(teamId)}/suggestions?page=${nextPage}&exclude_teams=${encodeURIComponent(excludeTeams)}&exclude_positions=${encodeURIComponent(excludePositions)}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch suggestions');
+
+            const data = await response.json();
+            const tbody = document.getElementById('suggestions-tbody');
+
+            if (tbody && data.players && data.players.length > 0) {
+                data.players.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.onclick = () => triggerDraftConfirmModal(p.player);
+                    tr.className = 'border-b border-outline-variant table-row-hover transition-colors cursor-pointer group';
+                    tr.innerHTML = `
+                        <td class="px-6 py-4 font-bold text-blue-400">${Math.round(p.recommendation_score || 0)}</td>
+                        <td class="px-6 py-4 font-medium group-hover:text-primary transition-colors">${p.player}</td>
+                        <td class="px-6 py-4 font-bold text-on-surface text-sm">${p.position || ''}</td>
+                        <td class="px-6 py-4">${renderTeamBadge(p.team || '')}</td>
+                        <td class="px-6 py-4">${p.fpts ? p.fpts.toFixed(1) : '—'}</td>
+                        <td class="px-6 py-4">${p.fpg ? p.fpg.toFixed(2) : '—'}</td>
+                        <td class="px-6 py-4">${renderStatusBadge(p)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            currentPage = data.page;
+            totalPages = data.total_pages;
+
+            if (!data.has_next || currentPage >= totalPages) {
+                if (sentinelText) sentinelText.textContent = 'All suggestions loaded';
+                if (spinner) spinner.classList.add('hidden');
+            } else {
+                if (sentinelText) sentinelText.textContent = 'Scroll down to load more suggestions...';
+                if (spinner) spinner.classList.add('hidden');
+            }
+        } catch (err) {
+            console.error('Error loading suggestions:', err);
+            if (sentinelText) sentinelText.textContent = 'Error loading suggestions';
+            if (spinner) spinner.classList.add('hidden');
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    const sentinel = document.getElementById('suggestions-sentinel');
+    if (sentinel && totalPages > 1) {
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadNextPage();
+            }
+        }, { rootMargin: '250px' });
+        observer.observe(sentinel);
     }
 });
 </script>

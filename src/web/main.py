@@ -190,6 +190,61 @@ async def undraft_player_endpoint(request: Request, player_name: Annotated[str, 
     return RedirectResponse(url=referer, status_code=303)
 
 
+def get_team_suggestions_pagination(team_id: str, page: int = 1, page_size: int = 10, exclude_teams: str = "", exclude_positions: str = ""):
+    draft_state = get_draft_state_dict()
+    teams_data = draft_state.get("teams", {})
+    roster = teams_data.get(team_id, [])
+
+    all_drafted_player_names = list(draft_state.get("drafted_players", []))
+    for t_name, t_roster in teams_data.items():
+        for p in t_roster:
+            p_name = p.get('player')
+            if p_name and p_name not in all_drafted_player_names:
+                all_drafted_player_names.append(p_name)
+
+    drafted_names = set(all_drafted_player_names)
+    engine = PlayerRecommendationEngine(config=config, my_team=roster, drafted_players=drafted_names)
+    
+    num_teams = len(teams_data) if teams_data else 10
+    current_round = (len(drafted_names) // num_teams) + 1
+    
+    suggestions = engine.get_recommendations(current_round=current_round, n=100)
+
+    for player in suggestions:
+        player_name = player.get('player', '')
+        injury = config.get_player_injury(player_name)
+        afcon = config.get_player_afcon_status(player_name)
+
+        player['injury_severity'] = injury.get('severity', 'Healthy')
+        player['at_afcon'] = afcon.get('at_afcon', False)
+
+    excluded_teams = set(t.strip().upper() for t in exclude_teams.split(',') if t.strip()) if exclude_teams else set()
+    excluded_positions = set(p.strip().upper() for p in exclude_positions.split(',') if p.strip()) if exclude_positions else set()
+
+    filtered_suggestions = [
+        p for p in suggestions
+        if p.get('team', '').upper() not in excluded_teams and p.get('position', '')[0].upper() not in excluded_positions
+    ]
+
+    return paginate(filtered_suggestions, page, page_size)
+
+@app.get("/api/teams/{team_id}/suggestions")
+async def api_team_suggestions(
+    team_id: str,
+    page: int = 1,
+    page_size: int = 10,
+    exclude_teams: str = "",
+    exclude_positions: str = ""
+):
+    pagination = get_team_suggestions_pagination(team_id, page=page, page_size=page_size, exclude_teams=exclude_teams, exclude_positions=exclude_positions)
+    return {
+        "players": pagination["players"],
+        "page": pagination["page"],
+        "total_pages": pagination["total_pages"],
+        "has_next": pagination["page"] < pagination["total_pages"],
+        "has_previous": pagination["page"] > 1
+    }
+
 @app.get("/teams/{team_id}", response_class=HTMLResponse)
 async def read_team(
     request: Request,
@@ -202,14 +257,20 @@ async def read_team(
 ):
     draft_state = get_draft_state_dict()
     teams_data = draft_state.get("teams", {})
-    all_drafted_player_names = draft_state.get("drafted_players", [])
-    
-    if team_id not in teams_data:
-        raise HTTPException(status_code=404, detail="Team not found")
-
-    roster = teams_data.get(team_id, [])
     team_name = team_id
-    roster_rules = config.get_roster_rules()
+
+    if team_name not in teams_data:
+        team_name = list(teams_data.keys())[0] if teams_data else "Team 1"
+
+    roster = teams_data.get(team_name, [])
+
+    roster_rules = {"G": 2, "D": 5, "M": 5, "F": 3}
+    all_drafted_player_names = list(draft_state.get("drafted_players", []))
+    for t_name, t_roster in teams_data.items():
+        for p in t_roster:
+            p_name = p.get('player')
+            if p_name and p_name not in all_drafted_player_names:
+                all_drafted_player_names.append(p_name)
 
     # Calculate Position Breakdown
     position_counts = {"G": 0, "D": 0, "M": 0, "F": 0}
@@ -285,7 +346,7 @@ async def read_team(
         color_info = CLUB_COLORS.get(club, {"color": "#6c757d", "name": club})
         club_breakdown.append({
             "code": club,
-            "name": color_info.get("name", club),
+            "name": color_info["name"],
             "count": len(rostered_players),
             "players": rostered_players,
             "is_big_six": club in BIG_SIX,
@@ -296,39 +357,10 @@ async def read_team(
     # Sort club breakdown in alphabetical order by team code
     club_breakdown.sort(key=lambda x: x["code"])
 
-    # Get suggestions using the backend engine
-    drafted_names = set(all_drafted_player_names)
-    engine = PlayerRecommendationEngine(config=config, my_team=roster, drafted_players=drafted_names)
-    
-    num_teams = len(teams_data) if teams_data else 10
-    current_round = (len(drafted_names) // num_teams) + 1
-    
-    suggestions = engine.get_recommendations(current_round=current_round, n=100)
-
-    for player in suggestions:
-        player_name = player.get('player', '')
-        injury = config.get_player_injury(player_name)
-        afcon = config.get_player_afcon_status(player_name)
-
-        player['injury_severity'] = injury.get('severity', 'Healthy')
-        player['at_afcon'] = afcon.get('at_afcon', False)
-
-        if exclude_teams:
-            excluded_teams = set(t.strip().upper() for t in exclude_teams.split(',') if t.strip())
-        else:
-            excluded_teams = set()
-
-        if exclude_positions:
-            excluded_positions = set(p.strip().upper() for p in exclude_positions.split(',') if p.strip())
-        else:
-            excluded_positions = set()
-
-        filtered_suggestions = [
-            p for p in suggestions
-            if p.get('team', '').upper() not in excluded_teams and p.get('position', '')[0].upper() not in excluded_positions
-        ]
-
-        suggestions_pagination = paginate(filtered_suggestions, page_suggestions, 10)
+    suggestions_pagination = get_team_suggestions_pagination(
+        team_id=team_name, page=page_suggestions, page_size=10,
+        exclude_teams=exclude_teams, exclude_positions=exclude_positions
+    )
 
     return templates.TemplateResponse(
         request=request, name="team.html",
