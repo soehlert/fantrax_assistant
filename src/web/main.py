@@ -236,6 +236,7 @@ def get_team_suggestions_pagination(team_id: str, page: int = 1, page_size: int 
         injury = config.get_player_injury(player_name)
         afcon = config.get_player_afcon_status(player_name)
 
+        player['id'] = db_mgr.get_player_id_by_name(player_name) or player_name
         player['injury_severity'] = injury.get('severity', 'Healthy')
         player['at_afcon'] = afcon.get('at_afcon', False)
 
