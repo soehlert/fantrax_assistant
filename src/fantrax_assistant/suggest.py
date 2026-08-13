@@ -185,32 +185,34 @@ class PlayerRecommendationEngine:
 
     def calculate_rotation_risk_penalty(self, player: dict) -> float:
         """
-        Calculate rotation risk / minutes security penalty.
-        Players on high-depth top clubs (MCI, ARS, CHE, LIV) who are not 80+ minute locked starters
+        Calculate rotation risk / minutes security penalty based on total season team starts (out of 38 games).
+        Players on high-depth top clubs (MCI, ARS, CHE, LIV) who do not start regularly (>=22 starts / 38)
         receive a rotation risk discount.
         """
-        team = player.get('team', '').upper()
+        team = str(player.get('team', '')).upper()
         fpg = float(player.get('fpg', 0) or 0)
 
-        # Check minutes / appearances if stats available
+        # Check minutes / starts if stats available
         stats = player.get('stats') or {}
-        starts = stats.get('starts', 0)
-        apps = stats.get('matches_played', 0)
-        mins = stats.get('minutes', 0)
+        starts = int(stats.get('starts', 0) or 0)
+        mins = int(stats.get('minutes', 0) or 0)
 
-        # Nailed-on elite starters retain 100% floor
-        if fpg >= 4.2 and (apps == 0 or (starts / max(1, apps)) >= 0.8):
+        # Nailed-on core starters (>=28 starts out of 38, or 2400+ mins) retain 100% floor
+        if starts >= 28 or mins >= 2400:
             return 1.0
 
+        # Regular starters (>=22 starts out of 38, or 1800+ mins)
+        if starts >= 22 or mins >= 1800:
+            return 1.0 if team not in {'MCI', 'ARS', 'CHE', 'LIV'} else 0.95
+
+        # Rotational / Fringe players (<22 starts out of 38)
         if team in {'MCI', 'ARS', 'CHE', 'LIV'}:
-            if mins > 0 and apps > 0:
-                avg_mins = mins / apps
-                if avg_mins < 65:
-                    return 0.80  # 20% discount for low minutes per game
-                elif avg_mins < 78:
-                    return 0.90  # 10% discount for sub-80 min starters
-            elif fpg < 3.8:
-                return 0.85  # 15% discount for non-elite rotational options on stacked squads
+            if starts < 14 or mins < 1200:
+                return 0.80  # 20% discount for low team starts / heavy rotation
+            else:
+                return 0.88  # 12% discount for moderate rotation
+        elif starts < 14 and mins < 1200:
+            return 0.90  # 10% discount for general low-volume / injury-prone players
 
         return 1.0
 
