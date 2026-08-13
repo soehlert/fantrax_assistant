@@ -57,8 +57,11 @@
             <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Consensus ADP</div>
             <div class="text-xl font-extrabold text-on-surface mt-1">{{ fantrax_info.get('adp', 'N/A') }}</div>
         </div>
-        <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center">
-            <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Rotation Risk</div>
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center group relative">
+            <div class="flex items-center justify-center gap-1 text-xs font-bold text-on-surface-variant uppercase tracking-wider cursor-help">
+                <span>Rotation Risk</span>
+                <span class="material-symbols-outlined text-[13px] text-outline">info</span>
+            </div>
             <div class="text-xl font-extrabold mt-1">
                 {% if rotation_risk_info.color == 'emerald' %}
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap inline-block max-w-full truncate">{{ rotation_risk_info.badge }}</span>
@@ -67,6 +70,20 @@
                 {% else %}
                     <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30 whitespace-nowrap inline-block max-w-full truncate">{{ rotation_risk_info.badge }}</span>
                 {% endif %}
+            </div>
+
+            <!-- Custom Floating Tooltip for Rotation Risk -->
+            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-3 bg-surface-container-high border border-outline-variant rounded-lg shadow-xl text-left hidden group-hover:block z-50 pointer-events-none">
+                <div class="text-xs font-bold text-on-surface mb-1.5 border-b border-outline-variant/60 pb-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm text-primary">autorenew</span>
+                    <span>Rotation & Workload Risk Levels</span>
+                </div>
+                <div class="space-y-1.5 text-[11px] text-on-surface-variant leading-tight">
+                    <div><span class="font-bold text-emerald-400">Nailed Starter:</span> 30+ season starts (100% value floor).</div>
+                    <div><span class="font-bold text-emerald-400">Regular Starter:</span> 22-29 season starts (95% value floor).</div>
+                    <div><span class="font-bold text-amber-300">Moderate Risk:</span> 14-21 season starts (12% rotation discount).</div>
+                    <div><span class="font-bold text-red-400">Low Volume:</span> &lt;14 season starts (20% sample/injury discount).</div>
+                </div>
             </div>
         </div>
         <div class="bg-surface-container border border-outline-variant rounded-xl p-4 text-center">
@@ -125,31 +142,54 @@
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Matches started in starting XI out of total Premier League appearances">
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help">
                 <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
                     <span>Starts / Appearances</span>
                     <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                 </div>
                 <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('starts', 0) }} / {{ pl_stats.get('appearances', 0) }}</div>
+
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-surface-container-high border border-outline-variant rounded-lg shadow-xl text-left hidden group-hover:block z-50 pointer-events-none">
+                    <div class="text-xs font-bold text-on-surface mb-1 border-b border-outline-variant/60 pb-1">Starting XI vs Total Appearances</div>
+                    <div class="text-[11px] text-on-surface-variant leading-tight">Matches started in the XI out of total Premier League matches played.</div>
+                </div>
             </div>
 
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Total minutes played on the pitch this season">
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help">
                 <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
                     <span>Minutes Played</span>
                     <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                 </div>
                 <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('minutes', 0) }}'</div>
+
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-surface-container-high border border-outline-variant rounded-lg shadow-xl text-left hidden group-hover:block z-50 pointer-events-none">
+                    <div class="text-xs font-bold text-on-surface mb-1 border-b border-outline-variant/60 pb-1">Season On-Pitch Minutes</div>
+                    <div class="text-[11px] text-on-surface-variant leading-tight">Total minutes played in the Premier League this season. Full season = 3420'.</div>
+                </div>
             </div>
 
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Official Premier League ICT (Influence, Creativity, Threat) Index evaluating overall match impact. Higher score indicates greater performance.">
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help">
                 <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
                     <span>PL ICT Index</span>
                     <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                 </div>
                 <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('ict_index', '0.0') }}</div>
+
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-3 bg-surface-container-high border border-outline-variant rounded-lg shadow-xl text-left hidden group-hover:block z-50 pointer-events-none">
+                    <div class="text-xs font-bold text-on-surface mb-1.5 border-b border-outline-variant/60 pb-1 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm text-primary">analytics</span>
+                        <span>Premier League ICT Index</span>
+                    </div>
+                    <div class="text-[11px] text-on-surface-variant leading-relaxed">
+                        Official Premier League statistical metric combining <span class="font-semibold text-on-surface">Influence</span>, <span class="font-semibold text-on-surface">Creativity</span>, and <span class="font-semibold text-on-surface">Threat</span> into a single total performance score.
+                        <div class="mt-1.5 pt-1 border-t border-outline-variant/40 text-[10px] text-emerald-400 font-medium">
+                            Elite Premier League Stars score 150.0 to 350.0+
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Influence: Measures match event impact (passes, tackles, assists). Threat: Measures goalscoring threat (shots, box touches). Higher numbers = greater impact.">
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help">
                 <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
                     <span>Influence & Threat</span>
                     <span class="material-symbols-outlined text-[13px] text-outline">info</span>
@@ -158,6 +198,21 @@
                     <span>{{ pl_stats.get('influence', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">Infl</span>
                     <span class="text-outline-variant mx-1">•</span>
                     <span>{{ pl_stats.get('threat', 0) }}</span> <span class="text-xs text-on-surface-variant font-normal">Thr</span>
+                </div>
+
+                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 p-3.5 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl text-left hidden group-hover:block z-50 pointer-events-none">
+                    <div class="text-xs font-bold text-on-surface mb-2 border-b border-outline-variant/60 pb-1 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm text-primary">bolt</span>
+                        <span>Match Impact & Goal Threat Metrics</span>
+                    </div>
+                    <div class="space-y-2 text-[11px] text-on-surface-variant leading-relaxed">
+                        <div>
+                            <span class="font-bold text-on-surface">Influence (Infl):</span> Evaluates direct match impact—key passes, tackles, interceptions, clearances, assists & goals scored. Higher score = greater match dominance.
+                        </div>
+                        <div>
+                            <span class="font-bold text-on-surface">Threat (Thr):</span> Evaluates goalscoring danger—shots inside opposition box, big chances created/received, penalty box touches & xG. Higher score = higher goal likelihood.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
