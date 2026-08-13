@@ -707,6 +707,24 @@ async def read_player_profile(request: Request, player_name: str):
             elif target_pl and pl_key in target_pl:
                 raw_val = float(target_pl.get(pl_key, 0) or 0)
 
+            # Fallback estimation for expected stats (xG/xA/shots) if Understat data is missing but FPL goals/threat exist
+            if raw_val == 0.0 and pl_stats:
+                goals_count = float(pl_stats.get("goals", 0) or 0)
+                assists_count = float(pl_stats.get("assists", 0) or 0)
+                threat_val = float(pl_stats.get("threat", 0) or 0)
+                creativity_val = float(pl_stats.get("creativity", 0) or 0)
+
+                if u_key in {"xG", "npxG"} and (goals_count > 0 or threat_val > 0):
+                    raw_val = round(goals_count * 0.85 + (threat_val / 200.0), 2)
+                elif u_key == "xA" and (assists_count > 0 or creativity_val > 0):
+                    raw_val = round(assists_count * 0.80 + (creativity_val / 250.0), 2)
+                elif u_key in {"xGChain", "xGBuildup"} and (threat_val > 0 or creativity_val > 0):
+                    raw_val = round((threat_val + creativity_val) / 30.0, 2)
+                elif u_key == "shots" and threat_val > 0:
+                    raw_val = round(threat_val / 12.0, 1)
+                elif u_key == "key_passes" and creativity_val > 0:
+                    raw_val = round(creativity_val / 15.0, 1)
+
             peer_vals = [float(p.get(pl_key, 0) or 0) for p in peers]
 
             if raw_val == 0 or not peer_vals or all(v == 0 for v in peer_vals):

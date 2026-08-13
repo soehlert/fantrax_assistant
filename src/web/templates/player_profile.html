@@ -76,20 +76,20 @@
             <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 p-3.5 bg-surface-container-high border border-outline-variant rounded-lg shadow-2xl text-left hidden group-hover:block z-50 pointer-events-none">
                 <div class="text-xs font-bold text-on-surface mb-2 border-b border-outline-variant/60 pb-1.5 flex items-center gap-1">
                     <span class="material-symbols-outlined text-sm text-primary">autorenew</span>
-                    <span>Rotation Risk vs. Injury Absences</span>
+                    <span>Rotation Risk vs. Injury Misses</span>
                 </div>
                 <div class="space-y-2 text-[11px] text-on-surface-variant leading-relaxed">
                     <div class="bg-surface-container-low p-2 rounded border border-outline-variant/40">
                         <span class="font-bold text-on-surface">Tactical Rotation vs. Injuries:</span>
                         <div class="text-[10.5px] mt-0.5 text-on-surface-variant">
-                            A player who starts every fit game but missed 20 matches with an injury is a <span class="text-emerald-400 font-semibold">Nailed Starter When Fit</span>. Tactical rotation discounts apply specifically when a manager healthy-benches or rotates a player.
+                            Rotation risk specifically measures when a manager <span class="text-amber-300 font-semibold">healthy-benches</span> a player. A player who misses 20 games with an injury but starts 100% when healthy is <span class="text-emerald-400 font-semibold">Nailed When Fit</span>.
                         </div>
                     </div>
                     <div class="space-y-1 text-[10.5px]">
-                        <div><span class="font-bold text-emerald-400">Nailed Starter:</span> 30+ season starts (100% value floor).</div>
+                        <div><span class="font-bold text-emerald-400">Nailed Starter / Fit:</span> 30+ starts OR 100% fit start rate (100% floor).</div>
                         <div><span class="font-bold text-emerald-400">Regular Starter:</span> 22-29 season starts (95% value floor).</div>
                         <div><span class="font-bold text-amber-300">Moderate Risk:</span> 14-21 season starts (12% rotation discount).</div>
-                        <div><span class="font-bold text-red-400">Low Volume / Injury:</span> &lt;14 starts (20% durability/sample discount).</div>
+                        <div><span class="font-bold text-red-400">Low Volume / Injury:</span> &lt;14 starts (20% sample/durability discount).</div>
                     </div>
                 </div>
             </div>
@@ -359,13 +359,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const percentiles = {{ chart_data.percentiles | tojson }};
     const rawValues = {{ chart_data.raw_values | tojson }};
 
+    // Ensure 0 percentile bars render a subtle 2.5% bar line so they are visible and hoverable
+    const displayPercentiles = percentiles.map(p => Math.max(2.5, p));
+
     new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
                 label: 'Percentile Rank (%)',
-                data: percentiles,
+                data: displayPercentiles,
                 backgroundColor: [
                     'rgba(56, 189, 248, 0.8)',
                     'rgba(59, 130, 246, 0.8)',
