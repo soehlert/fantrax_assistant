@@ -131,22 +131,20 @@
                 </svg>
                 <span class="text-xl font-extrabold text-on-surface tracking-wider">PEP</span>
             </a>
-            <div class="flex gap-6 ml-6 text-sm font-medium text-on-surface-variant">
-                <a class="hover:text-on-surface transition-colors flex items-center gap-2" href="{{ url_for('read_root') }}">
-                    <span class="material-symbols-outlined text-[18px]">home</span> Home
-                </a>
-                <a class="hover:text-on-surface transition-colors flex items-center gap-2 border-b-2 border-primary-container pb-1" href="{{ url_for('read_root') }}">
+            <div class="flex gap-6 ml-6 text-sm font-medium">
+                <a class="transition-colors flex items-center gap-2 {% if request.url.path == '/' %}text-on-surface border-b-2 border-primary-container pb-1{% else %}text-on-surface-variant hover:text-on-surface{% endif %}" href="{{ url_for('read_root') }}">
                     <span class="material-symbols-outlined text-[18px]">list_alt</span> Draft Board
                 </a>
             </div>
         </div>
 
-        <!-- Right Side: Inline Tracked Team Links or Responsive Dropdown -->
+        <!-- Right Side: Dynamic Inline Tracked Team Links with Active Highlight -->
         <div class="flex items-center gap-6">
             {% if tracked_teams | length <= 4 and tracked_teams | length > 0 %}
                 <div class="hidden sm:flex items-center gap-6">
                     {% for t_name in tracked_teams %}
-                        <a href="{{ url_for('read_team', team_id=t_name) }}" class="hover:text-on-surface transition-colors flex items-center gap-2 text-sm font-medium text-on-surface-variant">
+                        {% set t_url = url_for('read_team', team_id=t_name) %}
+                        <a href="{{ t_url }}" class="transition-colors flex items-center gap-2 text-sm font-medium {% if request.url.path == t_url %}text-on-surface border-b-2 border-primary-container pb-1{% else %}text-on-surface-variant hover:text-on-surface{% endif %}">
                             <span class="material-symbols-outlined text-[18px]">groups</span> {{ t_name }}
                         </a>
                     {% endfor %}

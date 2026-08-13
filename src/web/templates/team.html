@@ -176,21 +176,22 @@
 <section class="mt-8 flex flex-col gap-6">
     <h2 class="text-headline-lg font-display text-on-surface">Suggestions</h2>
 
-    <!-- Integrated Filter & Draft Search Container Row -->
+    <!-- Integrated Filter & Draft Search Container Row (Spaced out & Balanced Layout) -->
     <div class="bg-surface-container border border-outline-variant rounded-xl p-4 shadow-sm">
         <div class="flex flex-col xl:flex-row items-center justify-between gap-6">
 
-            <!-- Left / Center: Filter Controls (Exclude Teams & Positions) -->
-            <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="flex flex-col md:flex-row items-center gap-6 w-full xl:w-auto">
+            <!-- Left / Center: Filter Controls (Spaced Out Exclude Teams, Positions, & Filter Button) -->
+            <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="flex flex-col md:flex-row items-center justify-start md:justify-between gap-8 flex-grow pr-0 xl:pr-6 border-b xl:border-b-0 xl:border-r border-outline-variant/40 pb-4 xl:pb-0 w-full xl:w-auto">
                 <div class="flex items-center gap-3">
                     <label class="text-sm font-bold text-on-surface whitespace-nowrap">Exclude Teams:</label>
-                    <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-44" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
+                    <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-52" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
                 </div>
-                <div class="flex items-center gap-3">
+
+                <div class="flex items-center gap-4">
                     <span class="text-sm font-bold text-on-surface whitespace-nowrap">Exclude Positions:</span>
-                    <div class="flex items-center gap-2.5">
+                    <div class="flex items-center gap-3.5">
                         {% for pos in all_positions %}
-                        <label class="flex items-center gap-1 cursor-pointer select-none">
+                        <label class="flex items-center gap-1.5 cursor-pointer select-none">
                             <input class="form-checkbox position-checkbox rounded bg-surface-container-low border-outline-variant text-primary-container focus:ring-primary-container" type="checkbox" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}/>
                             <span class="text-sm font-bold text-on-surface">{{ pos }}</span>
                         </label>
@@ -198,13 +199,14 @@
                     </div>
                     <input type="hidden" id="exclude-positions-input" name="exclude_positions" value="{{ exclude_positions }}">
                 </div>
-                <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-1.5 px-5 rounded-md transition-colors active:scale-95 shadow-sm">
+
+                <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-1.5 px-6 rounded-md transition-colors active:scale-95 shadow-sm">
                     Filter
                 </button>
             </form>
 
             <!-- Far Right: Player Draft Search Bar & Button -->
-            <form action="{{ url_for('draft_player', team_id=team_name) }}" method="post" class="flex items-center gap-3 w-full xl:w-auto" id="draft-form">
+            <form action="{{ url_for('draft_player', team_id=team_name) }}" method="post" class="flex items-center gap-3 w-full xl:w-auto flex-shrink-0" id="draft-form">
                 <div class="relative flex-grow xl:w-64">
                     <input type="text" name="player_name" id="player-draft-input" class="w-full bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container transition-all" placeholder="Enter player name to draft" required autocomplete="off"/>
                     <div id="autocomplete-results" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
