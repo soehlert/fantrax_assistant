@@ -7,7 +7,7 @@
     <div class="w-full max-w-2xl">
         <form action="{{ url_for('mark_player_drafted') }}" method="post" class="flex items-center gap-4">
             <div class="relative flex-grow">
-                <input type="text" name="player_name" id="drafted-by-other-input" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-3 px-4 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-shadow shadow-inner" placeholder="Enter player name marked as drafted" required autocomplete="off"/>
+                <input type="text" name="player_name" id="drafted-by-other-input" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-3 px-4 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Enter player name marked as drafted" required autocomplete="off"/>
                 <div id="autocomplete-results-main" class="absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
             <button type="submit" class="bg-surface-variant hover:bg-outline-variant text-on-surface font-bold py-3 px-6 rounded-md transition-colors shadow-md active:scale-95">
@@ -17,10 +17,10 @@
     </div>
 </section>
 
-<!-- Draft Status Alert Toast (Transparent Green Pill with Green Border & Auto-Dismiss) -->
+<!-- Draft Status Alert Toast (Pure Auto-Dismiss, No X Button) -->
 {% if draft_status %}
-<div class="w-full max-w-2xl mx-auto my-2" id="draft-toast-alert-main">
-    <div class="px-5 py-2.5 rounded-full {% if draft_status == 'success' %}bg-emerald-950/40 text-emerald-300 border border-emerald-500/70 shadow-lg backdrop-blur-sm{% else %}bg-red-950/40 text-red-300 border border-red-500/70 shadow-lg backdrop-blur-sm{% endif %} flex justify-between items-center transition-all duration-300">
+<div class="w-full max-w-xl mx-auto my-2" id="draft-toast-alert-main">
+    <div class="px-6 py-2.5 rounded-full {% if draft_status == 'success' %}bg-emerald-950/40 text-emerald-300 border border-emerald-500/70 shadow-lg backdrop-blur-sm{% else %}bg-red-950/40 text-red-300 border border-red-500/70 shadow-lg backdrop-blur-sm{% endif %} flex justify-center items-center text-center transition-all duration-500">
         <span class="text-sm font-medium flex items-center gap-2">
             {% if draft_status == 'success' %}
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -30,7 +30,6 @@
                 {{ message }}
             {% endif %}
         </span>
-        <button type="button" onclick="document.getElementById('draft-toast-alert-main').remove()" class="text-emerald-400 hover:text-emerald-200 text-sm font-bold ml-4">✕</button>
     </div>
 </div>
 {% endif %}
@@ -41,7 +40,7 @@
         <h2 class="text-headline-lg font-display text-on-surface">Available Players</h2>
         <form action="{{ url_for('read_root') }}" method="get" class="flex items-center gap-2 max-w-md w-full">
             <div class="relative flex-grow">
-                <input type="text" name="search" id="available-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-shadow" placeholder="Search available players..." value="{{ search_query or '' }}" autocomplete="off"/>
+                <input type="text" name="search" id="available-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Search available players..." value="{{ search_query or '' }}" autocomplete="off"/>
                 <div id="autocomplete-results-search" class="absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
             <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md transition-colors">
@@ -103,7 +102,7 @@
         <h2 class="text-headline-lg font-display text-on-surface">Drafted Players</h2>
         <form action="{{ url_for('read_root') }}" method="get" class="flex items-center gap-2 max-w-md w-full">
             <div class="relative flex-grow">
-                <input type="text" name="search_drafted" id="drafted-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-shadow" placeholder="Search drafted players..." value="{{ search_drafted_query or '' }}" autocomplete="off"/>
+                <input type="text" name="search_drafted" id="drafted-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Search drafted players..." value="{{ search_drafted_query or '' }}" autocomplete="off"/>
                 <div id="autocomplete-results-drafted" class="absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
             <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md transition-colors">
@@ -163,13 +162,13 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // AUTO-DISMISS DRAFT TOAST ALERT AFTER 4 SECONDS
+    // AUTO-DISMISS DRAFT TOAST ALERT AFTER 3.5 SECONDS
     const toastAlert = document.getElementById('draft-toast-alert-main');
     if (toastAlert) {
         setTimeout(() => {
             toastAlert.style.opacity = '0';
-            setTimeout(() => toastAlert.remove(), 300);
-        }, 4000);
+            setTimeout(() => toastAlert.remove(), 500);
+        }, 3500);
     }
 
     function setupAutocomplete(inputId, resultsId, endpoint = '/api/players/autocomplete') {

@@ -7,7 +7,7 @@
     <div class="w-full max-w-2xl">
         <form action="{{ url_for('draft_player', team_id=team_name) }}" method="post" class="flex items-center gap-4" id="draft-form">
             <div class="relative flex-grow">
-                <input type="text" name="player_name" id="player-draft-input" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-3 px-4 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-shadow shadow-inner" placeholder="Enter player name to draft" required autocomplete="off"/>
+                <input type="text" name="player_name" id="player-draft-input" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-3 px-4 focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Enter player name to draft" required autocomplete="off"/>
                 <div id="autocomplete-results" class="absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
             <button type="submit" class="bg-primary-container hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md transition-colors shadow-md active:scale-95">
@@ -17,10 +17,10 @@
     </div>
 </section>
 
-<!-- Draft Status Alert Toast (Transparent Green Pill with Green Border & Auto-Dismiss) -->
+<!-- Draft Status Alert Toast (Transparent Green Pill with Green Border & Pure Auto-Dismiss) -->
 {% if draft_status %}
-<div class="w-full max-w-2xl mx-auto my-2" id="draft-toast-alert">
-    <div class="px-5 py-2.5 rounded-full {% if draft_status == 'success' %}bg-emerald-950/40 text-emerald-300 border border-emerald-500/70 shadow-lg backdrop-blur-sm{% else %}bg-red-950/40 text-red-300 border border-red-500/70 shadow-lg backdrop-blur-sm{% endif %} flex justify-between items-center transition-all duration-300">
+<div class="w-full max-w-xl mx-auto my-2" id="draft-toast-alert">
+    <div class="px-6 py-2.5 rounded-full {% if draft_status == 'success' %}bg-emerald-950/40 text-emerald-300 border border-emerald-500/70 shadow-lg backdrop-blur-sm{% else %}bg-red-950/40 text-red-300 border border-red-500/70 shadow-lg backdrop-blur-sm{% endif %} flex justify-center items-center text-center transition-all duration-500">
         <span class="text-sm font-medium flex items-center gap-2">
             {% if draft_status == 'success' %}
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -30,7 +30,6 @@
                 <strong>Error:</strong> {{ drafted_player }}
             {% endif %}
         </span>
-        <button type="button" onclick="document.getElementById('draft-toast-alert').remove()" class="text-emerald-400 hover:text-emerald-200 text-sm font-bold ml-4">✕</button>
     </div>
 </div>
 {% endif %}
@@ -184,20 +183,20 @@
     {% endfor %}
 </section>
 
-<!-- Suggestions Table Section (Heading FIRST, then Filter Row directly UNDER Heading) -->
+<!-- Suggestions Table Section (Heading FIRST, Filter Row DIRECTLY UNDER Heading with Balanced Spacing) -->
 <section class="mt-8 flex flex-col gap-6">
     <h2 class="text-headline-lg font-display text-on-surface">Suggestions</h2>
 
-    <!-- Compact Filter Bar Row Directly Under Suggestions Heading (No Whitespace Gaps) -->
-    <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="bg-surface-container border border-outline-variant rounded-xl p-4 shadow-sm">
-        <div class="flex flex-wrap items-center gap-6">
-            <div class="flex items-center gap-3">
+    <!-- Balanced Filter Bar Row (Evenly Spaced Across Full Width) -->
+    <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="bg-surface-container border border-outline-variant rounded-xl p-5 shadow-sm">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-3 w-full md:w-auto">
                 <label class="text-sm font-semibold text-on-surface whitespace-nowrap">Exclude Teams:</label>
-                <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-64" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
+                <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-60" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
             </div>
             <div class="flex items-center gap-3">
                 <span class="text-sm font-semibold text-on-surface whitespace-nowrap">Exclude Positions:</span>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3.5">
                     {% for pos in all_positions %}
                     <label class="flex items-center gap-1.5 cursor-pointer select-none">
                         <input class="form-checkbox position-checkbox rounded bg-surface-container-low border-outline-variant text-primary-container focus:ring-primary-container" type="checkbox" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}/>
@@ -207,7 +206,7 @@
                 </div>
                 <input type="hidden" id="exclude-positions-input" name="exclude_positions" value="{{ exclude_positions }}">
             </div>
-            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-1.5 px-6 rounded-md transition-colors active:scale-95 ml-auto md:ml-0">
+            <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-2 px-8 rounded-md transition-colors active:scale-95 shadow-sm">
                 Filter
             </button>
         </div>
@@ -266,13 +265,13 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // AUTO-DISMISS DRAFT TOAST ALERT AFTER 4 SECONDS
+    // PURE AUTO-DISMISS DRAFT TOAST ALERT AFTER 3.5 SECONDS
     const toastAlert = document.getElementById('draft-toast-alert');
     if (toastAlert) {
         setTimeout(() => {
             toastAlert.style.opacity = '0';
-            setTimeout(() => toastAlert.remove(), 300);
-        }, 4000);
+            setTimeout(() => toastAlert.remove(), 500);
+        }, 3500);
     }
 
     // AUTOCOMPLETE FOR PLAYER INPUT
