@@ -180,18 +180,18 @@
     <div class="bg-surface-container border border-outline-variant rounded-xl p-4 shadow-sm">
         <div class="flex flex-col xl:flex-row items-center justify-between gap-6">
 
-            <!-- Left / Center: Filter Controls (Spaced Out Exclude Teams, Positions, & Filter Button) -->
-            <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="flex flex-col md:flex-row items-center justify-start md:justify-between gap-8 flex-grow pr-0 xl:pr-6 border-b xl:border-b-0 xl:border-r border-outline-variant/40 pb-4 xl:pb-0 w-full xl:w-auto">
-                <div class="flex items-center gap-3">
+            <!-- Left Group: Filter Controls (Exclude Teams + Exclude Positions + Filter Button) -->
+            <form method="get" action="{{ url_for('read_team', team_id=team_name) }}" id="filter-form" class="flex flex-col md:flex-row items-center gap-5 w-full xl:w-auto">
+                <div class="flex items-center gap-2.5">
                     <label class="text-sm font-bold text-on-surface whitespace-nowrap">Exclude Teams:</label>
-                    <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-52" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
+                    <input name="exclude_teams" class="bg-surface-container-low border border-outline-variant text-on-surface placeholder-outline rounded-md py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container w-44" placeholder="e.g., MCI,LIV,ARS" type="text" value="{{ exclude_teams }}"/>
                 </div>
 
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2.5">
                     <span class="text-sm font-bold text-on-surface whitespace-nowrap">Exclude Positions:</span>
-                    <div class="flex items-center gap-3.5">
+                    <div class="flex items-center gap-2.5">
                         {% for pos in all_positions %}
-                        <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                        <label class="flex items-center gap-1 cursor-pointer select-none">
                             <input class="form-checkbox position-checkbox rounded bg-surface-container-low border-outline-variant text-primary-container focus:ring-primary-container" type="checkbox" value="{{ pos }}" {% if pos in exclude_positions %}checked{% endif %}/>
                             <span class="text-sm font-bold text-on-surface">{{ pos }}</span>
                         </label>
@@ -200,7 +200,7 @@
                     <input type="hidden" id="exclude-positions-input" name="exclude_positions" value="{{ exclude_positions }}">
                 </div>
 
-                <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-1.5 px-6 rounded-md transition-colors active:scale-95 shadow-sm">
+                <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-1.5 px-5 rounded-md transition-colors active:scale-95 shadow-sm">
                     Filter
                 </button>
             </form>
