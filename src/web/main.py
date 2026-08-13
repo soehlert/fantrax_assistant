@@ -583,35 +583,87 @@ async def read_player_profile(request: Request, player_name: str):
             for p in c_db.get("players", []):
                 p_norm = norm(p.get("name", ""))
                 if p_norm == t_norm or t_norm in p_norm or p_norm in t_norm:
-                    pl_stats = p
+                    starts = int(p.get("starts", 0) or 0)
+                    matches = int(p.get("matches_played", 0) or 0)
+                    total_apps = max(starts, matches)
+                    pl_stats = {
+                        "starts": starts,
+                        "total_apps": total_apps,
+                        "minutes": int(p.get("minutes", 0) or 0),
+                        "ict_index": float(p.get("ict_index", 0) or 0),
+                        "influence": float(p.get("influence", 0) or 0),
+                        "threat": float(p.get("threat", 0) or 0),
+                    }
                     break
     except Exception as e:
         print(f"Error loading PL stats: {e}")
 
-    # 6. Similar Available Alternatives
+    # 6. Similar Available Alternatives Based on Understat Profile Distance
     similar_players = []
     try:
+        import numpy as np
         player_pos = (fantrax_info.get("position") or "M").split(",")[0].strip().upper()
-        player_fpg = float(fantrax_info.get("fpg", 0) or 0)
-        player_adp = float(fantrax_info.get("adp", 999) or 999)
+        
+        all_u_players = understat.get_all_players_data("EPL", "2024")
+        u_map = {}
+        for up in all_u_players:
+            u_map[norm(up.get("player_name", ""))] = up
+
+        def get_u_entry(pname):
+            t = norm(pname)
+            if t in u_map:
+                return u_map[t]
+            for k, v in u_map.items():
+                if t in k or k in t:
+                    return v
+            return None
+
+        metrics = ["xG", "xA", "npxG", "shots", "key_passes", "xGChain", "xGBuildup"]
+        def get_vec(up_data):
+            if not up_data:
+                return np.zeros(len(metrics))
+            gms = max(float(up_data.get("games", 1) or 1), 1.0)
+            return np.array([float(up_data.get(m, 0) or 0) / gms for m in metrics])
+
+        target_u = get_u_entry(player_name_clean)
+        target_vec = get_vec(target_u)
 
         all_available = [
             p for p in config.rankings.get("rankings", [])
             if p.get("player") not in state.drafted_players
             and p.get("player") != player_name_clean
         ]
+
         pos_match = [
             p for p in all_available
             if player_pos in p.get("position", "").upper().split(",")
         ] or all_available
 
-        pos_match.sort(key=lambda p: (
-            abs(float(p.get("adp", 999) or 999) - player_adp) * 0.6 +
-            abs(float(p.get("fpg", 0) or 0) - player_fpg) * 4.0
-        ))
-        similar_players = pos_match[:3]
+        scored = []
+        for cand in pos_match:
+            cand_u = get_u_entry(cand.get("player", ""))
+            cand_vec = get_vec(cand_u)
+            
+            if target_u and cand_u:
+                dist = float(np.linalg.norm(target_vec - cand_vec))
+            else:
+                dist = abs(float(cand.get("adp", 999) or 999) - float(fantrax_info.get("adp", 999) or 999)) * 0.1
+
+            cand_copy = dict(cand)
+            if cand_u:
+                gms = max(float(cand_u.get("games", 1) or 1), 1.0)
+                cand_copy["xg_per_game"] = round(float(cand_u.get("xG", 0) or 0) / gms, 2)
+                cand_copy["xa_per_game"] = round(float(cand_u.get("xA", 0) or 0) / gms, 2)
+            else:
+                cand_copy["xg_per_game"] = 0.0
+                cand_copy["xa_per_game"] = 0.0
+
+            scored.append((cand_copy, dist))
+
+        scored.sort(key=lambda x: x[1])
+        similar_players = [item[0] for item in scored[:3]]
     except Exception as e:
-        print(f"Error finding similar players: {e}")
+        print(f"Error finding similar Understat players: {e}")
 
     return templates.TemplateResponse(
         request=request,

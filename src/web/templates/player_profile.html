@@ -87,7 +87,7 @@
         </div>
     </div>
 
-    <!-- Official Workload & Match Rating Row (If Available) -->
+    <!-- Official Workload & Match Rating Row with Informative Tooltips -->
     {% if pl_stats %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
         <div class="flex items-center justify-between border-b border-outline-variant pb-3 mb-4">
@@ -108,20 +108,35 @@
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3">
-                <div class="text-xs font-semibold text-on-surface-variant uppercase">Starts / Matches</div>
-                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('starts', 0) }} / {{ pl_stats.get('matches_played', 0) }}</div>
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Matches started in starting XI out of total Premier League appearances">
+                <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
+                    <span>Starts / Appearances</span>
+                    <span class="material-symbols-outlined text-[13px] text-outline">info</span>
+                </div>
+                <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('starts', 0) }} / {{ pl_stats.get('total_apps', 0) }}</div>
             </div>
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3">
-                <div class="text-xs font-semibold text-on-surface-variant uppercase">Minutes Played</div>
+
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Total minutes played on the pitch this season">
+                <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
+                    <span>Minutes Played</span>
+                    <span class="material-symbols-outlined text-[13px] text-outline">info</span>
+                </div>
                 <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('minutes', 0) }}'</div>
             </div>
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3">
-                <div class="text-xs font-semibold text-on-surface-variant uppercase">PL ICT Index</div>
+
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Official Premier League Influence, Creativity & Threat Index evaluating overall statistical impact">
+                <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
+                    <span>PL ICT Index</span>
+                    <span class="material-symbols-outlined text-[13px] text-outline">info</span>
+                </div>
                 <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('ict_index', '0.0') }}</div>
             </div>
-            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3">
-                <div class="text-xs font-semibold text-on-surface-variant uppercase">Influence / Threat</div>
+
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3 group relative cursor-help" title="Influence measures key match event impact (passes, tackles). Threat measures goal-scoring threat (shots, box touches).">
+                <div class="flex items-center justify-center gap-1 text-xs font-semibold text-on-surface-variant uppercase">
+                    <span>Influence / Threat</span>
+                    <span class="material-symbols-outlined text-[13px] text-outline">info</span>
+                </div>
                 <div class="text-lg font-bold text-on-surface mt-0.5">{{ pl_stats.get('influence', 0) }} / {{ pl_stats.get('threat', 0) }}</div>
             </div>
         </div>
@@ -175,28 +190,29 @@
     </div>
     {% endif %}
 
-    <!-- Similar Available Alternatives Card -->
+    <!-- Similar Available Alternatives Card (Matched by Understat Profile Vector) -->
     {% if similar_players %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4">
         <div class="flex items-center justify-between border-b border-outline-variant pb-3">
             <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary-container text-xl">compare_arrows</span>
-                <h3 class="text-headline-sm font-bold text-on-surface">Similar Available Alternatives</h3>
+                <h3 class="text-headline-sm font-bold text-on-surface">Similar Understat Alternatives</h3>
             </div>
-            <span class="text-xs font-semibold text-on-surface-variant">Top Undrafted Options at {{ position_display.split(' ')[0] }}</span>
+            <span class="text-xs font-semibold text-on-surface-variant">Top Undrafted Options Matched by Statistical Profile (xG, xA, Shots, Key Passes)</span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             {% for sim in similar_players %}
-            <a href="/player/{{ sim.player }}" class="bg-surface-container-low border border-outline-variant rounded-lg p-4 hover:border-primary-container/50 transition-all flex flex-col gap-2 group">
+            <a href="/player/{{ sim.player }}" class="bg-surface-container-low border border-outline-variant rounded-lg p-4 hover:border-primary-container/50 transition-all flex flex-col gap-2.5 group">
                 <div class="flex items-center justify-between">
                     <span class="text-base font-bold text-on-surface group-hover:text-primary-container transition-colors">{{ sim.player }}</span>
                     <span class="text-xs font-bold px-2 py-0.5 rounded bg-surface-variant text-on-surface border border-outline-variant">{{ sim.position }}</span>
                 </div>
-                <div class="flex items-center justify-between text-xs text-on-surface-variant mt-1">
-                    <span>Club: <strong class="text-on-surface">{{ sim.team }}</strong></span>
+                <div class="grid grid-cols-2 gap-2 text-xs text-on-surface-variant bg-surface-container p-2 rounded border border-outline-variant/40">
                     <span>ADP: <strong class="text-on-surface">{{ "%.1f"|format(sim.adp) if sim.adp else '—' }}</strong></span>
                     <span>FP/G: <strong class="text-on-surface">{{ "%.2f"|format(sim.fpg) if sim.fpg else '—' }}</strong></span>
+                    <span>xG/G: <strong class="text-on-surface">{{ "%.2f"|format(sim.xg_per_game) }}</strong></span>
+                    <span>xA/G: <strong class="text-on-surface">{{ "%.2f"|format(sim.xa_per_game) }}</strong></span>
                 </div>
             </a>
             {% endfor %}
