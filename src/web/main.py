@@ -16,10 +16,13 @@ from fantrax_assistant.analysis import DraftPickAnalyzer
 from fantrax_assistant.db import DatabaseManager
 
 # --- App Setup ---
+from fantrax_assistant.weekly import WeeklyManagerEngine
+
 config = DraftConfig()
 understat = Understat()
 analyzer = DraftPickAnalyzer(config=config)
 db_mgr = DatabaseManager("data/fantrax_assistant.db")
+weekly_engine = WeeklyManagerEngine()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -306,6 +309,7 @@ async def api_team_suggestions(
 async def read_team(
     request: Request,
     team_id: str,
+    tab: str = "roster",
     page_suggestions: int = 1,
     draft_status: str = None,
     drafted_player: str = None,
@@ -422,13 +426,14 @@ async def read_team(
             "accent_color": color_info["color"]
         })
 
-    # Sort club breakdown in alphabetical order by team code
-    club_breakdown.sort(key=lambda x: x["code"])
-
     suggestions_pagination = get_team_suggestions_pagination(
         team_id=team_name, page=page_suggestions, page_size=10,
         exclude_teams=exclude_teams, exclude_positions=exclude_positions
     )
+
+    # Weekly Manager Lineup & Auto-Sub Advice
+    weekly_lineup = weekly_engine.get_optimal_lineup(roster)
+    auto_subs = weekly_engine.get_auto_sub_recommendations(weekly_lineup['starters'], weekly_lineup['bench'])
 
     return templates.TemplateResponse(
         request=request, name="team.html",
@@ -445,7 +450,10 @@ async def read_team(
             "tracked_teams": [t for t in teams_data.keys() if t != 'Other'],
             "exclude_teams": exclude_teams,
             "exclude_positions": exclude_positions,
-            "all_positions": ["G", "D", "M", "F"]
+            "all_positions": ["G", "D", "M", "F"],
+            "active_tab": tab,
+            "weekly_lineup": weekly_lineup,
+            "auto_subs": auto_subs
         }
     )
 
