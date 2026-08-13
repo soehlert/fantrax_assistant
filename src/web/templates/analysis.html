@@ -9,8 +9,8 @@
     </p>
 </section>
 
-<!-- Summary Statistics Bar -->
-<section class="mt-6 bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-around gap-6">
+<!-- Summary Statistics Bar (Same Width as Feed) -->
+<section class="mt-6 max-w-4xl mx-auto w-full bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-around gap-6">
     <div class="flex items-center gap-4">
         <div class="w-12 h-12 rounded-full bg-primary-container/20 text-primary-container flex items-center justify-center flex-shrink-0">
             <span class="material-symbols-outlined text-2xl">analytics</span>
@@ -29,10 +29,10 @@
         </div>
         <div>
             <div class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Highest Value Steal</div>
-            <div class="text-lg font-bold text-on-surface">
-                {% set steals = feed | selectattr('grade_class', 'equalto', 'emerald') | list %}
-                {% if steals %}
-                    {{ steals[0].player }} (Pick #{{ steals[0].pick_number }})
+            <div class="text-lg font-bold text-on-surface flex items-center gap-1.5 flex-wrap">
+                {% if top_steal %}
+                    <span>{{ top_steal.player }}</span>
+                    <span class="text-sm font-semibold text-on-surface-variant">(Pick #{{ top_steal.pick_number }} • Grade: <strong class="text-on-surface">{{ top_steal.grade }}</strong>)</span>
                 {% else %}
                     —
                 {% endif %}
