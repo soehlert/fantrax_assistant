@@ -28,14 +28,27 @@ class DraftPickAnalyzer:
         # Fetch player metrics from config if not passed explicitly
         fpg = player_fpg
         fpts = player_fpts
-        if (fpg is None or fpts is None) and self.config:
+        matches = 0
+        if self.config:
             details = self.config.get_player_adp(player_name)
             if details:
                 if fpg is None: fpg = float(details.get('fpg', 0.0))
                 if fpts is None: fpts = float(details.get('fpts', 0.0))
+                stats = details.get('stats', {})
+                if isinstance(stats, dict):
+                    matches = int(stats.get('matches_played', 0))
         
-        fpg = fpg or 0.0
+        fpg_raw = fpg or 0.0
         fpts = fpts or 0.0
+
+        # Sample size regression for games played (< 5 matches)
+        if matches > 0 and matches < 5:
+            if adp <= 60:
+                eff_fpg = (fpg_raw * matches + 2.25 * (5 - matches)) / 5.0
+            else:
+                eff_fpg = min(fpg_raw, 2.25)
+        else:
+            eff_fpg = fpg_raw
 
         # Baseline score starts at 81.0 for expected consensus ADP
         reasons = []
@@ -60,14 +73,19 @@ class DraftPickAnalyzer:
             else:
                 reasons.append(f"Fair market value pick right around expected ADP (#{adp:.1f}).")
 
-        # 2. Points Monster / Elite Production Bonus
+        # 2. Production Tier Bonus (Sample Size Regressed)
         monster_bonus = 0.0
-        if fpg >= 2.5:
-            monster_bonus = min(8.5, (fpg - 2.5) * 3.2)
-            if fpg >= 4.0:
-                reasons.append(f"Elite points monster ({fpg:.2f} FP/G) provides top-tier scoring output.")
-            elif fpg >= 3.2:
-                reasons.append(f"High production profile ({fpg:.2f} FP/G) adds strong weekly scoring upside.")
+        if eff_fpg >= 4.5 and fpts >= 140:
+            monster_bonus = 18.0  # League Juggernaut (Haaland) -> Guaranteed A+ at top picks
+            reasons.append(f"Tier 1 League Juggernaut ({eff_fpg:.2f} FP/G, {fpts:.0f} FPts) dominates the entire league in fantasy output.")
+        elif eff_fpg >= 4.0 and fpts >= 125:
+            monster_bonus = 12.5  # Dominant Star (Bruno) -> Guaranteed A/A+ at top picks
+            reasons.append(f"Elite points monster ({eff_fpg:.2f} FP/G) provides top-tier scoring output.")
+        elif eff_fpg >= 3.2:
+            monster_bonus = min(7.5, (eff_fpg - 2.5) * 3.0)
+            reasons.append(f"High production profile ({eff_fpg:.2f} FP/G) adds strong weekly scoring upside.")
+        elif eff_fpg >= 2.5:
+            monster_bonus = min(4.0, (eff_fpg - 2.5) * 2.0)
 
         # 3. Positional Need Fit
         primary_pos = player_pos.split(',')[0].strip().upper() if player_pos else 'M'
