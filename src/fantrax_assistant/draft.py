@@ -317,35 +317,45 @@ def reset():
 
 
 @app.command()
-def setup():
-    """Fetch live stats, initialize optional data files, and seed SQLite database without touching active draft state."""
+def refresh():
+    """Fetch live stats, initialize optional data files, and update SQLite database without touching draft state or team rosters."""
     import sys
     from pathlib import Path
     root_dir = Path(__file__).resolve().parent.parent.parent
     sys.path.insert(0, str(root_dir))
 
     from scripts.fetch_all_data import fetch_fpl_current_stats, ensure_optional_json_files, run_db_seeder
-    console.print(f"[{COLORS['header']}]🚀 Running Master Setup & Data Pipeline...[/{COLORS['header']}]\n")
+    console.print(f"[{COLORS['header']}]🔄 Fetching live data & updating database...[/{COLORS['header']}]\n")
     fetch_fpl_current_stats()
     ensure_optional_json_files()
     run_db_seeder()
-    console.print(f"\n[{COLORS['success']}]✓ Setup complete! SQLite database & data files are ready.[/{COLORS['success']}]")
+    console.print(f"\n[{COLORS['success']}]✓ Data refresh complete! SQLite database & data files are up to date.[/{COLORS['success']}]")
 
 
 @app.command()
 def init(
-    teams: Annotated[str, typer.Option(
+    teams: Annotated[Optional[str], typer.Option(
         "--teams", "-t",
         help='Comma-separated team names (e.g., "Sam,Scott,Hayden")'
-    )] = "Sam,Scott,Hayden",
-    fetch_data: Annotated[bool, typer.Option(
-        "--fetch-data/--no-fetch-data", "-f",
-        help="Fetch live stats, initialize JSON files, and seed SQLite database during init"
-    )] = False,
+    )] = None,
 ):
-    """Initialize or reset draft state with specified teams (WARNING: clears active picks)."""
-    if fetch_data:
-        setup()
+    """Initialize from scratch: fetch all data sources, seed DB, and prompt for tracked team names."""
+    import sys
+    from pathlib import Path
+    root_dir = Path(__file__).resolve().parent.parent.parent
+    sys.path.insert(0, str(root_dir))
+
+    console.print(f"[{COLORS['header']}]🚀 Starting initial setup from scratch...[/{COLORS['header']}]\n")
+    from scripts.fetch_all_data import fetch_fpl_current_stats, ensure_optional_json_files, run_db_seeder
+    fetch_fpl_current_stats()
+    ensure_optional_json_files()
+    run_db_seeder()
+
+    if not teams:
+        teams = typer.prompt(
+            "\nEnter team names to track (comma-separated)",
+            default="Sam,Scott,Hayden"
+        )
 
     state = DraftState()
     team_list = [t.strip() for t in teams.split(',') if t.strip()]
