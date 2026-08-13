@@ -69,16 +69,17 @@ class PlayerRecommendationEngine:
 
     def calculate_base_value(self, player: dict) -> float:
         """
-        Calculate base value from effective FP/G (weighted by sample size).
+        Calculate base value from effective FP/G (weighted by sample size and rotation risk).
         Weight: 30%
         """
         fpg = self.get_effective_fpg(player)
         position = player.get('position', 'M')
         pos_weight = self.get_position_weight(position)
+        rot_risk = self.calculate_rotation_risk_penalty(player)
 
         # Normalize FP/G to 0-100 scale (elite effective FP/G ~4.5 in this league)
         normalized = min(fpg / 4.5 * 100, 100)
-        adjusted = normalized * pos_weight
+        adjusted = normalized * pos_weight * rot_risk
 
         return min(adjusted * 0.30, 30)
 
@@ -182,31 +183,60 @@ class PlayerRecommendationEngine:
         multiplier = multipliers.get(severity, 0.9)
         return multiplier * 15
 
+    def calculate_rotation_risk_penalty(self, player: dict) -> float:
+        """
+        Calculate rotation risk / minutes security penalty.
+        Players on high-depth top clubs (MCI, ARS, CHE, LIV) who are not 80+ minute locked starters
+        receive a rotation risk discount.
+        """
+        team = player.get('team', '').upper()
+        fpg = float(player.get('fpg', 0) or 0)
+
+        # Check minutes / appearances if stats available
+        stats = player.get('stats') or {}
+        starts = stats.get('starts', 0)
+        apps = stats.get('matches_played', 0)
+        mins = stats.get('minutes', 0)
+
+        # Nailed-on elite starters retain 100% floor
+        if fpg >= 4.2 and (apps == 0 or (starts / max(1, apps)) >= 0.8):
+            return 1.0
+
+        if team in {'MCI', 'ARS', 'CHE', 'LIV'}:
+            if mins > 0 and apps > 0:
+                avg_mins = mins / apps
+                if avg_mins < 65:
+                    return 0.80  # 20% discount for low minutes per game
+                elif avg_mins < 78:
+                    return 0.90  # 10% discount for sub-80 min starters
+            elif fpg < 3.8:
+                return 0.85  # 15% discount for non-elite rotational options on stacked squads
+
+        return 1.0
+
     def position_multiplier(self, player: dict) -> float:
         """
-        Calculate position multiplier based on position and versatility.
-        Attackers weighted most heavily, defenders least.
-        Versatile players (multiple positions) get bonus.
+        Calculate position multiplier based on positional scarcity and value.
+        Forwards (F) and Midfielders (M) weighted highest due to goal/assist scarcity.
+        Defenders (D) and Goalkeepers (G) discounted due to tight scoring distribution and high waiver replacement availability.
         """
         position_str = player.get('position', '')
 
-        # Base multiplier by PRIMARY position (or highest attacking position if multiple)
         if 'F' in position_str:
-            base_multiplier = 1.25
+            base_multiplier = 1.40
         elif 'M' in position_str:
-            base_multiplier = 0.75
+            base_multiplier = 1.15
         elif 'D' in position_str:
-            base_multiplier = 0.50
+            base_multiplier = 0.45
         elif 'G' in position_str:
             base_multiplier = 0.25
         else:
-            base_multiplier = 0.5
+            base_multiplier = 0.60
 
-        # Versatility bonus - players with multiple positions
         versatility_bonus = 1.0
         if ',' in position_str:
             num_positions = len(position_str.split(','))
-            versatility_bonus = 1.0 + (0.15 * (num_positions - 1))
+            versatility_bonus = 1.0 + (0.10 * (num_positions - 1))
 
         return base_multiplier * versatility_bonus
 
@@ -227,14 +257,17 @@ class PlayerRecommendationEngine:
         )
 
         max_count = roster_rules.get(position, 0)
-        position_multiplier = self.position_multiplier(player)
+        pos_mult = self.position_multiplier(player)
 
+        # Early in draft, D and G needs are deferred since baseline replacements are abundant
         if current_count >= max_count:
-            return 3.0 * position_multiplier
+            need_score = 3.0
         elif current_count == 0:
-            return 15.0 * position_multiplier
+            need_score = 15.0 if ('F' in position or 'M' in position) else 8.0
         else:
-            return 10.0 * position_multiplier
+            need_score = 10.0
+
+        return need_score * pos_mult
 
     def calculate_position_scarcity(self, player: dict) -> float:
         """
