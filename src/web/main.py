@@ -677,6 +677,31 @@ async def read_player_profile(request: Request, player_name: str):
         if not peers:
             peers = all_pl_players
 
+        # Query Understat peers directly from DB understat_stats table for Understat metrics
+        understat_peers = {}
+        try:
+            pos_like = f"{pos_str[0]}%"
+            with db.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                SELECT u.xg, u.npxg, u.xa, u.shots, u.key_passes, u.xg_chain, u.xg_buildup
+                FROM players p JOIN understat_stats u ON p.id = u.player_id
+                WHERE upper(p.position) LIKE ? AND u.xg IS NOT NULL
+                """, (pos_like,))
+                u_rows = cursor.fetchall()
+                if u_rows:
+                    understat_peers = {
+                        "xG": [float(r[0] or 0) for r in u_rows],
+                        "npxG": [float(r[1] or 0) for r in u_rows],
+                        "xA": [float(r[2] or 0) for r in u_rows],
+                        "shots": [float(r[3] or 0) for r in u_rows],
+                        "key_passes": [float(r[4] or 0) for r in u_rows],
+                        "xGChain": [float(r[5] or 0) for r in u_rows],
+                        "xGBuildup": [float(r[6] or 0) for r in u_rows],
+                    }
+        except Exception as e:
+            print(f"Error loading Understat DB peers: {e}")
+
         metric_configs = [
             ("goals", "Goals", "goals"),
             ("npg", "Non-Penalty Goals", "goals"),
@@ -715,17 +740,21 @@ async def read_player_profile(request: Request, player_name: str):
                 creativity_val = float(pl_stats.get("creativity", 0) or 0)
 
                 if u_key in {"xG", "npxG"} and (goals_count > 0 or threat_val > 0):
-                    raw_val = round(goals_count * 0.85 + (threat_val / 200.0), 2)
+                    raw_val = round(goals_count * 0.70 + (threat_val / 300.0), 2)
                 elif u_key == "xA" and (assists_count > 0 or creativity_val > 0):
-                    raw_val = round(assists_count * 0.80 + (creativity_val / 250.0), 2)
+                    raw_val = round(assists_count * 0.70 + (creativity_val / 350.0), 2)
                 elif u_key in {"xGChain", "xGBuildup"} and (threat_val > 0 or creativity_val > 0):
-                    raw_val = round((threat_val + creativity_val) / 30.0, 2)
+                    raw_val = round((threat_val + creativity_val) / 40.0, 2)
                 elif u_key == "shots" and threat_val > 0:
-                    raw_val = round(threat_val / 12.0, 1)
+                    raw_val = round(threat_val / 15.0, 1)
                 elif u_key == "key_passes" and creativity_val > 0:
-                    raw_val = round(creativity_val / 15.0, 1)
+                    raw_val = round(creativity_val / 20.0, 1)
 
-            peer_vals = [float(p.get(pl_key, 0) or 0) for p in peers]
+            # Select peer values: use Understat DB peers for Understat metrics, FPL peers for FPL metrics
+            if u_key in understat_peers:
+                peer_vals = understat_peers[u_key]
+            else:
+                peer_vals = [float(p.get(pl_key, 0) or 0) for p in peers]
 
             if raw_val == 0 or not peer_vals or all(v == 0 for v in peer_vals):
                 pct = 0.0
