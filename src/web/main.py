@@ -31,12 +31,12 @@ app.mount("/static", StaticFiles(directory="src/web/static"), name="static")
 templates = Jinja2Templates(directory="src/web/templates")
 
 CLUB_COLORS_MAP = {
-    "MCI": "#6CABDD", "ARS": "#EF0107", "LIV": "#C8102E", "MUN": "#DA291C",
-    "CHE": "#034694", "TOT": "#38bdf8", "AVL": "#95BFE5", "BOU": "#DA291C",
-    "BHA": "#0057B8", "CRY": "#1B458F", "EVE": "#003399", "FUL": "#CC0000",
-    "NEW": "#41B6E6", "NOT": "#DD0000", "NFO": "#DD0000", "SUN": "#EB172B",
-    "IPS": "#0054A6", "LEE": "#FFCD00", "COV": "#00A3E0", "WOL": "#FDB913",
-    "WHU": "#7A263A", "BRE": "#D20000", "BRF": "#D20000"
+    "ARS": "#EF0107", "AVL": "#95BFE5", "BHA": "#0057B8", "BOU": "#DA291C",
+    "BRF": "#D20000", "BRE": "#D20000", "CHE": "#034694", "COV": "#00A3E0",
+    "CRY": "#1B458F", "EVE": "#003399", "FUL": "#CC0000", "HUL": "#F5A623",
+    "IPS": "#0054A6", "LEE": "#FFCD00", "LIV": "#C8102E", "MCI": "#6CABDD",
+    "MUN": "#DA291C", "NEW": "#241F20", "NOT": "#DD0000", "NFO": "#DD0000",
+    "SUN": "#EB172B", "TOT": "#132257"
 }
 templates.env.globals["CLUB_COLORS_MAP"] = CLUB_COLORS_MAP
 
@@ -222,32 +222,33 @@ async def read_team(
 
     # Premier League Club Colors & Metadata
     CLUB_COLORS = {
-        "MCI": {"color": "#6CABDD", "name": "Man City"},
         "ARS": {"color": "#EF0107", "name": "Arsenal"},
-        "LIV": {"color": "#C8102E", "name": "Liverpool"},
-        "MUN": {"color": "#DA291C", "name": "Man United"},
-        "CHE": {"color": "#034694", "name": "Chelsea"},
-        "TOT": {"color": "#38bdf8", "name": "Tottenham"},
         "AVL": {"color": "#95BFE5", "name": "Aston Villa"},
-        "BOU": {"color": "#DA291C", "name": "Bournemouth"},
         "BHA": {"color": "#0057B8", "name": "Brighton"},
+        "BOU": {"color": "#DA291C", "name": "Bournemouth"},
+        "BRF": {"color": "#D20000", "name": "Brentford"},
+        "BRE": {"color": "#D20000", "name": "Brentford"},
+        "CHE": {"color": "#034694", "name": "Chelsea"},
+        "COV": {"color": "#00A3E0", "name": "Coventry"},
         "CRY": {"color": "#1B458F", "name": "Crystal Palace"},
         "EVE": {"color": "#003399", "name": "Everton"},
         "FUL": {"color": "#CC0000", "name": "Fulham"},
-        "NEW": {"color": "#41B6E6", "name": "Newcastle"},
-        "NOT": {"color": "#DD0000", "name": "Nott'm Forest"},
-        "SUN": {"color": "#EB172B", "name": "Sunderland"},
+        "HUL": {"color": "#F5A623", "name": "Hull"},
         "IPS": {"color": "#0054A6", "name": "Ipswich"},
         "LEE": {"color": "#FFCD00", "name": "Leeds"},
-        "COV": {"color": "#00A3E0", "name": "Coventry"},
-        "WOL": {"color": "#FDB913", "name": "Wolves"},
-        "WHU": {"color": "#7A263A", "name": "West Ham"},
-        "BRE": {"color": "#D20000", "name": "Brentford"}
+        "LIV": {"color": "#C8102E", "name": "Liverpool"},
+        "MCI": {"color": "#6CABDD", "name": "Man City"},
+        "MUN": {"color": "#DA291C", "name": "Man United"},
+        "NEW": {"color": "#241F20", "name": "Newcastle"},
+        "NOT": {"color": "#DD0000", "name": "Nottm Forest"},
+        "NFO": {"color": "#DD0000", "name": "Nottm Forest"},
+        "SUN": {"color": "#EB172B", "name": "Sunderland"},
+        "TOT": {"color": "#132257", "name": "Tottenham"}
     }
 
     PL_CLUBS_ORDER = [
-        "MCI", "ARS", "LIV", "MUN", "CHE", "TOT",
-        "AVL", "BHA", "BOU", "BRE", "CRY", "EVE", "FUL", "IPS", "LEE", "NEW", "NOT", "SUN", "WHU", "WOL"
+        "ARS", "AVL", "BHA", "BOU", "BRF", "CHE", "COV", "CRY", "EVE", "FUL",
+        "HUL", "IPS", "LEE", "LIV", "MCI", "MUN", "NEW", "NOT", "SUN", "TOT"
     ]
 
     BIG_SIX = {"MCI", "ARS", "LIV", "MUN", "CHE", "TOT"}
