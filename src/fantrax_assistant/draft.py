@@ -305,9 +305,71 @@ def show_team(team: Annotated[str, typer.Option("--team", "-t",help="Team name t
             breakdown.add_row(pos, str(current), str(max_count), need_str)
         console.print("\n", breakdown)
 
+        from .analysis import DraftPickAnalyzer
+        analyzer = DraftPickAnalyzer(config=config)
+        team_eval = analyzer.evaluate_team_grade(team_name, state)
+        console.print(f"\n[{COLORS['header']}]Team Grade:[/{COLORS['header']}] [bold bright_green]{team_eval['grade']}[/bold bright_green] ({team_eval['score']}/100, Rank #{team_eval['rank']})")
 
 
 @app.command()
+def team_grade(
+    team: Annotated[Optional[str], typer.Option("--team", "-t", help="Team name to evaluate (evaluates all tracked teams if omitted)")] = None,
+):
+    """View full team grade, 4-component score breakdown, and sports analyst writeup."""
+    from .analysis import DraftPickAnalyzer
+    config = DraftConfig()
+    config.load_all_data()
+    state = DraftState()
+    analyzer = DraftPickAnalyzer(config=config)
+
+    all_grades = analyzer.evaluate_all_tracked_teams(state)
+
+    if team:
+        target_name = state.find_team_name(team) or team
+        teams_to_show = [all_grades.get(target_name, analyzer.evaluate_team_grade(target_name, state))]
+    else:
+        teams_to_show = sorted(all_grades.values(), key=lambda x: x["rank"])
+
+    for eval_item in teams_to_show:
+        t_id = eval_item["team_id"]
+        grade = eval_item["grade"]
+        score = eval_item["score"]
+        rank = eval_item["rank"]
+        comps = eval_item["components"]
+        writeup = eval_item["writeup"]
+
+        header_panel = Panel(
+            f"[bold text-xl]{t_id}[/bold text-xl] — Grade: [bold bright_green]{grade}[/bold bright_green] ({score}/100) | Rank #{rank} in League\n"
+            f"[dim]{writeup['headline']}[/dim]",
+            title="Team Grade Report",
+            border_style=COLORS['border'],
+            box=box.ROUNDED
+        )
+        console.print(header_panel)
+
+        comp_table = Table(title="Component Breakdown", box=box.SIMPLE, border_style=COLORS['border'])
+        comp_table.add_column("Component", style=COLORS['info'])
+        comp_table.add_column("Score", justify="right", style="white")
+        comp_table.add_row("Star Power & Top Starters", f"{comps['star_power']:.1f} / 100")
+        comp_table.add_row("Pick Value & Efficiency", f"{comps['pick_efficiency']:.1f} / 100")
+        comp_table.add_row("Roster Fit & Position Coverage", f"{comps['roster_balance']:.1f} / 100")
+        comp_table.add_row("Squad Availability & Risk", f"{comps['availability']:.1f} / 100")
+        console.print(comp_table)
+
+        console.print(f"\n[bold {COLORS['header']}]Executive Summary:[/{COLORS['header']}]")
+        console.print(f"  {writeup['executive_summary']}\n")
+
+        console.print(f"[bold bright_green]Strengths:[/bold bright_green]")
+        for s in writeup['strengths']:
+            console.print(f"  • {s}")
+
+        console.print(f"\n[bold yellow]Concerns & Risks:[/bold yellow]")
+        for v in writeup['vulnerabilities']:
+            console.print(f"  • {v}")
+
+        console.print(f"\n[bold {COLORS['highlight']}]Analyst Verdict:[/{COLORS['highlight']}]")
+        console.print(f"  {writeup['verdict']}\n")
+
 def reset():
     """Reset draft state."""
     if Confirm.ask("[bold]Reset everything?[/bold]", default=False):

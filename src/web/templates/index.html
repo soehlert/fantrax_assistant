@@ -43,7 +43,6 @@
             <input type="hidden" name="sort_drafted" value="{{ sort_drafted }}"/>
             <div class="relative flex-grow">
                 <input type="text" name="search" id="available-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 text-base focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Search available players..." value="{{ search_query or '' }}" autocomplete="off"/>
-                <div id="autocomplete-results-search" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
             <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-md text-base transition-colors">
                 Search
@@ -51,62 +50,73 @@
         </form>
     </div>
 
-    <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm">
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse whitespace-nowrap">
-                <thead>
-                    <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface uppercase tracking-wider">
-                        <th class="px-6 py-3 font-bold">Rank</th>
-                        <th class="px-6 py-3 font-bold">Name</th>
-                        <th class="px-6 py-3 font-bold">Position</th>
-                        <th class="px-6 py-3 font-bold">Team</th>
-                        <th class="px-6 py-3 font-bold">
-                            <a href="{{ url_for('read_root') }}?sort_available=adp&search={{ search_query or '' }}&sort_drafted={{ sort_drafted }}" class="flex items-center gap-1 hover:text-primary-container transition-colors">
-                                <span>ADP</span>
-                                {% if sort_available == 'adp' %}<span class="material-symbols-outlined text-[14px] text-primary-container">arrow_downward</span>{% endif %}
-                            </a>
-                        </th>
-                        <th class="px-6 py-3 font-bold">
-                            <a href="{{ url_for('read_root') }}?sort_available=fpts&search={{ search_query or '' }}&sort_drafted={{ sort_drafted }}" class="flex items-center gap-1 hover:text-primary-container transition-colors">
-                                <span>Fantasy Points</span>
-                                {% if sort_available == 'fpts' %}<span class="material-symbols-outlined text-[14px] text-primary-container">arrow_downward</span>{% endif %}
-                            </a>
-                        </th>
-                        <th class="px-6 py-3 font-bold">
-                            <a href="{{ url_for('read_root') }}?sort_available=fpg&search={{ search_query or '' }}&sort_drafted={{ sort_drafted }}" class="flex items-center gap-1 hover:text-primary-container transition-colors" title="Sorted by FP/Game (min {{ min_games }} games filter)">
-                                <span>FP/Game (Min {{ min_games }}G)</span>
-                                {% if sort_available == 'fpg' %}<span class="material-symbols-outlined text-[14px] text-primary-container">arrow_downward</span>{% endif %}
-                            </a>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="text-body-md text-on-surface">
-                    {% for player in available.players %}
-                    <tr onclick="triggerDraftConfirmModal('{{ player.player }}')" class="border-b border-outline-variant table-row-hover transition-colors cursor-pointer group">
-                        <td class="px-6 py-2.5 font-bold text-on-surface-variant text-sm">{{ loop.index + (available.page - 1) * available.page_size }}</td>
-                        <td class="px-6 py-2.5 font-semibold text-on-surface transition-colors text-base">
-                            <a href="/player/{{ player.id or player.player }}" onclick="event.stopPropagation();" class="hover:text-primary-container transition-colors font-bold">
-                                {{ player.player }}
-                            </a>
-                        </td>
-                        <td class="px-6 py-2.5 font-bold text-on-surface text-base">
-                            {{ player.position }}
-                        </td>
-                        <td class="px-6 py-2.5">{{ render_team_badge(player.team) }}</td>
-                        <td class="px-6 py-2.5"><span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
-                        <td class="px-6 py-2.5 font-medium text-sm">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
-                        <td class="px-6 py-2.5 font-medium text-sm">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" class="px-6 py-6 text-center text-on-surface-variant text-sm">No available players found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div id="available-table-container">
+        <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <thead>
+                        <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface uppercase tracking-wider">
+                            <th class="px-6 py-3 font-bold">Rank</th>
+                            <th class="px-6 py-3 font-bold">Name</th>
+                            <th class="px-6 py-3 font-bold">Position</th>
+                            <th class="px-6 py-3 font-bold">Team</th>
+                            <th class="px-6 py-3 font-bold">
+                                <a href="{{ url_for('read_root') }}?sort_available=adp&search={{ search_query or '' }}&sort_drafted={{ sort_drafted }}" class="flex items-center gap-1 hover:text-primary-container transition-colors">
+                                    <span>ADP</span>
+                                    {% if sort_available == 'adp' %}<span class="material-symbols-outlined text-[14px] text-primary-container">arrow_downward</span>{% endif %}
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 font-bold">
+                                <a href="{{ url_for('read_root') }}?sort_available=fpts&search={{ search_query or '' }}&sort_drafted={{ sort_drafted }}" class="flex items-center gap-1 hover:text-primary-container transition-colors">
+                                    <span>Proj. Fantasy Points</span>
+                                    {% if sort_available == 'fpts' %}<span class="material-symbols-outlined text-[14px] text-primary-container">arrow_downward</span>{% endif %}
+                                </a>
+                            </th>
+                            <th class="px-6 py-3 font-bold">
+                                <a href="{{ url_for('read_root') }}?sort_available=fpg&search={{ search_query or '' }}&sort_drafted={{ sort_drafted }}" class="flex items-center gap-1 hover:text-primary-container transition-colors" title="Sorted by Proj. FP/Game">
+                                    <span>Proj. FP/Game</span>
+                                    {% if sort_available == 'fpg' %}<span class="material-symbols-outlined text-[14px] text-primary-container">arrow_downward</span>{% endif %}
+                                </a>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-body-md text-on-surface">
+                        {% for player in available.players %}
+                        <tr onclick="triggerDraftConfirmModal('{{ player.player }}')" class="border-b border-outline-variant table-row-hover transition-colors cursor-pointer group">
+                            <td class="px-6 py-2.5 font-bold text-on-surface-variant text-sm">{{ loop.index + (available.page - 1) * available.page_size }}</td>
+                            <td class="px-6 py-2.5 font-semibold text-on-surface transition-colors text-base">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <a href="/player/{{ player.id or player.player }}" onclick="event.stopPropagation();" class="hover:text-primary-container transition-colors font-bold">
+                                        {{ player.player }}
+                                    </a>
+                                    {% if player.at_afcon %}
+                                        <span class="bg-red-600/30 text-red-300 border border-red-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full" title="AFCON Duty">AFCON</span>
+                                    {% elif player.injury_severity and player.injury_severity != 'Healthy' %}
+                                        <span class="{% if 'Short' in player.injury_severity %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% elif 'Medium' in player.injury_severity %}bg-orange-500/20 text-orange-300 border border-orange-500/30{% else %}bg-red-500/20 text-red-300 border border-red-500/30{% endif %} text-[10px] font-bold px-2 py-0.5 rounded-full cursor-help" title="{{ player.injury_type or player.injury_notes or player.injury_severity }}">
+                                            {{ player.injury_type or player.injury_notes or player.injury_severity }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-2.5 font-bold text-on-surface text-base">
+                                {{ player.position }}
+                            </td>
+                            <td class="px-6 py-2.5">{{ render_team_badge(player.team) }}</td>
+                            <td class="px-6 py-2.5"><span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
+                            <td class="px-6 py-2.5 font-medium text-sm">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
+                            <td class="px-6 py-2.5 font-medium text-sm">{{ "%.2f"|format(player.fpg) if player.fpg else '—' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-6 text-center text-on-surface-variant text-sm">No available players found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
+        {{ render_pagination(available, 'page_available', '&sort_available=' + sort_available + '&sort_drafted=' + sort_drafted + '&page_drafted=' + drafted.page|string + '&search=' + (search_query or '')) }}
     </div>
-    {{ render_pagination(available, 'page_available', '&sort_available=' + sort_available + '&sort_drafted=' + sort_drafted + '&page_drafted=' + drafted.page|string + '&search=' + (search_query or '')) }}
 </section>
 
 <!-- Drafted Players Section (7 Columns - Sleek Compact Vertical Spacing) -->
@@ -118,7 +128,6 @@
             <input type="hidden" name="sort_drafted" value="{{ sort_drafted }}"/>
             <div class="relative flex-grow">
                 <input type="text" name="search_drafted" id="drafted-player-search" class="w-full bg-surface-container border border-outline-variant text-on-surface placeholder-outline rounded-md py-2 px-3 text-base focus:outline-none focus:ring-1 focus:ring-primary-container focus:border-primary-container transition-all" placeholder="Search drafted players..." value="{{ search_drafted_query or '' }}" autocomplete="off"/>
-                <div id="autocomplete-results-drafted" class="hidden absolute w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-xl z-50 overflow-hidden"></div>
             </div>
             <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-md text-base transition-colors">
                 Search
@@ -126,7 +135,7 @@
         </form>
     </div>
 
-    <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+    <div id="drafted-table-container">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse whitespace-nowrap">
                 <thead>
@@ -143,7 +152,7 @@
                         </th>
                         <th class="px-6 py-3 font-bold">
                             <a href="{{ url_for('read_root') }}?sort_drafted=fpts&search_drafted={{ search_drafted_query or '' }}&sort_available={{ sort_available }}" class="flex items-center gap-1 hover:text-primary-container transition-colors">
-                                <span>Fantasy Points</span>
+                                <span>Proj. Fantasy Points</span>
                                 {% if sort_drafted == 'fpts' %}<span class="material-symbols-outlined text-[14px] text-primary-container">arrow_downward</span>{% endif %}
                             </a>
                         </th>
@@ -155,9 +164,18 @@
                     <tr class="border-b border-outline-variant table-row-hover transition-colors">
                         <td class="px-6 py-2.5 font-bold text-on-surface-variant text-sm">{{ loop.index + (drafted.page - 1) * drafted.page_size }}</td>
                         <td class="px-6 py-2.5 font-bold text-on-surface text-base">
-                            <a href="/player/{{ player.id or player.player }}" class="hover:text-primary-container transition-colors font-bold">
-                                {{ player.player }}
-                            </a>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <a href="/player/{{ player.id or player.player }}" class="hover:text-primary-container transition-colors font-bold">
+                                    {{ player.player }}
+                                </a>
+                                {% if player.at_afcon %}
+                                    <span class="bg-red-600/30 text-red-300 border border-red-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full" title="AFCON Duty">AFCON</span>
+                                {% elif player.injury_severity and player.injury_severity != 'Healthy' %}
+                                    <span class="{% if 'Short' in player.injury_severity %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% elif 'Medium' in player.injury_severity %}bg-orange-500/20 text-orange-300 border border-orange-500/30{% else %}bg-red-500/20 text-red-300 border border-red-500/30{% endif %} text-[10px] font-bold px-2 py-0.5 rounded-full cursor-help" title="{{ player.injury_type or player.injury_notes or player.injury_severity }}">
+                                        {{ player.injury_type or player.injury_notes or player.injury_severity }}
+                                    </span>
+                                {% endif %}
+                            </div>
                         </td>
                         <td class="px-6 py-2.5 font-bold text-on-surface text-base">
                             {{ player.position }}
@@ -165,7 +183,25 @@
                         <td class="px-6 py-2.5">{{ render_team_badge(player.team) }}</td>
                         <td class="px-6 py-2.5"><span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">{{ "%.1f"|format(player.adp) if player.adp else '—' }}</span></td>
                         <td class="px-6 py-2.5 font-medium text-sm">{{ "%.1f"|format(player.fpts) if player.fpts else '—' }}</td>
-                        <td class="px-6 py-2.5"><span class="bg-surface-variant text-on-surface text-xs font-bold px-3 py-0.5 rounded-full">{{ player.owner or 'Drafted' }}</span></td>
+                        <td class="px-6 py-2.5">
+                            <div class="flex items-center justify-between gap-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-on-surface-variant">Owner:</span>
+                                    <select onchange="reassignPlayerTeam('{{ player.player }}', this.value)" class="bg-surface-container-low border border-outline-variant text-on-surface text-xs font-bold rounded pl-3 pr-8 py-1.5 focus:outline-none focus:border-primary-container cursor-pointer min-w-[110px] shadow-sm">
+                                        {% for team_opt in all_teams %}
+                                        <option value="{{ team_opt }}" {% if team_opt == (player.owner or 'Other') %}selected{% endif %}>{{ team_opt }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <form action="/draft/undraft" method="post" class="inline" onsubmit="return confirm('Undraft {{ player.player }} and return to available pool?')">
+                                    <input type="hidden" name="player_name" value="{{ player.player }}">
+                                    <button type="submit" title="Undraft player" class="text-xs text-red-400 hover:text-red-300 font-bold px-2 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 transition-all flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-xs">undo</span>
+                                        <span>Undraft</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
@@ -177,85 +213,11 @@
         </div>
     </div>
     {{ render_pagination(drafted, 'page_drafted', '&page_available=' + available.page|string + '&search_drafted=' + (search_drafted_query or '')) }}
+    </div>
 </section>
 
-<!-- Homepage Draft Confirmation Modal Popup -->
-<div id="draft-confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4 transition-all">
-    <div class="bg-surface-container border border-outline-variant rounded-xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-5 animate-in fade-in zoom-in duration-200">
-        <div class="flex items-center gap-3.5">
-            <div class="w-10 h-10 rounded-full bg-primary-container/20 text-primary-container flex items-center justify-center flex-shrink-0">
-                <span class="material-symbols-outlined text-xl">person_add</span>
-            </div>
-            <div>
-                <h3 class="text-xl font-bold text-on-surface">Confirm Draft Pick</h3>
-                <p class="text-xs text-on-surface-variant mt-0.5">Select a team to draft this player for</p>
-            </div>
-        </div>
-
-        <div class="bg-surface-container-low border border-outline-variant rounded-lg p-4 flex flex-col gap-3">
-            <span class="text-lg font-bold text-on-surface" id="modal-player-name">Player Name</span>
-            <div class="flex flex-col gap-1 mt-1">
-                <label class="text-xs font-semibold text-on-surface-variant">Draft for Team:</label>
-                <select id="modal-team-select" class="w-full bg-surface-container border border-outline-variant text-on-surface rounded-md py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-container" onchange="updateModalFormAction(this.value)">
-                    {% for t_name in tracked_teams %}
-                        <option value="{{ t_name }}">{{ t_name }}</option>
-                    {% endfor %}
-                    <option value="Other">Other / Untracked Team</option>
-                </select>
-            </div>
-        </div>
-
-        <form action="/teams/{{ tracked_teams[0] if tracked_teams else 'Sam' }}/draft" method="post" id="modal-draft-form">
-            <input type="hidden" name="player_name" id="modal-hidden-player-input" value="">
-            <div class="flex justify-end gap-3 mt-1">
-                <button type="button" onclick="closeDraftConfirmModal()" class="bg-surface-variant hover:bg-outline-variant text-on-surface font-semibold text-sm py-2 px-5 rounded-md transition-colors">
-                    Cancel
-                </button>
-                <button type="submit" class="bg-primary-container hover:bg-blue-600 text-white font-bold text-sm py-2 px-6 rounded-md transition-colors shadow-md active:scale-95 flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[16px]">check</span> Confirm Draft
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <script>
-function updateModalFormAction(teamName) {
-    const form = document.getElementById('modal-draft-form');
-    if (form) {
-        if (teamName === 'Other') {
-            form.action = `/mark-player-drafted`;
-        } else {
-            form.action = `/teams/${encodeURIComponent(teamName)}/draft`;
-        }
-    }
-}
-
-function triggerDraftConfirmModal(playerName) {
-    document.getElementById('modal-player-name').textContent = playerName;
-    document.getElementById('modal-hidden-player-input').value = playerName;
-    const teamSelect = document.getElementById('modal-team-select');
-    if (teamSelect) {
-        updateModalFormAction(teamSelect.value);
-    }
-    document.getElementById('draft-confirm-modal').classList.remove('hidden');
-}
-
-function closeDraftConfirmModal() {
-    document.getElementById('draft-confirm-modal').classList.add('hidden');
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeDraftConfirmModal();
-    });
-
-    const modal = document.getElementById('draft-confirm-modal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeDraftConfirmModal();
-        });
-    }
 
     // CLEAR DRAFT TOAST QUERY PARAMETERS FROM URL HISTORY AFTER RENDER
     if (window.location.search.includes('draft_status')) {
@@ -272,38 +234,61 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3500);
     }
 
-    // LIVE AUTO-SEARCH ON INPUT WITHOUT CLICKING SEARCH BUTTON
-    let availDebounceTimer;
-    const availInput = document.getElementById('available-player-search');
-    const availForm = document.getElementById('available-search-form');
-    if (availInput && availForm) {
-        availInput.addEventListener('input', () => {
-            clearTimeout(availDebounceTimer);
-            availDebounceTimer = setTimeout(() => {
-                availForm.submit();
-            }, 350);
+    // IN-PLACE LIVE TABLE FILTERING (NO PAGE RELOAD / NO FOCUS LOSS)
+    function setupLiveTableFilter(inputId, formId, containerId, queryParam) {
+        const input = document.getElementById(inputId);
+        const form = document.getElementById(formId);
+        const container = document.getElementById(containerId);
+        if (!input || !container) return;
+
+        let debounceTimer;
+
+        const performUpdate = async () => {
+            const query = input.value.trim();
+            const url = new URL(window.location.href);
+            url.searchParams.set(queryParam, query);
+            url.searchParams.set(queryParam === 'search' ? 'page_available' : 'page_drafted', '1');
+
+            try {
+                const res = await fetch(url.toString());
+                if (!res.ok) return;
+                const text = await res.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                const newContainer = doc.getElementById(containerId);
+                if (newContainer && container) {
+                    container.innerHTML = newContainer.innerHTML;
+                }
+                window.history.replaceState({}, '', url.toString());
+            } catch (err) {
+                console.error('Live filter fetch error:', err);
+            }
+        };
+
+        input.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(performUpdate, 200);
         });
+
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                performUpdate();
+            });
+        }
     }
 
-    let draftedDebounceTimer;
-    const draftedInput = document.getElementById('drafted-player-search');
-    const draftedForm = document.getElementById('drafted-search-form');
-    if (draftedInput && draftedForm) {
-        draftedInput.addEventListener('input', () => {
-            clearTimeout(draftedDebounceTimer);
-            draftedDebounceTimer = setTimeout(() => {
-                draftedForm.submit();
-            }, 350);
-        });
-    }
+    setupLiveTableFilter('available-player-search', 'available-search-form', 'available-table-container', 'search');
+    setupLiveTableFilter('drafted-player-search', 'drafted-search-form', 'drafted-table-container', 'search_drafted');
 
-    function setupAutocomplete(inputId, resultsId, endpoint = '/api/players/autocomplete', autoSubmit = false) {
+    function setupAutocomplete(inputId, resultsId, endpoint = '/api/players/autocomplete') {
         const input = document.getElementById(inputId);
         const container = document.getElementById(resultsId);
         if (!input || !container) return;
 
         input.addEventListener('input', async (e) => {
-            const query = e.target.value;
+            const query = e.target.value.trim();
             container.innerHTML = '';
             if (query.length < 2) {
                 container.classList.add('hidden');
@@ -331,9 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         input.value = name;
                         container.innerHTML = '';
                         container.classList.add('hidden');
-                        if (autoSubmit) {
-                            input.closest('form').submit();
-                        }
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
                     });
                     container.appendChild(item);
                 });
@@ -344,16 +327,32 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         document.addEventListener('click', (e) => {
-            if (!input.contains(e.target)) {
+            if (!input.contains(e.target) && !container.contains(e.target)) {
                 container.innerHTML = '';
                 container.classList.add('hidden');
             }
         });
     }
 
-    setupAutocomplete('drafted-by-other-input', 'autocomplete-results-main', '/api/players/autocomplete', false);
-    setupAutocomplete('available-player-search', 'autocomplete-results-search', '/api/players/autocomplete', true);
-    setupAutocomplete('drafted-player-search', 'autocomplete-results-drafted', '/api/players/autocomplete', true);
+    setupAutocomplete('drafted-by-other-input', 'autocomplete-results-main', '/api/players/autocomplete');
 });
+
+async function reassignPlayerTeam(playerName, targetTeam) {
+    try {
+        const res = await fetch('/api/draft/reassign', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ player: playerName, team: targetTeam })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            window.location.reload();
+        } else {
+            alert('Error reassigning team: ' + data.message);
+        }
+    } catch (err) {
+        alert('Failed to reassign team: ' + err);
+    }
+}
 </script>
 {% endblock %}

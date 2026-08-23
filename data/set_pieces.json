@@ -1,0 +1,28 @@
+{
+  "players": {
+    "Bruno Fernandes": {"is_pk_taker": true, "is_set_piece_taker": true, "team": "MUN"},
+    "Cole Palmer": {"is_pk_taker": true, "is_set_piece_taker": true, "team": "CHE"},
+    "Erling Haaland": {"is_pk_taker": true, "is_set_piece_taker": false, "team": "MCI"},
+    "Bukayo Saka": {"is_pk_taker": true, "is_set_piece_taker": true, "team": "ARS"},
+    "Mohamed Salah": {"is_pk_taker": true, "is_set_piece_taker": false, "team": "LIV"},
+    "Son Heung-Min": {"is_pk_taker": true, "is_set_piece_taker": true, "team": "TOT"},
+    "Alexander Isak": {"is_pk_taker": true, "is_set_piece_taker": false, "team": "NEW"},
+    "Jean-Philippe Mateta": {"is_pk_taker": true, "is_set_piece_taker": false, "team": "CRY"},
+    "Eberechi Eze": {"is_pk_taker": false, "is_set_piece_taker": true, "team": "ARS"},
+    "Rayan Cherki": {"is_pk_taker": false, "is_set_piece_taker": true, "team": "MCI"},
+    "Rayan": {"is_pk_taker": false, "is_set_piece_taker": true, "team": "BOU"},
+    "Enzo Le Fee": {"is_pk_taker": true, "is_set_piece_taker": true, "team": "SUN"},
+    "Matheus Cunha": {"is_pk_taker": true, "is_set_piece_taker": true, "team": "WOL"},
+    "Bryan Mbeumo": {"is_pk_taker": true, "is_set_piece_taker": true, "team": "BRF"},
+    "Mikkel Damsgaard": {"is_pk_taker": false, "is_set_piece_taker": true, "team": "BRF"},
+    "Lewis Hall": {"is_pk_taker": false, "is_set_piece_taker": true, "team": "NEW"},
+    "Enzo Fernandez": {"is_pk_taker": false, "is_set_piece_taker": true, "team": "CHE"},
+    "Igor Thiago": {"is_pk_taker": true, "is_set_piece_taker": false, "team": "BRF"},
+    "Jarrod Bowen": {"is_pk_taker": true, "is_set_piece_taker": true, "team": "WHU"},
+    "Morgan Gibbs-White": {"is_pk_taker": true, "is_set_piece_taker": true, "team": "NFO"},
+    "Ollie Watkins": {"is_pk_taker": true, "is_set_piece_taker": false, "team": "AST"},
+    "James Maddison": {"is_pk_taker": false, "is_set_piece_taker": true, "team": "TOT"},
+    "Martin Odegaard": {"is_pk_taker": false, "is_set_piece_taker": true, "team": "ARS"},
+    "Trent Alexander-Arnold": {"is_pk_taker": false, "is_set_piece_taker": true, "team": "LIV"}
+  }
+}

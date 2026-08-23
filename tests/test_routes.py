@@ -27,12 +27,17 @@ class TestWebRoutesWithDB(unittest.TestCase):
         req.scope['app'] = app
         res = asyncio.run(read_team(req, 'Sam'))
         self.assertEqual(res.status_code, 200)
+        body = res.body.decode()
+        self.assertIn("Draft Rating", body)
+        self.assertIn("Sports Analyst Writeup", body)
 
     def test_draft_analysis_route(self):
         req = Request({'type': 'http', 'method': 'GET', 'path': '/draft/analysis', 'headers': []})
         req.scope['app'] = app
         res = asyncio.run(read_draft_analysis(req))
         self.assertEqual(res.status_code, 200)
+        body = res.body.decode()
+        self.assertIn("Tracked Team Grades", body)
 
     def test_player_profile_by_uuid(self):
         p_id = db_mgr.get_player_id_by_name("Jordan Pickford")
@@ -41,6 +46,7 @@ class TestWebRoutesWithDB(unittest.TestCase):
         res = asyncio.run(read_player_profile(req, p_id))
         self.assertEqual(res.status_code, 200)
         self.assertIn("Jordan Pickford", res.body.decode())
+        self.assertIn("Draft Player", res.body.decode())
 
     def test_team_suggestions_api(self):
         res = asyncio.run(api_team_suggestions("Sam", page=1))

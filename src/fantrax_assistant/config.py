@@ -1,8 +1,19 @@
 """Configuration loader for draft assistant."""
 
 import json
+import unicodedata
 from pathlib import Path
 from typing import Optional
+
+
+def normalize_name(s: str) -> str:
+    """Normalize string by removing accents, lowercasing, and stripping punctuation."""
+    if not s:
+        return ""
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', str(s))
+        if unicodedata.category(c) != 'Mn'
+    ).lower().replace('-', ' ').replace('.', '').strip()
 
 
 class DraftConfig:
@@ -32,6 +43,56 @@ class DraftConfig:
         self.league_config = self._load_json('league_config.json') or {}
         self.afcon = self._load_json('afcon_callups.json', quiet=True) or {"players": []}
         self.set_pieces = self._load_json('set_pieces.json', quiet=True) or {}
+
+        # Pre-build fast O(1) lookup maps
+        self._adp_map = {}
+        if self.rankings and 'rankings' in self.rankings:
+            for r in self.rankings['rankings']:
+                norm = normalize_name(r.get('player', ''))
+                if norm:
+                    self._adp_map[norm] = r
+
+        # Supplement rankings with players from SQLite database if missing (e.g. Goalkeepers)
+        db_path = self.data_dir / "fantrax_assistant.db"
+        if db_path.exists():
+            try:
+                import sqlite3
+                conn = sqlite3.connect(db_path)
+                c = conn.cursor()
+                c.execute("SELECT name, position, team, adp, fpts, fpg FROM players")
+                db_rows = c.fetchall()
+                conn.close()
+                for name, pos, team, adp, fpts, fpg in db_rows:
+                    norm = normalize_name(name)
+                    if norm and norm not in self._adp_map:
+                        item = {
+                            "rank": len(self.rankings.get('rankings', [])) + 1,
+                            "player": name,
+                            "position": pos,
+                            "team": team,
+                            "adp": float(adp or 999.0),
+                            "fpts": float(fpts or 0.0),
+                            "fpg": float(fpg or 0.0)
+                        }
+                        self._adp_map[norm] = item
+                        if self.rankings and 'rankings' in self.rankings:
+                            self.rankings['rankings'].append(item)
+            except Exception as e:
+                print(f"Warning: Failed to load supplementary DB players in DraftConfig: {e}")
+
+        self._injury_map = {}
+        if self.injuries and 'injuries' in self.injuries:
+            for inj in self.injuries['injuries']:
+                norm = normalize_name(inj.get('player', ''))
+                if norm:
+                    self._injury_map[norm] = inj
+
+        self._stats_map = {}
+        if self.stats and 'players' in self.stats:
+            for st in self.stats['players']:
+                norm = normalize_name(st.get('name', ''))
+                if norm:
+                    self._stats_map[norm] = st
 
         # Validate critical data
         if not self.league_config:
@@ -107,12 +168,18 @@ class DraftConfig:
         return False
 
     def get_player_stats(self, player_name: str) -> Optional[dict]:
-        """Get current season stats for a player using fuzzy matching."""
+        """Get current season stats for a player using fast O(1) lookup."""
         if not self.stats or 'players' not in self.stats:
             return None
 
+        norm = normalize_name(player_name)
+        if norm and hasattr(self, '_stats_map') and norm in self._stats_map:
+            return self._stats_map[norm]
+
         for player in self.stats['players']:
-            if self._fuzzy_match_name(player_name, player.get('name', '')):
+            p_name = player.get('name', '')
+            p_web = player.get('web_name', '')
+            if self._fuzzy_match_name(player_name, p_name) or self._fuzzy_match_name(player_name, p_web) or normalize_name(player_name) == normalize_name(p_web):
                 return player
 
         return None
@@ -134,11 +201,25 @@ class DraftConfig:
 
         return {'at_afcon': False}
 
+    def get_player_set_piece_status(self, player_name: str) -> dict:
+        """Check if player is designated penalty taker or set-piece taker."""
+        if not self.set_pieces or 'players' not in self.set_pieces:
+            return {'is_pk_taker': False, 'is_set_piece_taker': False}
+
+        for name, info in self.set_pieces.get('players', {}).items():
+            if self._fuzzy_match_name(player_name, name):
+                return info
+
+        return {'is_pk_taker': False, 'is_set_piece_taker': False}
 
     def get_player_injury(self, player_name: str) -> dict:
-        """Get injury status for a player using fuzzy matching."""
+        """Get injury status for a player using fast O(1) lookup."""
         if not self.injuries or 'injuries' not in self.injuries:
             return {'status': 'Unknown', 'severity': 'Unknown'}
+
+        norm = normalize_name(player_name)
+        if norm and hasattr(self, '_injury_map') and norm in self._injury_map:
+            return self._injury_map[norm]
 
         for injury in self.injuries['injuries']:
             if self._fuzzy_match_name(player_name, injury.get('player', '')):
@@ -147,9 +228,13 @@ class DraftConfig:
         return {'status': 'Healthy', 'severity': 'Healthy'}
 
     def get_player_adp(self, player_name: str) -> Optional[dict]:
-        """Get ADP/ranking for a player using fuzzy matching."""
+        """Get ADP/ranking for a player using fast O(1) lookup."""
         if not self.rankings or 'rankings' not in self.rankings:
             return None
+
+        norm = normalize_name(player_name)
+        if norm and hasattr(self, '_adp_map') and norm in self._adp_map:
+            return self._adp_map[norm]
 
         for ranking in self.rankings['rankings']:
             if self._fuzzy_match_name(player_name, ranking.get('player', '')):

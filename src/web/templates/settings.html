@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="max-w-3xl mx-auto flex flex-col gap-6">
+    <!-- Page Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-display font-display text-on-surface">Lineup Alert Settings</h1>
+            <p class="text-body-md text-on-surface-variant mt-1">Configure emergency lineup scratch notifications delivered directly to your Slack phone/desktop app and Mac system popups.</p>
+        </div>
+        {% if save_success %}
+        <div class="px-4 py-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-xl font-bold text-sm flex items-center gap-2">
+            <span class="material-symbols-outlined text-lg">check_circle</span>
+            <span>Settings Saved!</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Slack Setup Guide Card -->
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <span class="material-symbols-outlined text-2xl">chat</span>
+            </div>
+            <div>
+                <h2 class="text-title-lg font-bold text-on-surface">How to Set Up Slack Phone & Desktop Alerts</h2>
+                <p class="text-xs text-on-surface-variant">Follow these 3 quick steps to receive instant scratch notifications in your Slack mobile or desktop app:</p>
+            </div>
+        </div>
+
+        <ol class="text-sm text-on-surface flex flex-col gap-2.5 font-medium border-t border-outline-variant/60 pt-4">
+            <li class="flex items-start gap-2.5">
+                <span class="w-6 h-6 rounded-full bg-primary-container text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">1</span>
+                <div>
+                    Go to <a href="https://api.slack.com/apps" target="_blank" class="text-primary-container underline font-bold hover:text-white transition-colors">api.slack.com/apps</a> &rarr; click <strong>Create new app</strong> &rarr; select <strong>Blank app</strong>. Name it <em>Fantrax Assistant</em>, select your workspace, and click <strong>Create App</strong>.
+                </div>
+            </li>
+            <li class="flex items-start gap-2.5">
+                <span class="w-6 h-6 rounded-full bg-primary-container text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">2</span>
+                <div>
+                    In the left sidebar under <strong>Features</strong>, click <strong>Incoming Webhooks</strong> and toggle <strong>Activate Incoming Webhooks</strong> to <strong class="text-emerald-400">On</strong>.
+                </div>
+            </li>
+            <li class="flex items-start gap-2.5">
+                <span class="w-6 h-6 rounded-full bg-primary-container text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">3</span>
+                <div>
+                    At the bottom under <em>Webhook URLs for Your Workspace</em>, click <strong>Add New Webhook</strong>. Select your personal <strong>Direct Messages &rarr; @YourName</strong> (or a private channel) so only you see your alerts, click <strong>Allow</strong>, and copy the generated <strong>Webhook URL</strong> into the field below!
+                </div>
+            </li>
+        </ol>
+    </div>
+
+    <!-- Notification Form -->
+    <form method="POST" action="/settings" class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-6">
+        
+        <!-- Fantrax League & Team Integration -->
+        <div class="border-b border-outline-variant pb-6 flex flex-col gap-5">
+            <div>
+                <h2 class="text-title-lg font-bold text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary-container text-xl">sync_saved_locally</span>
+                    <span>Fantrax Live Sync & Gameweek Reminders</span>
+                </h2>
+                <p class="text-xs text-on-surface-variant mt-1">Connect your Fantrax league so the assistant can automatically sync rosters, check for empty starting slots, and alert you the day before matches if your lineup is incomplete.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Fantrax League ID Input -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-title-sm font-bold text-on-surface flex items-center gap-2">
+                        <span>Fantrax League ID</span>
+                        <!-- Tooltip Hover Badge -->
+                        <span class="group relative cursor-help text-on-surface-variant hover:text-primary-container transition-colors">
+                            <span class="material-symbols-outlined text-base">info</span>
+                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-72 p-3 bg-surface-container-highest border border-outline-variant rounded-xl text-xs text-on-surface shadow-xl z-50 pointer-events-none">
+                                <strong>How to find your League ID:</strong> Open your league on Fantrax in your browser. The League ID is the alphanumeric code in the URL right after <code>/league/</code> (e.g. in <code>fantrax.com/fantasy/league/<strong>abc123xyz</strong>/home</code>, your ID is <code>abc123xyz</code>).
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" name="fantrax_league_id" value="{{ settings.fantrax_league_id or '' }}" placeholder="e.g. abc123xyz789" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface font-mono text-sm focus:outline-none focus:border-primary-container shadow-inner">
+                </div>
+
+                <!-- My Fantrax Team Name -->
+                <div class="flex flex-col gap-2">
+                    <label class="text-title-sm font-bold text-on-surface flex items-center gap-2">
+                        <span>My Team Name / ID</span>
+                        <span class="group relative cursor-help text-on-surface-variant hover:text-primary-container transition-colors">
+                            <span class="material-symbols-outlined text-base">info</span>
+                            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-3 bg-surface-container-highest border border-outline-variant rounded-xl text-xs text-on-surface shadow-xl z-50 pointer-events-none">
+                                Enter your exact team name on Fantrax (e.g. <code>Sam</code> or your franchise title) so the assistant knows which roster to monitor.
+                            </span>
+                        </span>
+                    </label>
+                    <input type="text" name="fantrax_team_name" value="{{ settings.fantrax_team_name or '' }}" placeholder="e.g. Sam" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2.5 text-on-surface font-mono text-sm focus:outline-none focus:border-primary-container shadow-inner">
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 pt-2">
+                <!-- Auto-Sync Toggle -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-sm font-bold text-on-surface">Automatic Background Sync</span>
+                        <p class="text-xs text-on-surface-variant">Auto-sync live active rosters from Fantrax in the background before matchdays.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="auto_sync_enabled" value="true" {% if settings.auto_sync_enabled %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+                    </label>
+                </div>
+
+                <!-- 24h Pre-Gameweek Lineup Check Toggle -->
+                <div class="flex items-center justify-between">
+                    <div>
+                        <span class="text-sm font-bold text-on-surface">24h Pre-Gameweek Lineup Check ("Forgot to set a lineup" Alert)</span>
+                        <p class="text-xs text-on-surface-variant">Sends an alert 24h before the first match if you have empty starting spots or benched players in starting slots.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="gameweek_reminder_enabled" value="true" {% if settings.gameweek_reminder_enabled %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slack Webhook Input -->
+        <div class="flex flex-col gap-2 relative">
+            <div class="flex items-center justify-between">
+                <label class="text-title-md font-bold text-on-surface flex items-center gap-2">
+                    <span>Slack Webhook URL</span>
+                    <!-- Tooltip Hover Badge -->
+                    <span class="group relative cursor-help text-on-surface-variant hover:text-primary-container transition-colors">
+                        <span class="material-symbols-outlined text-lg">info</span>
+                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-72 p-3 bg-surface-container-highest border border-outline-variant rounded-xl text-xs text-on-surface shadow-xl z-50 pointer-events-none">
+                            Paste your incoming Slack Webhook URL to receive instant notifications on your phone or computer.
+                        </span>
+                    </span>
+                </label>
+                {% if settings.slack_webhook_url and settings.slack_webhook_url.startswith('http') %}
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Active</span>
+                {% endif %}
+            </div>
+            <input type="url" name="slack_webhook_url" value="{% if settings.slack_webhook_url and settings.slack_webhook_url.startswith('http') %}{{ settings.slack_webhook_url }}{% endif %}" placeholder="https://your-slack-incoming-webhook-url" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-3 text-on-surface font-mono text-sm focus:outline-none focus:border-primary-container shadow-inner">
+        </div>
+
+        <!-- macOS System Alerts Toggle -->
+        <div class="flex items-center justify-between pt-4 border-t border-outline-variant">
+            <div>
+                <h3 class="text-title-md font-bold text-on-surface flex items-center gap-2">
+                    <span>macOS Native Desktop System Alerts</span>
+                    <span class="group relative cursor-help text-on-surface-variant hover:text-primary-container transition-colors">
+                        <span class="material-symbols-outlined text-lg">info</span>
+                        <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 p-3 bg-surface-container-highest border border-outline-variant rounded-xl text-xs text-on-surface shadow-xl z-50 pointer-events-none">
+                            Triggers native macOS system notifications with sound on your desktop 60 mins and 5 mins before kickoff.
+                        </span>
+                    </span>
+                </h3>
+                <p class="text-xs text-on-surface-variant mt-0.5">Show Mac desktop popups with sound when on your computer.</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="macos_alerts_enabled" value="true" {% if settings.macos_alerts_enabled %}checked{% endif %} class="sr-only peer">
+                <div class="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+            </label>
+        </div>
+
+        <!-- Hidden input retention for optional secondary webhooks -->
+        <input type="hidden" name="ntfy_topic" value="{{ settings.ntfy_topic or '' }}">
+
+        <!-- Save Button -->
+        <div class="flex items-center justify-end pt-4 border-t border-outline-variant">
+            <button type="submit" class="px-6 py-2.5 bg-primary-container hover:bg-primary-container/90 text-white font-bold rounded-xl transition-all shadow-md flex items-center gap-2">
+                <span class="material-symbols-outlined text-lg">save</span>
+                <span>Save Settings</span>
+            </button>
+        </div>
+    </form>
+
+    <!-- Test Notification Trigger -->
+    <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex items-center justify-between">
+        <div>
+            <h3 class="text-title-md font-bold text-on-surface">Test Slack & Mac Notification</h3>
+            <p class="text-xs text-on-surface-variant mt-0.5">Click to dispatch a test scratch alert to your Slack app and Mac desktop to verify your webhook setup works.</p>
+        </div>
+        <form method="POST" action="/settings/test-alert">
+            <button type="submit" class="px-5 py-2.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant text-on-surface font-bold text-sm rounded-xl transition-all flex items-center gap-2 shadow-sm">
+                <span class="material-symbols-outlined text-lg text-amber-400">notifications_active</span>
+                <span>Send Test Alert</span>
+            </button>
+        </form>
+    </div>
+</section>
+{% endblock %}

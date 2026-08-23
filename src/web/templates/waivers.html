@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="max-w-container-max mx-auto flex flex-col gap-6">
+    <!-- Header with Team Selector & Title -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-display font-display text-on-surface flex items-center gap-3">
+                <span>Waiver Wire & Pickup Recommendations</span>
+            </h1>
+            <p class="text-body-md text-on-surface-variant mt-1">In-season free agent recommendations powered by the draft valuation engine. Track adds, drops, and net FP/G gains.</p>
+        </div>
+
+        <!-- Team Selector Dropdown -->
+        <div class="flex items-center gap-3 bg-surface-container border border-outline-variant rounded-xl p-1.5 shadow-sm">
+            <span class="text-xs font-bold text-on-surface-variant px-2 uppercase tracking-wider">Team</span>
+            <select onchange="window.location.href='/waivers?team=' + this.value + '&position={{ selected_position }}'" class="bg-surface-container-low border border-outline-variant text-on-surface text-sm font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:border-primary-container">
+                {% for t_name in tracked_teams %}
+                <option value="{{ t_name }}" {% if t_name == selected_team %}selected{% endif %}>{{ t_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Position Filter Tabs -->
+    <div class="flex items-center gap-2 border-b border-outline-variant pb-2">
+        {% for pos in ['ALL', 'G', 'D', 'M', 'F'] %}
+        <a href="/waivers?team={{ selected_team }}&position={{ pos }}" class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 {% if selected_position == pos %}bg-primary-container text-white shadow-md{% else %}bg-surface-container border border-outline-variant text-on-surface-variant hover:text-on-surface{% endif %}">
+            <span>{% if pos == 'ALL' %}All Positions{% else %}{{ pos }}{% endif %}</span>
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Recommendations Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+        <!-- Left 8 cols: Top Free Agent Pickup Cards -->
+        <div class="lg:col-span-8 flex flex-col gap-4">
+            <h2 class="text-headline-sm font-bold text-on-surface flex items-center justify-between">
+                <span>Top Recommended Pickups for {{ selected_team }}</span>
+                <span class="text-xs font-normal text-on-surface-variant font-mono">{{ suggestions | length }} available</span>
+            </h2>
+
+            {% if suggestions %}
+            <div class="flex flex-col gap-3">
+                {% for item in suggestions %}
+                <div class="bg-surface-container border border-outline-variant rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:border-outline-variant/90">
+                    <div class="flex items-start gap-3.5">
+                        <!-- Position & Score Badge -->
+                        <div class="flex flex-col items-center justify-center min-w-[76px] px-3 py-2.5 rounded-lg bg-surface-container-low border border-outline-variant text-center shrink-0">
+                            <span class="text-xs font-mono font-extrabold text-primary-container uppercase tracking-wide">{{ item.position }}</span>
+                            <span class="text-xs font-bold text-on-surface mt-1">{{ "%.2f"|format(item.effective_fpg) }}</span>
+                            <span class="text-[9px] font-semibold text-on-surface-variant uppercase tracking-wider">FP/G</span>
+                        </div>
+
+                        <!-- Player Name, Club & Rationale -->
+                        <div class="flex flex-col gap-1">
+                            <div class="flex items-center gap-2">
+                                <a href="/player/{{ item.player }}" class="text-title-md font-bold text-on-surface hover:text-primary-container transition-colors">{{ item.player }}</a>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant border border-outline-variant">{{ item.team }}</span>
+                                {% if item.set_piece_info.is_pk_taker %}
+                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">PK Taker</span>
+                                {% endif %}
+                                {% if item.set_piece_info.is_set_piece_taker %}
+                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">Set-Pieces</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="text-xs text-on-surface-variant font-medium">
+                                {{ item.rationale }}
+                            </div>
+
+                            <!-- Recommended Drop Target Tag -->
+                            {% if item.drop_candidate %}
+                            <div class="text-xs text-on-surface mt-1 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-sm text-red-400">remove_circle_outline</span>
+                                <span>Suggested Drop: <strong class="text-red-300 font-bold">{{ item.drop_candidate }}</strong> ({{ item.drop_candidate_fpg }} FP/G)</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Net Gain & Claim Action Button -->
+                    <div class="flex sm:flex-col items-center sm:items-end justify-between gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-outline-variant/60">
+                        {% if item.net_gain > 0 %}
+                        <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                            +{{ item.net_gain }} FP/G Net Gain
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 rounded-full text-xs font-bold bg-surface-container-high text-on-surface-variant border border-outline-variant">
+                            Free Agent Addition
+                        </span>
+                        {% endif %}
+
+                        <button type="button" onclick="executeClaim('{{ selected_team }}', '{{ item.player }}', '{{ item.drop_candidate or '' }}', '{{ item.position }}')" class="px-4 py-1.5 bg-primary-container hover:bg-primary-container/90 text-white font-bold text-xs rounded-lg transition-all shadow-sm flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-sm">add_circle</span>
+                            <span>Claim Pickup</span>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="bg-surface-container border border-outline-variant rounded-xl p-8 text-center text-on-surface-variant">
+                No free agent recommendations available for {{ selected_position }} position.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right 4 cols: Transaction History Log -->
+        <div class="lg:col-span-4 flex flex-col gap-4">
+            <h2 class="text-headline-sm font-bold text-on-surface">Transaction Log</h2>
+            
+            <div class="bg-surface-container border border-outline-variant rounded-xl p-4 shadow-sm flex flex-col gap-3">
+                {% if transactions %}
+                <div class="flex flex-col gap-2.5 max-h-[600px] overflow-y-auto pr-1">
+                    {% for tx in transactions %}
+                    <div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant/80 flex flex-col gap-1 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="font-extrabold px-2 py-0.5 rounded {% if 'ADD' in tx.type %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-red-500/20 text-red-300 border border-red-500/30{% endif %}">
+                                {{ tx.type }}
+                            </span>
+                            <span class="font-bold text-on-surface">{{ tx.team }}</span>
+                        </div>
+                        <div class="text-on-surface font-semibold mt-1">
+                            {% if tx.type == 'ADD & DROP' %}
+                            Added <strong class="text-emerald-300">{{ tx.player }}</strong> & Dropped <strong class="text-red-300">{{ tx.dropped_player }}</strong>
+                            {% elif tx.type == 'ADD' %}
+                            Added <strong class="text-emerald-300">{{ tx.player }}</strong>
+                            {% else %}
+                            Dropped <strong class="text-red-300">{{ tx.player }}</strong>
+                            {% endif %}
+                        </div>
+                        {% if tx.notes %}
+                        <div class="text-[11px] text-on-surface-variant opacity-80">{{ tx.notes }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-xs text-on-surface-variant text-center py-6">
+                    No transactions recorded yet this season.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Claim Confirmation Modal JS -->
+<script>
+async function executeClaim(team, player, dropPlayer, position) {
+    let confirmMsg = `Claim ${player} for ${team}?`;
+    if (dropPlayer) {
+        confirmMsg = `Add ${player} and DROP ${dropPlayer} from ${team}?`;
+    }
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        const res = await fetch('/api/transactions/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                team: team,
+                player: player,
+                dropped_player: dropPlayer || null,
+                position: position,
+                notes: `Waiver pickup (${position})`
+            })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            window.location.reload();
+        } else {
+            alert('Transaction error: ' + data.message);
+        }
+    } catch (err) {
+        alert('Error submitting transaction: ' + err);
+    }
+}
+</script>
+{% endblock %}

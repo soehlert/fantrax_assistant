@@ -1,6 +1,23 @@
 {% extends "base.html" %}
 
 {% block content %}
+<!-- Draft Status Alert Toast -->
+{% if draft_status %}
+<div class="w-full max-w-xl mx-auto my-2" id="draft-toast-alert-profile">
+    <div class="px-6 py-2.5 rounded-full {% if draft_status == 'success' %}bg-emerald-950/40 text-emerald-300 border border-emerald-500/70 shadow-lg backdrop-blur-sm{% else %}bg-red-950/40 text-red-300 border border-red-500/70 shadow-lg backdrop-blur-sm{% endif %} flex justify-center items-center text-center transition-all duration-500">
+        <span class="text-base font-semibold flex items-center gap-2">
+            {% if draft_status == 'success' %}
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                {{ message or ('Draft pick updated for ' ~ (drafted_player or player_name)) }}
+            {% else %}
+                <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+                {{ message or (drafted_player or 'Error processing draft action') }}
+            {% endif %}
+        </span>
+    </div>
+</div>
+{% endif %}
+
 <section class="flex flex-col gap-6 max-w-5xl mx-auto w-full">
     <!-- Header Row -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm">
@@ -11,15 +28,24 @@
             
             <div class="mt-3 flex items-center gap-3 flex-wrap">
                 {% if at_afcon %}
-                    <span class="bg-red-600/30 text-red-300 border border-red-500/40 text-xs font-bold px-3 py-1 rounded-full">⚠️ AFCON Duty</span>
+                    <span class="bg-red-600/30 text-red-300 border border-red-500/40 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1"><span class="material-symbols-outlined text-sm">warning</span> AFCON Duty</span>
                 {% elif injury_severity == 'Healthy' %}
-                    <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-3 py-1 rounded-full">✓ Healthy</span>
+                    <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1"><span class="material-symbols-outlined text-sm">check_circle</span> Healthy</span>
                 {% elif 'Short Term' in injury_severity %}
-                    <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-1 rounded-full">Short Term Injury</span>
+                    <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5" title="{{ injury_notes }}">
+                        <span class="material-symbols-outlined text-sm">healing</span>
+                        <span>{{ injury_notes or 'Short Term Injury' }}</span>
+                    </span>
                 {% elif 'Medium Term' in injury_severity %}
-                    <span class="bg-orange-500/20 text-orange-300 border border-orange-500/30 text-xs font-bold px-3 py-1 rounded-full">Medium Term Injury</span>
+                    <span class="bg-orange-500/20 text-orange-300 border border-orange-500/30 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5" title="{{ injury_notes }}">
+                        <span class="material-symbols-outlined text-sm">healing</span>
+                        <span>{{ injury_notes or 'Medium Term Injury' }}</span>
+                    </span>
                 {% else %}
-                    <span class="bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-bold px-3 py-1 rounded-full">Long Term Injury</span>
+                    <span class="bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5" title="{{ injury_notes }}">
+                        <span class="material-symbols-outlined text-sm">medical_services</span>
+                        <span>{{ injury_notes or 'Long Term Injury' }}</span>
+                    </span>
                 {% endif %}
 
                 {% set team_code = fantrax_info.get('team') or (player_data.get('team_title') if player_data else '') %}
@@ -38,15 +64,24 @@
             </div>
         </div>
 
-        <div class="flex items-center">
+        <div class="flex items-center gap-3">
             {% if drafted_by_team %}
-                <a href="{{ url_for('read_team', team_id=drafted_by_team) }}" class="bg-primary-container/20 text-primary-container border border-primary-container/30 px-4 py-2 rounded-full text-xs font-bold hover:bg-primary-container/30 transition-colors shadow-sm">
+                <a href="{{ url_for('read_team', team_id=drafted_by_team) }}" class="bg-primary-container/20 text-primary-container border border-primary-container/30 px-4 py-2 rounded-full text-xs font-bold hover:bg-primary-container/30 transition-colors shadow-sm flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">groups</span>
                     Drafted by {{ drafted_by_team }}
                 </a>
+                <form action="/draft/undraft" method="post" class="inline">
+                    <input type="hidden" name="player_name" value="{{ player_name }}">
+                    <button type="submit" class="bg-surface-variant hover:bg-red-950/60 hover:text-red-300 hover:border-red-500/50 border border-outline-variant/60 text-on-surface-variant px-3.5 py-2 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer">
+                        <span class="material-symbols-outlined text-[14px]">undo</span>
+                        Undraft
+                    </button>
+                </form>
             {% else %}
-                <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-full text-xs font-bold shadow-sm">
-                    Available
-                </span>
+                <button type="button" onclick="triggerDraftConfirmModal('{{ player_name }}')" class="bg-primary-container hover:bg-blue-600 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-md active:scale-95 flex items-center gap-2 cursor-pointer">
+                    <span class="material-symbols-outlined text-[18px]">person_add</span>
+                    Draft Player
+                </button>
             {% endif %}
         </div>
     </div>
@@ -134,20 +169,8 @@
                 <span class="material-symbols-outlined text-primary-container text-xl">dataset</span>
                 <h3 class="text-headline-sm font-bold text-on-surface">Premier League Workload & Match Index</h3>
             </div>
-            {% set fpg_val = fantrax_info.get('fpg', 0) | float %}
-            {% set starts_val = pl_stats.get('starts', 0) | int %}
-            {% if fpg_val >= 4.0 and starts_val >= 15 %}
-                <span class="bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-extrabold px-3 py-1 rounded-full">🔥 Elite Dominant Form</span>
-            {% elif fpg_val >= 4.0 and starts_val < 15 %}
-                <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-extrabold px-3 py-1 rounded-full">⚡ High Output (Low Sample)</span>
-            {% elif fpg_val >= 3.0 and starts_val >= 15 %}
-                <span class="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-extrabold px-3 py-1 rounded-full">⚡ Strong Regular Starter</span>
-            {% elif fpg_val >= 3.0 and starts_val < 15 %}
-                <span class="bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold px-3 py-1 rounded-full">📈 Good Form (Low Sample)</span>
-            {% elif fpg_val >= 2.0 %}
-                <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-semibold px-3 py-1 rounded-full">📈 Solid Contributor</span>
-            {% else %}
-                <span class="bg-surface-variant text-on-surface-variant text-xs font-semibold px-3 py-1 rounded-full">💤 Low Volume / Bench Role</span>
+            {% if form_badge %}
+                <span class="{{ form_badge.class }} border text-xs font-extrabold px-3 py-1 rounded-full shadow-sm">{{ form_badge.label }}</span>
             {% endif %}
         </div>
 
@@ -270,9 +293,9 @@
                         <span class="material-symbols-outlined text-[13px] text-outline">info</span>
                     </div>
                     <div class="text-base font-bold text-on-surface mt-0.5 flex items-center justify-center gap-1">
-                        <span>{{ pl_stats.get('yellow_cards', 0) }} 🟨</span>
+                        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-3.5 bg-amber-400 rounded-sm inline-block"></span> {{ pl_stats.get('yellow_cards', 0) }}</span>
                         <span class="text-outline-variant mx-1">•</span>
-                        <span>{{ pl_stats.get('red_cards', 0) }} 🟥</span>
+                        <span class="inline-flex items-center gap-1"><span class="w-2.5 h-3.5 bg-red-500 rounded-sm inline-block"></span> {{ pl_stats.get('red_cards', 0) }}</span>
                     </div>
                 </div>
             </div>
@@ -299,15 +322,15 @@
     </div>
     {% endif %}
 
-    <!-- Similar Available Alternatives Card (Moved ABOVE Chart) -->
+    <!-- Similar Player Comparisons Card (Moved ABOVE Chart) -->
     {% if similar_players %}
     <div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4">
         <div class="flex items-center justify-between border-b border-outline-variant pb-3">
             <div class="flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary-container text-xl">compare_arrows</span>
-                <h3 class="text-headline-sm font-bold text-on-surface">Similar Available Alternatives</h3>
+                <h3 class="text-headline-sm font-bold text-on-surface">Similar Player Comparisons</h3>
             </div>
-            <span class="text-xs font-semibold text-on-surface-variant">Top Undrafted Options Matched by ADP Tier & Positional Role</span>
+            <span class="text-xs font-semibold text-on-surface-variant">Top League-Wide Player Comparisons by Role & Production</span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -438,4 +461,23 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 {% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // CLEAR DRAFT TOAST QUERY PARAMETERS FROM URL HISTORY AFTER RENDER
+    if (window.location.search.includes('draft_status')) {
+        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+    }
+
+    // AUTO-DISMISS DRAFT TOAST ALERT AFTER 3.5 SECONDS
+    const toastAlert = document.getElementById('draft-toast-alert-profile');
+    if (toastAlert) {
+        setTimeout(() => {
+            toastAlert.style.opacity = '0';
+            setTimeout(() => toastAlert.remove(), 500);
+        }, 3500);
+    }
+});
+</script>
 {% endblock %}

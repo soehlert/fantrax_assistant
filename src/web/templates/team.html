@@ -18,12 +18,141 @@
 
 {% if active_tab == 'weekly' %}
 <!-- WEEKLY MANAGER VIEW -->
+{% if lineup_alerts %}
+<div class="mt-3 mb-2 flex flex-col gap-2.5">
+    {% for alert in lineup_alerts %}
+    <div class="p-4 rounded-xl border flex items-center justify-between shadow-lg {% if 'CRITICAL' in alert.severity %}bg-red-950/80 border-red-500 text-red-200{% else %}bg-amber-950/80 border-amber-500 text-amber-200{% endif %}">
+        <div class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-2xl text-amber-400 animate-pulse">warning</span>
+            <div>
+                <div class="font-extrabold text-base">{{ alert.severity }}: {{ alert.starter }} ({{ alert.starter_team }})</div>
+                <div class="text-sm font-medium opacity-90">{{ alert.reason }} for {{ alert.kickoff_time }}. Recommended Sub: <strong class="text-white font-bold">{{ alert.recommended_sub }}</strong></div>
+                {% if alert.ir_directive %}
+                <div class="text-xs font-semibold text-purple-300 mt-1 bg-purple-950/60 px-2 py-1 rounded border border-purple-500/40">
+                    🏥 <strong>IR Strategy:</strong> {{ alert.ir_directive }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="px-3 py-1.5 rounded-lg bg-black/40 border border-white/20 text-xs font-mono font-bold">
+            {{ alert.minutes_until_kickoff }} mins to kickoff
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Gameweek Eve Health Alert -->
+{% if gw_reminder %}
+<div class="mt-3 mb-2 p-4 rounded-xl border bg-amber-950/70 border-amber-500/60 text-amber-200 flex items-center justify-between shadow-md">
+    <div class="flex items-center gap-3">
+        <span class="material-symbols-outlined text-2xl text-amber-400">notifications_active</span>
+        <div>
+            <div class="font-extrabold text-sm text-white">Gameweek Alert: Lineup Issues Detected for {{ gw_reminder.first_kickoff }}</div>
+            <div class="text-xs text-amber-300 mt-0.5">{{ gw_reminder.message }}</div>
+        </div>
+    </div>
+    <a href="https://www.fantrax.com" target="_blank" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-lg text-xs transition-colors shrink-0">
+        Open Fantrax &rarr;
+    </a>
+</div>
+{% endif %}
+
+<!-- Fantrax Sync & Lineup Management Action Bar -->
+<div class="bg-surface-container border border-outline-variant rounded-xl p-3.5 mt-3 mb-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+    <div class="flex items-center gap-3">
+        <button id="syncFantraxBtn" onclick="syncFantraxTeam()" class="px-3.5 py-1.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant hover:border-primary-container text-on-surface text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+            <span id="syncIcon" class="material-symbols-outlined text-base text-primary-container">sync</span>
+            <span id="syncText">Sync with Fantrax</span>
+        </button>
+        <span id="syncMetaStatus" class="text-xs text-on-surface-variant">
+            {% if fantrax_sync_meta and fantrax_sync_meta.synced_at %}
+                <span class="text-emerald-400 font-medium">✓ Synced {{ fantrax_sync_meta.synced_at }}</span>
+            {% else %}
+                Auto-sync ready
+            {% endif %}
+        </span>
+    </div>
+
+    <div class="flex items-center gap-2">
+        {% if is_custom_lineup %}
+        <span class="bg-purple-950/80 text-purple-300 border border-purple-500/40 text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+            Active Synced Lineup
+        </span>
+        <button onclick="resetToOptimalLineup()" class="text-xs text-on-surface-variant hover:text-red-400 font-bold underline px-2 py-1 transition-colors cursor-pointer">
+            Reset to Recommended XI
+        </button>
+        {% endif %}
+        <button id="toggleCustomizeBtn" onclick="toggleCustomizeLineup()" class="px-3 py-1.5 bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant text-on-surface text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-base">tune</span>
+            <span id="customizeBtnLabel">Customize Starters</span>
+        </button>
+    </div>
+</div>
+
+{% if suggested_subs %}
+<!-- Suggested Starting Lineup Upgrades Banner -->
+<div class="bg-amber-950/20 border border-amber-500/40 rounded-xl p-4 mb-4 flex flex-col gap-3 shadow-sm">
+    <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-amber-300 flex items-center gap-2">
+            <span class="material-symbols-outlined text-amber-400 text-lg">lightbulb</span>
+            <span>Suggested Lineup Upgrades & Handcuffs ({{ suggested_subs | length }})</span>
+        </h3>
+        <span class="text-xs text-amber-200/80">Projections and squad depth handcuffs recommend these lineup adjustments</span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {% for sub in suggested_subs %}
+        <div class="bg-surface-container border border-outline-variant rounded-lg p-3 flex flex-col justify-between gap-2.5 shadow-sm">
+            <div class="flex items-start justify-between gap-2">
+                <div>
+                    <div class="flex items-center gap-1.5 mb-1">
+                        {% if sub.is_conflict %}
+                        <span class="bg-purple-950 text-purple-300 border border-purple-500/60 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            ⚠️ {{ sub.badge_label }}
+                        </span>
+                        {% elif sub.is_handcuff %}
+                        <span class="bg-purple-950/80 text-purple-300 border border-purple-500/50 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            🔗 {{ sub.badge_label }}
+                        </span>
+                        {% else %}
+                        <span class="bg-blue-950/80 text-blue-300 border border-blue-500/50 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            📈 {{ sub.badge_label }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="text-xs text-on-surface font-bold">
+                        Start <span class="text-emerald-400 font-extrabold">{{ sub.bench_player }}</span> ({{ sub.bench_team }}, {{ sub.bench_pos }})
+                        <span class="text-on-surface-variant font-normal">over</span> <span class="text-red-300 font-bold">{{ sub.starter_to_replace }}</span> ({{ sub.starter_team }})
+                    </div>
+                    {% if sub.handcuff_partner %}
+                    <div class="text-[11px] text-purple-300/90 mt-0.5">
+                        Resolves double-starting with <strong>{{ sub.handcuff_partner }}</strong> ({{ sub.starter_team }})
+                    </div>
+                    {% endif %}
+                </div>
+                <span class="{% if sub.projected_diff >= 0 %}bg-emerald-950 text-emerald-300 border border-emerald-500/50{% else %}bg-amber-950 text-amber-300 border border-amber-500/50{% endif %} text-[10.5px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                    {{ "%+.2f"|format(sub.projected_diff) }} FPts
+                </span>
+            </div>
+            <div class="text-[11px] text-on-surface-variant flex items-center justify-between pt-2 border-t border-outline-variant/40 gap-2">
+                <span class="truncate" title="{{ sub.reason }}">{{ sub.reason }}</span>
+                <button onclick="swapStarter('{{ sub.starter_to_replace }}', '{{ sub.bench_player }}')" class="px-2.5 py-1 bg-primary-container hover:bg-primary-container/90 text-white font-bold text-[11px] rounded transition-all shadow-sm shrink-0 cursor-pointer">
+                    {% if sub.is_conflict %}Resolve Handcuff &rarr;{% else %}Apply Swap &rarr;{% endif %}
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter mt-2">
-    <!-- Left Column (8 cols): Ideal Starting XI (Full Height) -->
+    <!-- Left Column (8 cols): Active Starting XI (Full Height) -->
     <div class="lg:col-span-8 bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col h-full">
         <div class="px-6 py-4 border-b border-outline-variant bg-surface-container flex justify-between items-center">
             <h2 class="text-headline-sm font-bold text-on-surface flex items-center gap-2">
-                <span>Ideal Starting XI</span>
+                <span>{% if is_custom_lineup %}Active Starting XI{% else %}Ideal Starting XI{% endif %}</span>
                 <span class="bg-primary-container text-white text-xs font-bold px-2.5 py-0.5 rounded-full">Formation {{ weekly_lineup.formation }}</span>
             </h2>
             <div class="text-sm font-bold text-emerald-400">
@@ -40,18 +169,45 @@
                         <th class="px-6 py-3 font-bold">Opponent</th>
                         <th class="px-6 py-3 font-bold">Kickoff</th>
                         <th class="px-6 py-3 font-bold text-right">Proj FPts</th>
+                        <th class="px-4 py-3 font-bold text-center customize-col hidden">Swap</th>
                     </tr>
                 </thead>
                 <tbody class="text-body-md text-on-surface">
                     {% for player in weekly_lineup.starters %}
                     <tr class="border-b border-outline-variant table-row-hover transition-colors">
                         <td class="px-6 py-3 font-bold text-sm text-on-surface">
-                            {{ player.primary_pos }}
+                            {{ player.assigned_pos or player.primary_pos }}
                         </td>
                         <td class="px-6 py-3 font-bold text-base">
-                            <a href="/player/{{ player.id or player.player }}" class="hover:text-primary-container transition-colors">
-                                {{ player.player }}
-                            </a>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <a href="/player/{{ player.id or player.player }}" class="hover:text-primary-container transition-colors">
+                                    {{ player.player }}
+                                </a>
+                                {% if player.at_afcon %}
+                                    <span class="bg-red-600/30 text-red-300 border border-red-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full" title="AFCON Duty">AFCON</span>
+                                {% elif player.injury_severity and player.injury_severity != 'Healthy' %}
+                                    <span class="{% if 'Short' in player.injury_severity %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% elif 'Medium' in player.injury_severity %}bg-orange-500/20 text-orange-300 border border-orange-500/30{% else %}bg-red-500/20 text-red-300 border border-red-500/30{% endif %} text-[10px] font-bold px-2 py-0.5 rounded-full cursor-help" title="{{ player.injury_type or player.injury_notes or player.injury_severity }}">
+                                        {{ player.injury_type or player.injury_notes or player.injury_severity }}
+                                    </span>
+                                {% endif %}
+                                {% set hc = handcuff_map.get(player.player) if handcuff_map else None %}
+                                {% if hc and hc.both_starting %}
+                                    <span class="bg-purple-950 text-purple-300 border border-purple-500/60 text-[10px] font-bold px-2 py-0.5 rounded-full cursor-help" title="Double-starting risk: {{ player.player }} & {{ hc.partner }} compete for the same {{ hc.team }} {{ hc.sub_role }} slot">
+                                        🔗 Handcuff Conflict: {{ hc.partner }} ({{ hc.team }} {{ hc.sub_role }})
+                                    </span>
+                                {% elif hc and not hc.partner_is_starter %}
+                                    <span class="bg-purple-950/70 text-purple-300 border border-purple-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full cursor-help" title="Direct tactical handcuff available on bench">
+                                        🔗 Handcuff: {{ hc.partner }}
+                                    </span>
+                                {% endif %}
+                                {% for s_sub in suggested_subs %}
+                                    {% if s_sub.starter_to_replace == player.player and not s_sub.is_conflict %}
+                                    <span class="bg-amber-950/60 text-amber-300 border border-amber-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer hover:border-amber-400 transition-colors" onclick="swapStarter('{{ player.player }}', '{{ s_sub.bench_player }}')" title="Click to swap with {{ s_sub.bench_player }}">
+                                        💡 Upgrade: {{ s_sub.bench_player }} (+{{ "%.2f"|format(s_sub.projected_diff) }})
+                                    </span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
                         </td>
                         <td class="px-6 py-3">{{ render_team_badge(player.team) }}</td>
                         <td class="px-6 py-3 text-sm font-bold">
@@ -70,6 +226,14 @@
                         </td>
                         <td class="px-6 py-3 text-xs text-on-surface-variant font-medium whitespace-nowrap">{{ player.fixture.display_time }}</td>
                         <td class="px-6 py-3 text-right font-bold text-emerald-400 text-base">{{ "%.2f"|format(player.proj_fpts) }}</td>
+                        <td class="px-4 py-3 text-center customize-col hidden">
+                            <select onchange="swapStarter('{{ player.player }}', this.value)" class="bg-surface-container-high border border-outline-variant text-on-surface text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-primary-container">
+                                <option value="">⇄ Swap with...</option>
+                                {% for bench_p in weekly_lineup.bench %}
+                                <option value="{{ bench_p.player }}">{{ bench_p.player }} ({{ bench_p.primary_pos or bench_p.position }})</option>
+                                {% endfor %}
+                            </select>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -95,7 +259,17 @@
                 <div class="bg-surface-container-low border border-outline-variant rounded-lg p-3.5 flex flex-col gap-2 shadow-sm hover:border-primary-container/50 transition-colors">
                     <div class="flex justify-between items-center text-xs font-bold text-on-surface-variant">
                         <span class="text-primary-container font-extrabold">Rule #{{ loop.index }}</span>
-                        <span class="text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-500/30 text-[10px]">Rotation Risk</span>
+                        {% if sub.risk_category == 'Teammate Handcuff' %}
+                            <span class="text-purple-300 bg-purple-950/70 border border-purple-500/50 px-2 py-0.5 rounded text-[10px] font-bold">🔗 Teammate Handcuff</span>
+                        {% elif sub.risk_category == 'Injury Risk' %}
+                            <span class="text-red-300 bg-red-950/60 border border-red-500/50 px-2 py-0.5 rounded text-[10px] font-bold">🚑 Injury Risk</span>
+                        {% elif sub.risk_category == 'Rotation Risk' %}
+                            <span class="text-amber-400 bg-amber-950/40 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold">⚠️ Rotation Risk</span>
+                        {% elif 'Late Kickoff' in sub.risk_category %}
+                            <span class="text-blue-300 bg-blue-950/50 border border-blue-500/40 px-2 py-0.5 rounded text-[10px] font-bold">🛡️ Late Kickoff Insurance</span>
+                        {% else %}
+                            <span class="text-cyan-300 bg-cyan-950/50 border border-cyan-500/40 px-2 py-0.5 rounded text-[10px] font-bold">🛡️ Kickoff Insurance</span>
+                        {% endif %}
                     </div>
                     <div class="text-xs text-on-surface">
                         If <strong class="text-red-400 font-bold">{{ sub.starter }}</strong> ({{ sub.starter_team }}, {{ sub.starter_kickoff }}) doesn't start
@@ -103,12 +277,57 @@
                     <div class="text-xs text-on-surface">
                         ↳ Sub in <strong class="text-emerald-400 font-bold">{{ sub.sub_candidate }}</strong> ({{ sub.sub_team }}, {{ sub.sub_kickoff }})
                     </div>
+                    {% if sub.risk_reason %}
+                    <div class="text-[11px] text-on-surface-variant italic mt-0.5">
+                        {{ sub.risk_reason }}
+                    </div>
+                    {% endif %}
                 </div>
                 {% else %}
                 <div class="text-center py-4 px-2 text-on-surface-variant text-xs bg-surface-container-low rounded-lg border border-outline-variant/60">
-                    ✓ No high-risk starting rotations detected. Your starting XI has solid minutes security this week!
+                    <span class="material-symbols-outlined text-emerald-400 text-sm align-middle mr-1">check_circle</span>No high-risk starting rotations detected. Your starting XI has solid minutes security this week!
                 </div>
                 {% endfor %}
+
+                {% if injury_contingencies %}
+                <div class="mt-2 pt-3 border-t border-outline-variant/60">
+                    <div class="text-xs font-bold text-amber-300 flex items-center gap-1.5 mb-2">
+                        <span class="material-symbols-outlined text-sm text-amber-400">healing</span>
+                        <span>Pre-Match Injury Contingencies</span>
+                    </div>
+                    {% for ctg in injury_contingencies %}
+                    <div class="bg-amber-950/20 border border-amber-500/40 rounded-lg p-3 flex flex-col gap-2 text-xs">
+                        <div class="flex justify-between items-center font-bold">
+                            <span class="text-on-surface">{{ ctg.starter }} ({{ ctg.starter_team }}, {{ ctg.starter_pos }})</span>
+                            <span class="text-amber-300 bg-amber-950/60 px-1.5 py-0.5 rounded text-[10px] border border-amber-500/40">{{ ctg.injury_status }}</span>
+                        </div>
+                        <div class="text-[11px] text-on-surface-variant">Kickoff: <strong class="text-on-surface">{{ ctg.starter_kickoff }}</strong></div>
+                        
+                        {% if ctg.legal_warning %}
+                        <div class="text-[10px] text-amber-400 bg-amber-950/40 px-2 py-1 rounded border border-amber-500/30 font-medium">
+                            ⚠️ {{ ctg.legal_warning }}
+                        </div>
+                        {% endif %}
+
+                        {% if ctg.sub_candidate %}
+                        <div class="bg-surface-container-low p-2.5 rounded-lg border border-outline-variant text-[11px] text-on-surface">
+                            <span class="text-emerald-400 font-bold">Auto-Sub Plan:</span> If {{ ctg.starter }} doesn't start, sub in <strong class="text-white">{{ ctg.sub_candidate }}</strong> ({{ ctg.sub_team }}, {{ ctg.sub_kickoff }}).
+                        </div>
+                        {% endif %}
+
+                        {% if ctg.ir_directive %}
+                        <div class="text-[11px] text-purple-300 bg-purple-950/60 p-2.5 rounded-lg border border-purple-500/40 font-medium">
+                            🏥 <strong>IR Slot Strategy:</strong> {{ ctg.ir_directive }}
+                        </div>
+                        {% elif not ctg.sub_candidate %}
+                        <div class="bg-surface-container-low p-2.5 rounded-lg border border-outline-variant text-[11px] text-on-surface">
+                            <span class="text-amber-300 font-bold">Waiver Action:</span> {{ ctg.stream_directive }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -123,9 +342,24 @@
                     <div class="flex items-center gap-2.5">
                         <span class="text-xs font-bold text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded">Sub {{ loop.index }}</span>
                         <div>
-                            <a href="/player/{{ player.id or player.player }}" class="font-bold text-on-surface hover:text-primary-container text-sm block">
-                                {{ player.player }}
-                            </a>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <a href="/player/{{ player.id or player.player }}" class="font-bold text-on-surface hover:text-primary-container text-sm block">
+                                    {{ player.player }}
+                                </a>
+                                {% if player.at_afcon %}
+                                    <span class="bg-red-600/30 text-red-300 border border-red-500/40 text-[10px] font-bold px-1.5 py-0.2 rounded-full" title="AFCON Duty">AFCON</span>
+                                {% elif player.injury_severity and player.injury_severity != 'Healthy' %}
+                                    <span class="{% if 'Short' in player.injury_severity %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% elif 'Medium' in player.injury_severity %}bg-orange-500/20 text-orange-300 border border-orange-500/30{% else %}bg-red-500/20 text-red-300 border border-red-500/30{% endif %} text-[10px] font-bold px-1.5 py-0.2 rounded-full cursor-help" title="{{ player.injury_type or player.injury_notes or player.injury_severity }}">
+                                        {{ player.injury_type or player.injury_notes or player.injury_severity }}
+                                    </span>
+                                {% endif %}
+                                {% set hc_b = handcuff_map.get(player.player) if handcuff_map else None %}
+                                {% if hc_b %}
+                                    <span class="bg-purple-950/70 text-purple-300 border border-purple-500/40 text-[10px] font-bold px-1.5 py-0.2 rounded-full" title="Direct Handcuff for {{ hc_b.partner }}">
+                                        🔗 Handcuff for {{ hc_b.partner }}
+                                    </span>
+                                {% endif %}
+                            </div>
                             <div class="text-[11px] text-on-surface-variant mt-0.5 flex items-center gap-1.5">
                                 <span>{{ player.position }}</span>
                                 <span>•</span>
@@ -143,10 +377,149 @@
                 {% endfor %}
             </div>
         </div>
+
+        <!-- Waiver Pickups Quick Access Card -->
+        <div class="bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col mt-4">
+            <div class="px-5 py-3.5 border-b border-outline-variant bg-surface-container flex items-center justify-between">
+                <h2 class="text-base font-bold text-on-surface flex items-center gap-2">
+                    <span class="material-symbols-outlined text-emerald-400 text-lg">add_circle</span>
+                    <span>Top Waiver Pickups</span>
+                </h2>
+                <a href="/waivers?team={{ team_name }}" class="text-xs font-bold text-primary-container hover:underline">View All &rarr;</a>
+            </div>
+            <div class="p-4 text-xs text-on-surface-variant flex flex-col gap-2">
+                <p>Compare available free agents against your roster and claim upgrades with 1-click on the Waiver Wire page.</p>
+                <a href="/waivers?team={{ team_name }}" class="mt-1 w-full py-2 bg-primary-container/20 hover:bg-primary-container/30 border border-primary-container/40 text-primary-container font-bold rounded-lg text-center transition-colors">
+                    Explore {{ team_name }} Waiver Pickups &rarr;
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 {% else %}
 <!-- ROSTER OVERVIEW VIEW -->
+
+{% if team_grade %}
+<!-- TEAM GRADE & SPORTS ANALYST WRITEUP BANNER -->
+<div class="bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm mb-6 flex flex-col gap-6">
+    <!-- Top Row: Team Grade Badge, Score, Rank, and 4 Component Meters -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-outline-variant pb-6">
+        <!-- Grade Badge & Rank -->
+        <div class="flex items-center gap-4">
+            <div class="w-16 h-16 rounded-2xl flex flex-col items-center justify-center font-extrabold shadow-md
+                {% if team_grade.grade_class == 'emerald' %}bg-emerald-950 text-emerald-400 border border-emerald-500/50
+                {% elif team_grade.grade_class == 'blue' %}bg-blue-950 text-blue-400 border border-blue-500/50
+                {% elif team_grade.grade_class == 'amber' %}bg-amber-950 text-amber-400 border border-amber-500/50
+                {% else %}bg-red-950 text-red-400 border border-red-500/50{% endif %}">
+                <span class="text-2xl leading-none">{{ team_grade.grade }}</span>
+                <span class="text-[10px] font-mono opacity-80 mt-0.5">{{ team_grade.score }}/100</span>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h2 class="text-xl font-bold text-on-surface">{{ team_name }} Draft Rating</h2>
+                    <span class="bg-primary-container/20 text-primary-container border border-primary-container/30 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                        Rank #{{ team_grade.rank }} in League
+                    </span>
+                </div>
+                <p class="text-xs text-on-surface-variant mt-1">{{ team_grade.writeup.headline }}</p>
+            </div>
+        </div>
+
+        <!-- 4 Component Progress Bars -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full md:w-auto">
+            <!-- Star Power -->
+            <div class="bg-surface-container-low border border-outline-variant p-3 rounded-lg flex flex-col gap-1 min-w-[120px]">
+                <div class="flex justify-between text-[11px] font-bold text-on-surface-variant">
+                    <span>Star Power</span>
+                    <span class="text-emerald-400">{{ team_grade.components.star_power }}</span>
+                </div>
+                <div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+                    <div class="bg-emerald-400 h-full rounded-full" style="width: {{ team_grade.components.star_power }}%"></div>
+                </div>
+            </div>
+
+            <!-- Pick Efficiency -->
+            <div class="bg-surface-container-low border border-outline-variant p-3 rounded-lg flex flex-col gap-1 min-w-[120px]">
+                <div class="flex justify-between text-[11px] font-bold text-on-surface-variant">
+                    <span>Pick Value</span>
+                    <span class="text-blue-400">{{ team_grade.components.pick_efficiency }}</span>
+                </div>
+                <div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+                    <div class="bg-blue-400 h-full rounded-full" style="width: {{ team_grade.components.pick_efficiency }}%"></div>
+                </div>
+            </div>
+
+            <!-- Roster Balance -->
+            <div class="bg-surface-container-low border border-outline-variant p-3 rounded-lg flex flex-col gap-1 min-w-[120px]">
+                <div class="flex justify-between text-[11px] font-bold text-on-surface-variant">
+                    <span>Roster Fit</span>
+                    <span class="text-purple-400">{{ team_grade.components.roster_balance }}</span>
+                </div>
+                <div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+                    <div class="bg-purple-400 h-full rounded-full" style="width: {{ team_grade.components.roster_balance }}%"></div>
+                </div>
+            </div>
+
+            <!-- Availability -->
+            <div class="bg-surface-container-low border border-outline-variant p-3 rounded-lg flex flex-col gap-1 min-w-[120px]">
+                <div class="flex justify-between text-[11px] font-bold text-on-surface-variant">
+                    <span>Health & Risk</span>
+                    <span class="text-amber-400">{{ team_grade.components.availability }}</span>
+                </div>
+                <div class="w-full bg-surface-container h-1.5 rounded-full overflow-hidden">
+                    <div class="bg-amber-400 h-full rounded-full" style="width: {{ team_grade.components.availability }}%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Row: Sports Analyst Narrative Writeup -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Executive Summary & Verdict (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-3">
+            <h3 class="text-sm font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary-container text-lg">description</span>
+                Sports Analyst Writeup
+            </h3>
+            <p class="text-sm text-on-surface leading-relaxed">
+                {{ team_grade.writeup.executive_summary }}
+            </p>
+            <div class="bg-primary-container/10 border border-primary-container/30 rounded-lg p-3.5 mt-1">
+                <span class="text-xs font-extrabold text-primary-container block uppercase tracking-wider mb-0.5">Analyst Outlook & Verdict</span>
+                <p class="text-xs text-on-surface font-medium leading-normal">{{ team_grade.writeup.verdict }}</p>
+            </div>
+        </div>
+
+        <!-- Strengths, Vulnerabilities & Standout Picks (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-3">
+            <!-- Strengths -->
+            <div class="bg-surface-container-low border border-outline-variant rounded-lg p-3">
+                <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-sm">thumb_up</span> Key Strengths
+                </h4>
+                <ul class="text-xs text-on-surface space-y-1 list-disc list-inside">
+                    {% for item in team_grade.writeup.strengths %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Vulnerabilities -->
+            <div class="bg-surface-container-low border border-outline-variant rounded-lg p-3">
+                <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-sm">warning</span> Key Concerns & Risks
+                </h4>
+                <ul class="text-xs text-on-surface space-y-1 list-disc list-inside">
+                    {% for item in team_grade.writeup.vulnerabilities %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Two Column Layout for Roster and Needs -->
 <section class="grid grid-cols-1 lg:grid-cols-12 gap-gutter mt-2">
     <!-- Left Column: Current Roster (8 cols on desktop) -->
@@ -158,8 +531,9 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-surface-container-low border-b border-outline-variant font-sans font-bold text-xs text-on-surface-variant uppercase tracking-wider">
-                        <th class="px-6 py-3 font-bold">ADP</th>
                         <th class="px-6 py-3 font-bold">Name</th>
+                        <th class="px-6 py-3 font-bold text-center">Pick #</th>
+                        <th class="px-6 py-3 font-bold text-center">ADP</th>
                         <th class="px-6 py-3 font-bold">Position</th>
                         <th class="px-6 py-3 font-bold text-center">Grade</th>
                         <th class="px-6 py-3 font-bold text-right">Team</th>
@@ -168,13 +542,29 @@
                 <tbody class="text-body-md text-on-surface">
                     {% for player in roster %}
                     <tr class="border-b border-outline-variant table-row-hover transition-colors">
-                        <td class="px-6 py-2.5">
-                            <span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">{{ player.adp }}</span>
-                        </td>
                         <td class="px-6 py-2.5 font-bold text-on-surface text-base">
-                            <a href="/player/{{ player.id or player.player }}" class="hover:text-primary-container transition-colors">
-                                {{ player.player }}
-                            </a>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <a href="/player/{{ player.id or player.player }}" class="hover:text-primary-container transition-colors">
+                                    {{ player.player }}
+                                </a>
+                                {% if player.at_afcon %}
+                                    <span class="bg-red-600/30 text-red-300 border border-red-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full" title="AFCON Duty">AFCON</span>
+                                {% elif player.injury_severity and player.injury_severity != 'Healthy' %}
+                                    <span class="{% if 'Short' in player.injury_severity %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% elif 'Medium' in player.injury_severity %}bg-orange-500/20 text-orange-300 border border-orange-500/30{% else %}bg-red-500/20 text-red-300 border border-red-500/30{% endif %} text-[10px] font-bold px-2 py-0.5 rounded-full cursor-help" title="{{ player.injury_type or player.injury_severity }}">
+                                        {{ player.injury_type or player.injury_severity }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-6 py-2.5 text-center">
+                            {% if player.pick_number %}
+                                <span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">#{{ player.pick_number }}</span>
+                            {% else %}
+                                <span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-2.5 text-center">
+                            <span class="adp-badge text-xs font-bold px-2 py-0.5 rounded inline-block w-13 text-center shadow-sm border">{{ player.adp }}</span>
                         </td>
                         <td class="px-6 py-2.5">
                             <div class="flex gap-1.5 font-bold text-on-surface text-base">
@@ -208,7 +598,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="px-6 py-6 text-center text-on-surface-variant text-sm">This team's roster is empty.</td>
+                        <td colspan="6" class="px-6 py-6 text-center text-on-surface-variant text-sm">This team's roster is empty.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -243,7 +633,7 @@
                             {% if item.need > 0 %}
                                 <span class="text-base font-bold text-on-surface">{{ item.need }}</span>
                             {% else %}
-                                <span class="text-emerald-400 font-bold text-base">✓</span>
+                                <span class="material-symbols-outlined text-emerald-400 text-sm">check_circle</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -252,72 +642,6 @@
             </table>
         </div>
     </div>
-</section>
-
-<!-- Exposure Status Bar (Placed RIGHT ABOVE Team Cards Grid) -->
-<section class="mt-2 bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-    <h3 class="text-headline-sm font-headline-sm text-on-surface font-bold">Premier League Clubs &amp; Big Six Exposure</h3>
-    <div class="flex flex-wrap items-center gap-3">
-        <div class="bg-primary-container text-white px-4 py-2 rounded-md text-base font-bold shadow-sm">
-            Big Six: {{ big_six_count }}
-        </div>
-        <div class="bg-surface-variant text-on-surface px-4 py-2 rounded-md text-base font-bold shadow-sm">
-            Other: {{ non_big_six_count }}
-        </div>
-        <div class="text-on-surface px-4 py-2 text-base font-bold ml-2">
-            Active Clubs: {{ club_breakdown | selectattr('has_players') | list | length }}
-        </div>
-    </div>
-</section>
-
-<!-- 4x5 Grid for ALL 20 Team Cards in ALPHABETICAL ORDER -->
-<section class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-    {% for item in club_breakdown %}
-    {% if item.has_players %}
-    <!-- Active Team Card -->
-    <div class="bg-[#1a2130] rounded-xl p-5 flex flex-col justify-between relative overflow-hidden border border-[#2c3e50] shadow-md min-h-[175px]">
-        <div class="absolute top-0 left-0 w-full h-1" style="background-color: {{ item.accent_color }};"></div>
-        <div>
-            <div class="flex items-center gap-3 mb-3 mt-1">
-                <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[#f0f0f0] flex-shrink-0 shadow-sm">
-                    <span class="text-xs font-bold text-gray-800">{{ item.code }}</span>
-                </div>
-                <h3 class="text-xl font-bold text-on-surface">{{ item.code }}</h3>
-            </div>
-            <div class="text-[10px] font-bold text-on-surface mb-2 tracking-wider uppercase border-b border-[#2c3e50] pb-1.5">DRAFTED PLAYERS ({{ item.count }})</div>
-            <ul class="flex flex-col gap-1.5 flex-grow pr-1">
-                {% for p in item.players %}
-                <li class="flex justify-between items-center text-sm">
-                    <div class="flex items-center gap-1.5 min-w-0">
-                        <span class="w-1.5 h-1.5 bg-on-surface rounded-full flex-shrink-0"></span>
-                        <span class="text-on-surface truncate" title="{{ p.name }}">{{ p.name }}</span>
-                        {% if p.position %}
-                            <span class="text-on-surface-variant text-xs flex-shrink-0">({{ p.position }})</span>
-                        {% endif %}
-                    </div>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-    {% else %}
-    <!-- Empty / Unowned Team Card -->
-    <div class="bg-[#2a2c33] rounded-xl p-5 flex flex-col justify-between relative overflow-hidden border border-[#3f414a] shadow-sm min-h-[175px]">
-        <div class="absolute top-0 left-0 w-full h-1 bg-[#d4d4d4]"></div>
-        <div class="flex items-center justify-between mb-4 mt-1">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-[#f0f0f0]">
-                    <span class="text-xs font-bold text-gray-500">{{ item.code }}</span>
-                </div>
-                <h3 class="text-xl font-bold text-on-surface">{{ item.code }}</h3>
-            </div>
-        </div>
-        <div class="flex-grow flex items-center justify-center text-on-surface-variant text-sm border-t border-[#3f414a] pt-4 mt-auto">
-            No Players Drafted
-        </div>
-    </div>
-    {% endif %}
-    {% endfor %}
 </section>
 
 <!-- Suggestions Table Section (Infinite Scroll Enabled & Sleek Compact Vertical Spacing) -->
@@ -375,8 +699,8 @@
                         <th class="px-6 py-3 font-bold">Name</th>
                         <th class="px-6 py-3 font-bold">Position</th>
                         <th class="px-6 py-3 font-bold">Team</th>
-                        <th class="px-6 py-3 font-bold">Fantasy Points</th>
-                        <th class="px-6 py-3 font-bold">FP/Game</th>
+                        <th class="px-6 py-3 font-bold">Proj. Fantasy Points</th>
+                        <th class="px-6 py-3 font-bold">Proj. FP/Game</th>
                         <th class="px-6 py-3 font-bold">Status</th>
                     </tr>
                 </thead>
@@ -424,6 +748,72 @@
         <span id="suggestions-spinner" class="hidden w-4 h-4 border-2 border-primary-container border-t-transparent rounded-full animate-spin"></span>
         <span id="suggestions-sentinel-text">{% if suggestions.has_next %}Scroll down to load more suggestions...{% else %}All suggestions loaded{% endif %}</span>
     </div>
+</section>
+
+<!-- Exposure Status Bar (Placed BELOW Suggestions Table) -->
+<section class="mt-8 bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+    <h3 class="text-headline-sm font-headline-sm text-on-surface font-bold">Premier League Clubs &amp; Big Six Exposure</h3>
+    <div class="flex flex-wrap items-center gap-3">
+        <div class="bg-primary-container text-white px-4 py-2 rounded-md text-base font-bold shadow-sm">
+            Big Six: {{ big_six_count }}
+        </div>
+        <div class="bg-surface-variant text-on-surface px-4 py-2 rounded-md text-base font-bold shadow-sm">
+            Other: {{ non_big_six_count }}
+        </div>
+        <div class="text-on-surface px-4 py-2 text-base font-bold ml-2">
+            Active Clubs: {{ club_breakdown | selectattr('has_players') | list | length }}
+        </div>
+    </div>
+</section>
+
+<!-- 4x5 Grid for ALL 20 Team Cards in ALPHABETICAL ORDER -->
+<section class="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    {% for item in club_breakdown %}
+    {% if item.has_players %}
+    <!-- Active Team Card -->
+    <div class="bg-[#1a2130] rounded-xl p-5 flex flex-col justify-between relative overflow-hidden border border-[#2c3e50] shadow-md min-h-[175px]">
+        <div class="absolute top-0 left-0 w-full h-1" style="background-color: {{ item.accent_color }};"></div>
+        <div>
+            <div class="flex items-center gap-3 mb-3 mt-1">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center bg-[#f0f0f0] flex-shrink-0 shadow-sm">
+                    <span class="text-xs font-bold text-gray-800">{{ item.code }}</span>
+                </div>
+                <h3 class="text-xl font-bold text-on-surface">{{ item.code }}</h3>
+            </div>
+            <div class="text-[10px] font-bold text-on-surface mb-2 tracking-wider uppercase border-b border-[#2c3e50] pb-1.5">DRAFTED PLAYERS ({{ item.count }})</div>
+            <ul class="flex flex-col gap-1.5 flex-grow pr-1">
+                {% for p in item.players %}
+                <li class="flex justify-between items-center text-sm">
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <span class="w-1.5 h-1.5 bg-on-surface rounded-full flex-shrink-0"></span>
+                        <span class="text-on-surface truncate" title="{{ p.name }}">{{ p.name }}</span>
+                        {% if p.position %}
+                            <span class="text-on-surface-variant text-xs flex-shrink-0">({{ p.position }})</span>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% else %}
+    <!-- Empty / Unowned Team Card -->
+    <div class="bg-[#2a2c33] rounded-xl p-5 flex flex-col justify-between relative overflow-hidden border border-[#3f414a] shadow-sm min-h-[175px]">
+        <div class="absolute top-0 left-0 w-full h-1 bg-[#d4d4d4]"></div>
+        <div class="flex items-center justify-between mb-4 mt-1">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center bg-[#f0f0f0]">
+                    <span class="text-xs font-bold text-gray-500">{{ item.code }}</span>
+                </div>
+                <h3 class="text-xl font-bold text-on-surface">{{ item.code }}</h3>
+            </div>
+        </div>
+        <div class="flex-grow flex items-center justify-center text-on-surface-variant text-sm border-t border-[#3f414a] pt-4 mt-auto">
+            No Players Drafted
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
 </section>
 {% endif %}
 
@@ -575,25 +965,12 @@ document.addEventListener('DOMContentLoaded', () => {
             updateExcludedPositionsValue();
         });
 
-        // AUTO-SUBMIT ON CHECKBOX TOGGLE
+        // UPDATE EXCLUDED POSITIONS VALUE ON CHECKBOX TOGGLE (WAITS FOR USER TO CLICK FILTER SUBMIT)
         positionCheckboxes.forEach(cb => {
             cb.addEventListener('change', () => {
                 updateExcludedPositionsValue();
-                filterForm.submit();
             });
         });
-
-        // AUTO-SUBMIT ON EXCLUDE TEAMS TYPING (DEBOUNCED)
-        if (excludeTeamsInput) {
-            let excludeTeamsDebounceTimer;
-            excludeTeamsInput.addEventListener('input', () => {
-                clearTimeout(excludeTeamsDebounceTimer);
-                excludeTeamsDebounceTimer = setTimeout(() => {
-                    updateExcludedPositionsValue();
-                    filterForm.submit();
-                }, 400);
-            });
-        }
     }
 
     // INFINITE SCROLL IMPLEMENTATION FOR SUGGESTIONS TABLE
@@ -699,5 +1076,83 @@ document.addEventListener('DOMContentLoaded', () => {
         observer.observe(sentinel);
     }
 });
+
+let isCustomizeActive = false;
+function toggleCustomizeLineup() {
+    isCustomizeActive = !isCustomizeActive;
+    const cols = document.querySelectorAll('.customize-col');
+    cols.forEach(el => {
+        if (isCustomizeActive) {
+            el.classList.remove('hidden');
+        } else {
+            el.classList.add('hidden');
+        }
+    });
+    const label = document.getElementById('customizeBtnLabel');
+    if (label) {
+        label.textContent = isCustomizeActive ? 'Done Editing' : 'Customize Starters';
+    }
+}
+
+async function syncFantraxTeam() {
+    const btn = document.getElementById('syncFantraxBtn');
+    const icon = document.getElementById('syncIcon');
+    const text = document.getElementById('syncText');
+    const status = document.getElementById('syncMetaStatus');
+
+    if (icon) icon.classList.add('animate-spin');
+    if (text) text.textContent = 'Syncing...';
+
+    try {
+        const teamName = "{{ team_name }}";
+        const response = await fetch(`/api/teams/${encodeURIComponent(teamName)}/sync-fantrax`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        if (status && data.synced_at) {
+            status.innerHTML = `<span class="text-emerald-400 font-bold">✓ Synced ${data.synced_at}</span>`;
+        }
+        setTimeout(() => {
+            window.location.href = window.location.pathname + '?tab=weekly';
+        }, 600);
+    } catch (err) {
+        console.error('Error syncing Fantrax:', err);
+        if (status) status.innerHTML = `<span class="text-red-400">Sync error. Check Settings.</span>`;
+    } finally {
+        if (icon) icon.classList.remove('animate-spin');
+        if (text) text.textContent = 'Sync with Fantrax';
+    }
+}
+
+async function swapStarter(starterName, benchName) {
+    if (!benchName) return;
+    const teamName = "{{ team_name }}";
+    try {
+        const response = await fetch(`/api/teams/${encodeURIComponent(teamName)}/lineup/swap`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ starter: starterName, bench: benchName })
+        });
+        if (response.ok) {
+            window.location.href = window.location.pathname + '?tab=weekly';
+        }
+    } catch (err) {
+        console.error('Error swapping starter:', err);
+    }
+}
+
+async function resetToOptimalLineup() {
+    const teamName = "{{ team_name }}";
+    try {
+        const response = await fetch(`/api/teams/${encodeURIComponent(teamName)}/lineup/reset`, {
+            method: 'POST'
+        });
+        if (response.ok) {
+            window.location.href = window.location.pathname + '?tab=weekly';
+        }
+    } catch (err) {
+        console.error('Error resetting lineup:', err);
+    }
+}
 </script>
 {% endblock %}

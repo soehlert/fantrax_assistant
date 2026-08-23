@@ -66,70 +66,461 @@
     </div>
 </section>
 
-<!-- Feed Section (Reverse Chronological Cards) -->
-<section class="mt-8 flex flex-col gap-5 max-w-4xl mx-auto w-full">
-    <h2 class="text-headline-lg font-display text-on-surface">Draft Reaction Feed</h2>
+{% if tracked_team_grades %}
+<!-- Tracked Teams Power Rankings & Grades Section -->
+<section class="mt-8 max-w-4xl mx-auto w-full">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-headline-lg font-display text-on-surface flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary-container text-2xl">leaderboard</span>
+            Tracked Team Grades &amp; Power Rankings
+        </h2>
+        <span class="text-xs text-on-surface-variant font-semibold">Updated live per pick</span>
+    </div>
 
-    {% for item in feed %}
-    <div id="pick-card-{{ item.pick_number }}" class="scroll-mt-24 bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4 transition-all hover:border-[#434655]">
-        <!-- Top Row: Pick #, Team, Grade Badge -->
-        <div class="flex items-center justify-between border-b border-outline-variant pb-3">
-            <div class="flex items-center gap-3">
-                <span class="bg-surface-container-low text-on-surface font-extrabold text-base px-3 py-1 rounded-md border border-outline-variant">
-                    Pick #{{ item.pick_number }}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {% for t_grade in tracked_team_grades %}
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-5 shadow-sm flex flex-col justify-between gap-4 hover:border-primary-container/40 transition-colors">
+            <div class="flex items-center justify-between border-b border-outline-variant pb-3">
+                <div class="flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-full bg-primary-container/20 text-primary-container font-extrabold text-xs flex items-center justify-center border border-primary-container/30">
+                        #{{ t_grade.rank }}
+                    </span>
+                    <a href="/teams/{{ t_grade.team_id }}" class="text-base font-bold text-on-surface hover:text-primary-container transition-colors">
+                        {{ t_grade.team_id }}
+                    </a>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-xs font-extrabold
+                    {% if t_grade.grade_class == 'emerald' %}bg-emerald-500/20 text-emerald-400 border border-emerald-500/30
+                    {% elif t_grade.grade_class == 'blue' %}bg-blue-500/20 text-blue-400 border border-blue-500/30
+                    {% elif t_grade.grade_class == 'amber' %}bg-amber-500/20 text-amber-400 border border-amber-500/30
+                    {% else %}bg-red-500/20 text-red-400 border border-red-500/30{% endif %}">
+                    Grade: {{ t_grade.grade }} ({{ t_grade.score }})
                 </span>
-                <span class="text-on-surface-variant text-sm font-semibold">Drafted by <strong class="text-on-surface font-bold">{{ item.team_id }}</strong></span>
             </div>
 
-            <!-- Grade Badge Pill -->
-            <div class="flex items-center gap-2">
-                {% if item.grade_class == 'emerald' %}
-                    <span class="bg-emerald-950/70 text-emerald-300 border border-emerald-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
-                        Grade: {{ item.grade }}
-                    </span>
-                {% elif item.grade_class == 'blue' %}
-                    <span class="bg-blue-950/70 text-blue-300 border border-blue-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
-                        Grade: {{ item.grade }}
-                    </span>
-                {% elif item.grade_class == 'amber' %}
-                    <span class="bg-amber-950/70 text-amber-300 border border-amber-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
-                        Grade: {{ item.grade }}
-                    </span>
-                {% else %}
-                    <span class="bg-red-950/70 text-red-300 border border-red-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
-                        Grade: {{ item.grade }}
-                    </span>
-                {% endif %}
+            <div class="text-xs text-on-surface leading-relaxed line-clamp-3">
+                {{ t_grade.writeup.executive_summary }}
             </div>
+
+            <div class="grid grid-cols-2 gap-2 text-[11px] bg-surface-container-low p-2.5 rounded-lg border border-outline-variant">
+                <div>
+                    <span class="text-on-surface-variant block font-medium">Top Scorer</span>
+                    <span class="font-bold text-on-surface truncate block">{{ t_grade.top_scorer.name if t_grade.top_scorer else '—' }}</span>
+                </div>
+                <div>
+                    <span class="text-on-surface-variant block font-medium">Best Value Pick</span>
+                    <span class="font-bold text-emerald-400 truncate block">{{ t_grade.best_steal.player if t_grade.best_steal else '—' }}</span>
+                </div>
+            </div>
+
+            <a href="/teams/{{ t_grade.team_id }}" class="text-xs font-bold text-primary-container hover:underline flex items-center justify-end gap-1">
+                View Full Team Report <span class="material-symbols-outlined text-sm">arrow_forward</span>
+            </a>
         </div>
-
-        <!-- Middle Row: Player Info & Badges -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <a href="/player/{{ item.id or item.player }}" class="text-xl font-bold text-on-surface hover:text-primary-container transition-colors">{{ item.player }}</a>
-                <span class="text-base font-extrabold text-on-surface">({{ item.position }})</span>
-                {% if item.team %}
-                    {{ render_team_badge(item.team) }}
-                {% endif %}
-            </div>
-
-            <div class="flex items-center gap-4 text-sm font-semibold text-on-surface-variant">
-                <span>ADP: <strong class="text-on-surface">{{ "%.1f"|format(item.adp) if item.adp else '—' }}</strong></span>
-                <span>Pick #: <strong class="text-on-surface">{{ item.pick_number }}</strong></span>
-            </div>
-        </div>
-
-        <!-- Bottom Row: Narrative Rationale -->
-        <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3.5 text-base text-on-surface leading-relaxed">
-            <span class="font-semibold text-on-surface-variant">Analysis:</span> {{ item.rationale }}
-        </div>
+        {% endfor %}
     </div>
-    {% else %}
-    <div class="bg-surface-container border border-outline-variant rounded-xl p-12 text-center text-on-surface-variant">
-        <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2">article</span>
-        <h3 class="text-lg font-bold text-on-surface">No Draft Picks Graded Yet</h3>
-        <p class="text-sm mt-1">Draft players from the Draft Board or Team suggestions page to generate live pick evaluations and grades!</p>
-    </div>
-    {% endfor %}
 </section>
+{% endif %}
+
+<!-- Feed Section (Reverse Chronological Cards with Drag & Drop + Up/Down Reordering) -->
+<section class="mt-8 flex flex-col gap-5 max-w-4xl mx-auto w-full">
+    <div class="flex items-center justify-between">
+        <h2 class="text-headline-lg font-display text-on-surface">Draft Reaction Feed</h2>
+        <span class="text-xs text-on-surface-variant font-semibold flex items-center gap-1.5 bg-surface-container px-3 py-1.5 rounded-full border border-outline-variant shadow-sm">
+            <span class="material-symbols-outlined text-sm text-primary-container">unfold_more</span> Drag cards or click ▲/▼ to reorder pick sequence &amp; re-grade
+        </span>
+    </div>
+
+    <div id="draft-feed-container" class="flex flex-col gap-5 w-full">
+        {% for item in feed %}
+        <div id="pick-card-{{ item.pick_number }}" data-player="{{ item.player }}" draggable="true" class="pick-card scroll-mt-24 bg-surface-container border border-outline-variant rounded-xl p-6 shadow-sm flex flex-col gap-4 transition-all hover:border-[#434655] cursor-grab active:cursor-grabbing">
+            <!-- Top Row: Drag Handle + Pick # + Move Up/Down Controls + Team + Grade Badge -->
+            <div class="flex items-center justify-between border-b border-outline-variant pb-3">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-outline hover:text-on-surface transition-colors cursor-grab active:cursor-grabbing text-xl select-none" title="Drag to reorder pick sequence">drag_indicator</span>
+                    <span class="bg-surface-container-low text-on-surface font-extrabold text-base px-3 py-1 rounded-md border border-outline-variant">
+                        Pick #{{ item.pick_number }}
+                    </span>
+                    
+                    <!-- Quick Reorder Buttons (Move Up / Move Down / Swap / Delete) -->
+                    <div class="flex items-center gap-1 bg-surface-container-low border border-outline-variant rounded-md px-1 py-0.5">
+                        <button type="button" class="btn-move-up hover:bg-surface-variant text-on-surface p-0.5 rounded transition-colors" title="Move pick earlier in draft order">
+                            <span class="material-symbols-outlined text-base">keyboard_arrow_up</span>
+                        </button>
+                        <button type="button" class="btn-move-down hover:bg-surface-variant text-on-surface p-0.5 rounded transition-colors" title="Move pick later in draft order">
+                            <span class="material-symbols-outlined text-base">keyboard_arrow_down</span>
+                        </button>
+                        <button type="button" class="btn-swap-pick hover:bg-primary-container/20 text-primary-container p-0.5 rounded transition-colors" title="Swap / replace drafted player at this pick slot" data-player="{{ item.player }}" data-pick="{{ item.pick_number }}">
+                            <span class="material-symbols-outlined text-base">swap_horiz</span>
+                        </button>
+                        <button type="button" class="btn-delete-pick hover:bg-red-500/20 text-red-400 hover:text-red-300 p-0.5 rounded transition-colors" title="Delete this pick from draft history" data-player="{{ item.player }}" data-pick="{{ item.pick_number }}">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                        </button>
+                    </div>
+
+                    <span class="text-on-surface-variant text-sm font-semibold">Drafted by <strong class="text-on-surface font-bold">{{ item.team_id }}</strong></span>
+                </div>
+
+                <!-- Grade Badge Pill -->
+                <div class="flex items-center gap-2">
+                    {% if item.grade_class == 'purple' %}
+                        <span class="bg-purple-950/70 text-purple-300 border border-purple-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
+                            Grade: {{ item.grade }}
+                        </span>
+                    {% elif item.grade_class == 'emerald' %}
+                        <span class="bg-emerald-950/70 text-emerald-300 border border-emerald-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
+                            Grade: {{ item.grade }}
+                        </span>
+                    {% elif item.grade_class == 'blue' %}
+                        <span class="bg-blue-950/70 text-blue-300 border border-blue-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
+                            Grade: {{ item.grade }}
+                        </span>
+                    {% elif item.grade_class == 'amber' %}
+                        <span class="bg-amber-950/70 text-amber-300 border border-amber-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
+                            Grade: {{ item.grade }}
+                        </span>
+                    {% else %}
+                        <span class="bg-red-950/70 text-red-300 border border-red-500/60 font-extrabold text-lg px-4 py-1 rounded-full shadow-sm">
+                            Grade: {{ item.grade }}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Middle Row: Player Info & Badges -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <a href="/player/{{ item.id or item.player }}" class="text-xl font-bold text-on-surface hover:text-primary-container transition-colors">{{ item.player }}</a>
+                    <span class="text-base font-extrabold text-on-surface">({{ item.position }})</span>
+                    {% if item.team %}
+                        {{ render_team_badge(item.team) }}
+                    {% endif %}
+                </div>
+
+                <div class="flex items-center gap-4 text-sm font-semibold text-on-surface-variant">
+                    <span>ADP: <strong class="text-on-surface">{{ "%.1f"|format(item.adp) if item.adp else '—' }}</strong></span>
+                    <span>Pick #: <strong class="text-on-surface">{{ item.pick_number }}</strong></span>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Narrative Rationale -->
+            <div class="bg-surface-container-low border border-outline-variant/60 rounded-lg p-3.5 text-base text-on-surface leading-relaxed">
+                <span class="font-semibold text-on-surface-variant">Analysis:</span> {{ item.rationale }}
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-surface-container border border-outline-variant rounded-xl p-12 text-center text-on-surface-variant">
+            <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2">article</span>
+            <h3 class="text-lg font-bold text-on-surface">No Draft Picks Graded Yet</h3>
+            <p class="text-sm mt-1">Draft players from the Draft Board or Team suggestions page to generate live pick evaluations and grades!</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Swap Player Modal HTML -->
+<div id="swap-player-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-surface-container border border-outline-variant rounded-2xl max-w-md w-full p-6 shadow-2xl flex flex-col gap-4 relative">
+        <div class="flex items-center justify-between border-b border-outline-variant pb-3">
+            <h3 class="text-headline-sm font-bold text-on-surface flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary-container">swap_horiz</span>
+                Swap Draft Pick
+            </h3>
+            <button type="button" onclick="closeSwapModal()" class="text-on-surface-variant hover:text-on-surface p-1 rounded-md transition-colors">
+                <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+        </div>
+
+        <div>
+            <p class="text-xs text-on-surface-variant">Replacing player at <strong id="swap-modal-pick-num" class="text-on-surface font-bold">Pick #</strong>:</p>
+            <div id="swap-modal-old-player" class="text-base font-bold text-red-400 mt-1"></div>
+        </div>
+
+        <div class="flex flex-col gap-1.5 relative">
+            <label class="text-xs font-bold text-on-surface">Replacement Player:</label>
+            <input type="text" id="swap-modal-input" class="w-full bg-surface-container-low border border-outline-variant text-on-surface rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary-container" placeholder="Type player name (e.g. Igor Jesus)..." autocomplete="off" />
+            <div id="swap-autocomplete-results" class="hidden absolute top-full left-0 w-full mt-1 bg-surface-container border border-outline-variant rounded-md shadow-2xl z-50 max-h-48 overflow-y-auto"></div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-2 border-t border-outline-variant">
+            <button type="button" onclick="closeSwapModal()" class="px-4 py-2 text-xs font-bold text-on-surface-variant hover:text-on-surface rounded-lg">Cancel</button>
+            <button type="button" id="btn-confirm-swap" class="px-5 py-2 bg-primary-container hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-all shadow-md flex items-center gap-1.5 cursor-pointer">
+                <span class="material-symbols-outlined text-sm">check</span>
+                <span>Confirm Swap</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('draft-feed-container');
+    if (!container) return;
+
+    // Helper: Save new order to backend API
+    async function saveNewDraftOrder() {
+        const cards = Array.from(container.querySelectorAll('.pick-card'));
+        const reversedDOMPlayers = cards.map(c => c.dataset.player);
+        const newDraftHistory = reversedDOMPlayers.slice().reverse();
+
+        try {
+            const res = await fetch('/api/draft/reorder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ draft_history: newDraftHistory })
+            });
+
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                console.error('Failed to reorder draft history');
+            }
+        } catch (err) {
+            console.error('Error sending reorder API call:', err);
+        }
+    }
+
+    // 1. UP / DOWN / SWAP & DELETE BUTTON LISTENERS
+    container.addEventListener('click', async (e) => {
+        const upBtn = e.target.closest('.btn-move-up');
+        const downBtn = e.target.closest('.btn-move-down');
+        const swapBtn = e.target.closest('.btn-swap-pick');
+        const deleteBtn = e.target.closest('.btn-delete-pick');
+        if (!upBtn && !downBtn && !swapBtn && !deleteBtn) return;
+
+        const card = e.target.closest('.pick-card');
+        if (!card) return;
+
+        if (swapBtn) {
+            const playerName = swapBtn.dataset.player;
+            const pickNum = swapBtn.dataset.pick;
+            openSwapModal(playerName, pickNum);
+            return;
+        }
+
+        if (deleteBtn) {
+            const playerName = deleteBtn.dataset.player;
+            const pickNum = deleteBtn.dataset.pick;
+            if (confirm(`Are you sure you want to delete Pick #${pickNum} (${playerName})? This will undraft the player and re-grade all remaining picks.`)) {
+                try {
+                    const res = await fetch('/api/draft/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ player: playerName })
+                    });
+                    if (res.ok) {
+                        window.location.reload();
+                    } else {
+                        alert('Failed to delete draft pick.');
+                    }
+                } catch (err) {
+                    console.error('Error deleting draft pick:', err);
+                }
+            }
+            return;
+        }
+
+        if (upBtn) {
+            const prevCard = card.previousElementSibling;
+            if (prevCard && prevCard.classList.contains('pick-card')) {
+                prevCard.before(card);
+                saveNewDraftOrder();
+            }
+        } else if (downBtn) {
+            const nextCard = card.nextElementSibling;
+            if (nextCard && nextCard.classList.contains('pick-card')) {
+                nextCard.after(card);
+                saveNewDraftOrder();
+            }
+        }
+    });
+
+    // 2. SMOOTH DRAG AND DROP HANDLERS WITH INSERTION INDICATORS
+    let draggedItem = null;
+
+    function clearDragIndicators() {
+        document.querySelectorAll('.pick-card').forEach(c => {
+            c.classList.remove('border-t-4', 'border-b-4', 'border-primary-container', 'bg-primary-container/10');
+        });
+    }
+
+    container.addEventListener('dragstart', (e) => {
+        const card = e.target.closest('.pick-card');
+        if (!card) return;
+        draggedItem = card;
+        card.classList.add('opacity-40');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', card.dataset.player);
+    });
+
+    container.addEventListener('dragend', (e) => {
+        const card = e.target.closest('.pick-card');
+        if (card) {
+            card.classList.remove('opacity-40');
+        }
+        draggedItem = null;
+        clearDragIndicators();
+    });
+
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const card = e.target.closest('.pick-card');
+        if (card && card !== draggedItem) {
+            clearDragIndicators();
+            const rect = card.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            if (e.clientY < midpoint) {
+                card.classList.add('border-t-4', 'border-primary-container', 'bg-primary-container/10');
+            } else {
+                card.classList.add('border-b-4', 'border-primary-container', 'bg-primary-container/10');
+            }
+        }
+    });
+
+    container.addEventListener('dragleave', (e) => {
+        const card = e.target.closest('.pick-card');
+        if (card && !card.contains(e.relatedTarget)) {
+            card.classList.remove('border-t-4', 'border-b-4', 'border-primary-container', 'bg-primary-container/10');
+        }
+    });
+
+    container.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        const dropTargetCard = e.target.closest('.pick-card');
+        if (!dropTargetCard || !draggedItem || dropTargetCard === draggedItem) return;
+
+        const rect = dropTargetCard.getBoundingClientRect();
+        const midpoint = rect.top + rect.height / 2;
+        if (e.clientY < midpoint) {
+            dropTargetCard.before(draggedItem);
+        } else {
+            dropTargetCard.after(draggedItem);
+        }
+
+        clearDragIndicators();
+        saveNewDraftOrder();
+    });
+});
+
+let currentSwapOldPlayer = null;
+
+function openSwapModal(playerName, pickNum) {
+    currentSwapOldPlayer = playerName;
+    document.getElementById('swap-modal-pick-num').textContent = 'Pick #' + pickNum;
+    document.getElementById('swap-modal-old-player').textContent = playerName;
+    const input = document.getElementById('swap-modal-input');
+    input.value = '';
+    const modal = document.getElementById('swap-player-modal');
+    modal.classList.remove('hidden');
+    input.focus();
+}
+
+function closeSwapModal() {
+    const modal = document.getElementById('swap-player-modal');
+    modal.classList.add('hidden');
+    currentSwapOldPlayer = null;
+}
+
+// Set up autocomplete for swap input
+const swapInput = document.getElementById('swap-modal-input');
+const swapResults = document.getElementById('swap-autocomplete-results');
+
+if (swapInput && swapResults) {
+    let debounceTimer;
+    swapInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        const query = swapInput.value.trim();
+        if (query.length < 2) {
+            swapResults.innerHTML = '';
+            swapResults.classList.add('hidden');
+            return;
+        }
+
+        debounceTimer = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/players/autocomplete?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                const list = data.results || data.players || [];
+                swapResults.innerHTML = '';
+                if (list.length > 0) {
+                    list.forEach(p => {
+                        const pName = typeof p === 'string' ? p : (p.name || p.player || '');
+                        const pPos = typeof p === 'object' ? (p.position || '') : '';
+                        const pTeam = typeof p === 'object' ? (p.team || '') : '';
+                        const pAdp = typeof p === 'object' && p.adp ? `ADP: ${p.adp}` : '';
+
+                        const div = document.createElement('div');
+                        div.className = 'px-3 py-2.5 text-xs font-bold text-on-surface hover:bg-primary-container/20 hover:text-primary-container cursor-pointer border-b border-outline-variant/60 flex items-center justify-between transition-colors';
+                        div.innerHTML = `
+                            <span class="font-bold text-on-surface">${pName}</span>
+                            <span class="text-[11px] text-on-surface-variant font-medium">${pTeam} • ${pPos} ${pAdp ? '• ' + pAdp : ''}</span>
+                        `;
+                        div.addEventListener('click', () => {
+                            swapInput.value = pName;
+                            swapResults.innerHTML = '';
+                            swapResults.classList.add('hidden');
+                        });
+                        swapResults.appendChild(div);
+                    });
+                    swapResults.classList.remove('hidden');
+                } else {
+                    swapResults.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error('Error fetching autocomplete:', err);
+            }
+        }, 150);
+    });
+
+    swapInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const firstOption = swapResults.querySelector('div');
+            if (firstOption && !swapResults.classList.contains('hidden')) {
+                firstOption.click();
+            }
+            document.getElementById('btn-confirm-swap')?.click();
+        }
+    });
+}
+
+document.getElementById('btn-confirm-swap')?.addEventListener('click', async () => {
+    const newPlayer = swapInput.value.trim();
+    if (!currentSwapOldPlayer || !newPlayer) {
+        alert('Please select or type a replacement player.');
+        return;
+    }
+
+    const confirmBtn = document.getElementById('btn-confirm-swap');
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = `<span class="material-symbols-outlined text-sm animate-spin">sync</span> Swapping...`;
+    }
+
+    try {
+        const res = await fetch('/api/draft/swap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ old_player: currentSwapOldPlayer, new_player: newPlayer })
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error swapping player: ' + (data.error || data.message));
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = `<span class="material-symbols-outlined text-sm">check</span> Confirm Swap`;
+            }
+        }
+    } catch (err) {
+        alert('Failed to swap player: ' + err);
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = `<span class="material-symbols-outlined text-sm">check</span> Confirm Swap`;
+        }
+    }
+});
+</script>
 {% endblock %}

@@ -142,25 +142,91 @@ def scrape_sportsgambler_injuries() -> dict | None:
         }
 
 
+def fetch_fpl_injuries() -> list[dict]:
+    """Fetch live injury and availability data directly from FPL official API."""
+    import urllib.request
+    try:
+        url = "https://fantasy.premierleague.com/api/bootstrap-static/"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            elements = data.get('elements', [])
+            injuries = []
+
+            for p in elements:
+                status_code = p.get('status')
+                news = (p.get('news') or '').strip()
+                if not news and status_code == 'a':
+                    continue
+
+                first = p.get('first_name', '')
+                second = p.get('second_name', '')
+                full_name = f"{first} {second}".strip()
+
+                if status_code == 'i' or 'expected back' in news.lower() or 'long' in news.lower():
+                    severity = 'Long Term' if any(m in news.lower() for m in ['nov', 'dec', '2026', 'jan', 'feb', 'mar', 'months']) else 'Medium Term'
+                elif status_code == 'd' or 'chance' in news.lower():
+                    severity = 'Short Term'
+                elif status_code == 's':
+                    severity = 'Suspended'
+                elif status_code == 'u':
+                    severity = 'Long Term'
+                else:
+                    severity = 'Short Term'
+
+                injuries.append({
+                    'player': full_name,
+                    'team': '',
+                    'position': '',
+                    'injury_type': news or 'Injured',
+                    'status': 'Injured' if status_code in ('i', 'u') else ('Questionable' if status_code == 'd' else 'Suspended'),
+                    'return_date': news,
+                    'severity': severity
+                })
+            return injuries
+    except Exception as e:
+        print(f"Error fetching FPL injuries: {e}")
+        return []
+
+
 def save_injuries(output_file: str | Path = 'data/injuries.json') -> bool:
-    """Scrape and save injuries to JSON file."""
-    data = scrape_sportsgambler_injuries()
+    """Scrape and save injuries from FPL API and SportsGambler to JSON file."""
+    sg_data = scrape_sportsgambler_injuries() or {}
+    sg_injuries = sg_data.get('injuries', [])
 
-    if data:
-        output_path = Path(output_file)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+    fpl_injuries = fetch_fpl_injuries()
 
-        with output_path.open('w') as f:
-            json.dump(data, f, indent=2)
+    # Merge injuries (FPL API has highest accuracy)
+    merged_map = {}
+    for inj in sg_injuries:
+        p_name = inj.get('player', '')
+        if p_name:
+            merged_map[p_name] = inj
 
-        injury_count = len(data.get('injuries', []))
-        if injury_count > 0:
-            print(f"✓ Saved {injury_count} injuries to {output_path}")
-        else:
-            print(f"✓ Saved empty injury list to {output_path}")
-        return True
+    for inj in fpl_injuries:
+        p_name = inj.get('player', '')
+        if p_name:
+            if p_name in merged_map:
+                merged_map[p_name]['injury_type'] = inj['injury_type']
+                merged_map[p_name]['severity'] = inj['severity']
+            else:
+                merged_map[p_name] = inj
 
-    return False
+    final_injuries = list(merged_map.values())
+    output_path = Path(output_file)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    data = {
+        'last_updated': datetime.now().isoformat(),
+        'source': 'FPL Live API + SportsGambler',
+        'injuries': final_injuries
+    }
+
+    with output_path.open('w') as f:
+        json.dump(data, f, indent=2)
+
+    print(f"✓ Saved {len(final_injuries)} live injuries to {output_path}")
+    return True
 
 
 if __name__ == "__main__":

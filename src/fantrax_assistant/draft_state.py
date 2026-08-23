@@ -15,6 +15,9 @@ class DraftState:
         self.drafted_players: set[str] = set()
         self.draft_history: list[str] = []
         self.pick_analysis_history: list[dict] = []
+        self.transactions_history: list[dict] = []
+        self.custom_lineups: dict[str, list] = {}
+        self.fantrax_sync_meta: dict[str, dict] = {}
         self.load()
 
     def load(self):
@@ -28,12 +31,18 @@ class DraftState:
                     self.drafted_players = set(state.get('drafted_players', []))
                     self.draft_history = state.get('draft_history', list(self.drafted_players))
                     self.pick_analysis_history = state.get('pick_analysis_history', [])
+                    self.transactions_history = state.get('transactions_history', [])
+                    self.custom_lineups = state.get('custom_lineups', {})
+                    self.fantrax_sync_meta = state.get('fantrax_sync_meta', {})
             else:
                 self.teams = {"Team 1": []}
                 self.my_team = "Team 1"
                 self.drafted_players = set()
                 self.draft_history = []
                 self.pick_analysis_history = []
+                self.transactions_history = []
+                self.custom_lineups = {}
+                self.fantrax_sync_meta = {}
                 self.save()
         except Exception as e:
             print(f"Error loading draft state: {e}")
@@ -42,6 +51,9 @@ class DraftState:
             self.drafted_players = set()
             self.draft_history = []
             self.pick_analysis_history = []
+            self.transactions_history = []
+            self.custom_lineups = {}
+            self.fantrax_sync_meta = {}
             self.save()
 
     def save(self) -> bool:
@@ -55,6 +67,9 @@ class DraftState:
                 'drafted_players': list(self.drafted_players),
                 'draft_history': self.draft_history,
                 'pick_analysis_history': self.pick_analysis_history,
+                'transactions_history': self.transactions_history,
+                'custom_lineups': self.custom_lineups,
+                'fantrax_sync_meta': self.fantrax_sync_meta,
                 'teams': self.teams
             }
 
@@ -101,28 +116,52 @@ class DraftState:
         }
         self.teams[team_name].append(player_data)
         self.drafted_players.add(player_name)
-        if player_name in self.draft_history:
-            self.draft_history.remove(player_name)
-        self.draft_history.append(player_name)
+        if player_name not in self.draft_history:
+            self.draft_history.append(player_name)
         self.save()
         return True
 
     def mark_drafted(self, player_name: str):
         """Mark a player as drafted by an untracked team."""
         self.drafted_players.add(player_name)
-        if player_name in self.draft_history:
-            self.draft_history.remove(player_name)
-        self.draft_history.append(player_name)
+        if player_name not in self.draft_history:
+            self.draft_history.append(player_name)
         self.save()
 
-    def undraft_player(self, player_name: str):
-        """Remove player from drafted_players set and all team rosters."""
-        self.remove_from_teams(player_name)
+    def record_transaction(self, tx_type: str, team_name: str, player_name: str, dropped_player: str = None, notes: str = None):
+        """Record a transaction in the transaction log history."""
+        tx_item = {
+            'timestamp': datetime.now().isoformat(),
+            'type': tx_type,
+            'team': team_name,
+            'player': player_name,
+            'dropped_player': dropped_player,
+            'notes': notes or ''
+        }
+        self.transactions_history.append(tx_item)
+        self.save()
+
+    def add_player_to_team(self, team_name: str, player: dict, dropped_player_name: str = None, notes: str = None) -> bool:
+        """Add a free agent player to a team, optionally dropping another player."""
+        if dropped_player_name:
+            self.drop_player_from_team(team_name, dropped_player_name, notes=f"Dropped for {player.get('player')}")
+        
+        success = self.add_to_team(player, team_name)
+        if success:
+            tx_type = "ADD & DROP" if dropped_player_name else "ADD"
+            self.record_transaction(tx_type, team_name, player.get('player'), dropped_player=dropped_player_name, notes=notes)
+        return success
+
+    def drop_player_from_team(self, team_name: str, player_name: str, notes: str = None) -> bool:
+        """Drop a player from a team back to the free agent pool."""
+        if team_name in self.teams:
+            self.teams[team_name] = [p for p in self.teams[team_name] if p.get('player') != player_name]
         self.drafted_players.discard(player_name)
         if player_name in self.draft_history:
             self.draft_history.remove(player_name)
+        self.record_transaction("DROP", team_name, player_name, notes=notes)
         self.save()
-
+        return True
 
     def get_team(self, team_name: str) -> list:
         """Get a specific team's roster."""
@@ -141,13 +180,10 @@ class DraftState:
                 return team
         return None
 
-    def mark_drafted(self, player_name: str):
-        """Mark player as drafted by opponent."""
-        self.drafted_players.add(player_name)
-        self.save()
-
     def reset(self):
         """Reset draft state."""
         self.teams = {"Team 1": []}
         self.drafted_players = set()
+        self.draft_history = []
+        self.pick_analysis_history = []
         self.save()

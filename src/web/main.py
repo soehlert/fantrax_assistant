@@ -1,7 +1,8 @@
 import math
 import json
+from pathlib import Path
 from contextlib import asynccontextmanager
-from typing import Annotated # Annotated is standard in Python 3.9+
+from typing import Annotated, Optional # Annotated is standard in Python 3.9+
 
 from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -17,17 +18,28 @@ from fantrax_assistant.db import DatabaseManager
 
 # --- App Setup ---
 from fantrax_assistant.weekly import WeeklyManagerEngine
+from fantrax_assistant.lineup_monitor import LineupMonitor
+from fantrax_assistant.waiver_manager import WaiverManagerEngine
 
 config = DraftConfig()
 understat = Understat()
 analyzer = DraftPickAnalyzer(config=config)
 db_mgr = DatabaseManager("data/fantrax_assistant.db")
-weekly_engine = WeeklyManagerEngine()
+weekly_engine = WeeklyManagerEngine(config=config)
+lineup_monitor = LineupMonitor(config=config)
+waiver_engine = WaiverManagerEngine(config=config)
+
+from fantrax_assistant.fixtures_sync import fetch_live_pl_schedule
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Load all data on startup
     config.load_all_data()
+    # Sync live Premier League schedule & kickoff updates
+    try:
+        fetch_live_pl_schedule()
+    except Exception as e:
+        print(f"Non-critical fixture sync warning: {e}")
     # Ensure default draft state file exists
     DraftState()
     yield
@@ -56,26 +68,19 @@ def get_draft_state_dict() -> dict:
     }
 
 @app.get("/api/players/autocomplete")
-async def autocomplete_players(q: str = ""):
-    """Endpoint for player name autocomplete (excludes already drafted players)."""
+async def autocomplete_players(q: str = "", include_drafted: bool = True):
+    """Endpoint for player name autocomplete."""
     if len(q) < 2:
         return JSONResponse({"players": []})
 
-    draft_state = get_draft_state_dict()
-    drafted_names = set(draft_state.get("drafted_players", []))
-
     all_players = config.rankings.get('rankings', []) if config.rankings else []
-
     seen = set()
     matches = []
+    q_lower = q.strip().lower()
+
     for p in all_players:
         name = p.get("player", "")
-
-        # Skip if player is already drafted
-        if any(config._fuzzy_match_name(name, d) for d in drafted_names):
-            continue
-
-        if q.lower() in name.lower() and name not in seen:
+        if q_lower in name.lower() and name not in seen:
             seen.add(name)
             matches.append(name)
             if len(matches) >= 10:
@@ -169,6 +174,8 @@ async def read_root(
             'fpts': player.get('fpts'),
             'fpg': player.get('fpg'),
             'injury_severity': injury.get('severity', 'Healthy'),
+            'injury_type': injury.get('injury_type', ''),
+            'injury_notes': injury.get('injury_type') or injury.get('notes', ''),
             'at_afcon': afcon.get('at_afcon', False)
         }
 
@@ -247,32 +254,44 @@ async def read_root(
             "sort_available": sort_available,
             "sort_drafted": sort_drafted,
             "min_games": min_games,
-            "tracked_teams": [t for t in teams_data.keys() if t != 'Other']
+            "tracked_teams": [t for t in teams_data.keys() if t != 'Other'],
+            "all_teams": list(teams_data.keys())
         }
     )
+
+def get_redirect_target(request: Request, default_url: str, params: dict) -> str:
+    from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
+    referer = request.headers.get("referer") or default_url
+    parsed = urlparse(referer)
+    query_dict = parse_qs(parsed.query)
+    for key in ["draft_status", "message", "drafted_player"]:
+        query_dict.pop(key, None)
+    for k, v in params.items():
+        if v is not None:
+            query_dict[k] = [str(v)]
+    new_query = urlencode(query_dict, doseq=True)
+    return urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+
 
 @app.post("/draft/mark_drafted")
 async def mark_player_drafted(request: Request, player_name: Annotated[str, Form()]):
     """Marks a player as drafted by an untracked team."""
     state = DraftState()
     player_details = config.get_player_adp(player_name)
-    base_url = request.url_for('read_root')
+    default_url = str(request.url_for('read_root'))
 
     if not player_details:
-        return RedirectResponse(
-            url=f"{base_url}?draft_status=error&message=Player '{player_name}' not found",
-            status_code=303
-        )
+        target_url = get_redirect_target(request, default_url, {"draft_status": "error", "message": f"Player '{player_name}' not found"})
+        return RedirectResponse(url=target_url, status_code=303)
     
     exact_name = player_details['player']
     if exact_name in state.drafted_players:
-        return RedirectResponse(
-            url=f"{base_url}?draft_status=error&message={exact_name} is already drafted",
-            status_code=303
-        )
+        target_url = get_redirect_target(request, default_url, {"draft_status": "error", "message": f"{exact_name} is already drafted"})
+        return RedirectResponse(url=target_url, status_code=303)
 
     state.mark_drafted(exact_name)
     pick_num = len(state.drafted_players)
+    available_players = [p for p in config.rankings.get("rankings", []) if p.get('player') not in state.drafted_players]
     analysis = analyzer.grade_pick(
         player_name=exact_name,
         team_id='Other',
@@ -280,22 +299,172 @@ async def mark_player_drafted(request: Request, player_name: Annotated[str, Form
         player_adp=player_details.get('adp'),
         player_pos=player_details.get('position', ''),
         player_team=player_details.get('team', ''),
-        team_roster=[]
+        team_roster=[],
+        available_players=available_players
     )
     state.add_pick_analysis(analysis)
 
-    return RedirectResponse(
-        url=f"{base_url}?draft_status=success&message=Marked {exact_name} as drafted",
-        status_code=303
-    )
+    target_url = get_redirect_target(request, default_url, {"draft_status": "success", "message": f"Marked {exact_name} as drafted"})
+    return RedirectResponse(url=target_url, status_code=303)
 
 @app.post("/draft/undraft")
 async def undraft_player_endpoint(request: Request, player_name: Annotated[str, Form()]):
     """Undrafts a player, returning them to the available pool."""
     state = DraftState()
     state.undraft_player(player_name)
-    referer = request.headers.get("referer") or str(request.url_for('read_root'))
-    return RedirectResponse(url=referer, status_code=303)
+    default_url = str(request.url_for('read_root'))
+    target_url = get_redirect_target(request, default_url, {"draft_status": "success", "message": f"Undrafted {player_name}"})
+    return RedirectResponse(url=target_url, status_code=303)
+
+@app.post("/api/draft/reassign")
+async def reassign_player_team(request: Request):
+    """Reassigns a drafted player to another team instantly."""
+    try:
+        data = await request.json()
+        player_name = data.get("player")
+        new_team = data.get("team")
+
+        if not player_name or not new_team:
+            return JSONResponse({"status": "error", "message": "Player and target team required"}, status_code=400)
+
+        state = DraftState()
+        player_info = config.get_player_adp(player_name) or {
+            "player": player_name,
+            "position": "M",
+            "team": "TBD",
+            "adp": 999
+        }
+
+        # add_to_team removes player from old team and moves to new_team
+        state.add_to_team(player_info, new_team)
+        analyzer.backfill_retroactive_analysis(state)
+        return JSONResponse({"status": "success", "message": f"Moved {player_name} to {new_team}"})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+
+@app.post("/api/draft/reorder")
+async def reorder_draft_history(request: Request):
+    """
+    Reorders the draft sequence based on drag-and-drop actions in the feed
+    and re-runs retroactive pick analysis.
+    """
+    try:
+        data = await request.json()
+        new_history = data.get("draft_history", [])
+        if not new_history:
+            return JSONResponse(status_code=400, content={"error": "Empty draft history"})
+
+        state = DraftState()
+        state.draft_history = new_history
+        state.drafted_players = set(new_history)
+        state.pick_analysis_history = []
+
+        analyzer = DraftPickAnalyzer(config=config)
+        updated_feed = analyzer.backfill_retroactive_analysis(state)
+        state.save()
+
+        return JSONResponse(content={"success": True, "feed": updated_feed})
+    except Exception as e:
+        print(f"Error reordering draft history: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/api/draft/delete")
+async def delete_draft_pick(request: Request):
+    """
+    Deletes a drafted pick from draft history and team rosters,
+    and re-evaluates retroactive pick analysis for remaining picks.
+    """
+    try:
+        data = await request.json()
+        player_name = data.get("player")
+        if not player_name:
+            return JSONResponse(status_code=400, content={"error": "Missing player name"})
+
+        state = DraftState()
+        state.undraft_player(player_name)
+
+        analyzer = DraftPickAnalyzer(config=config)
+        updated_feed = analyzer.backfill_retroactive_analysis(state, force=True)
+        state.save()
+
+        return JSONResponse(content={"success": True, "feed": updated_feed})
+    except Exception as e:
+        print(f"Error deleting draft pick: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+@app.post("/api/draft/swap")
+async def swap_draft_pick(request: Request):
+    """
+    Swaps a drafted player with another player at the exact same pick position in draft history,
+    updating team rosters and recalculating retroactive pick analysis.
+    """
+    try:
+        data = await request.json()
+        old_player = data.get("old_player")
+        new_player = data.get("new_player")
+
+        if not old_player or not new_player:
+            return JSONResponse(status_code=400, content={"error": "Both old_player and new_player are required"})
+
+        state = DraftState()
+        if old_player not in state.draft_history:
+            return JSONResponse(status_code=404, content={"error": f"Player '{old_player}' not found in draft history"})
+
+        # Resolve canonical player name from rankings/ADP
+        canonical_info = config.get_player_adp(new_player)
+        canonical_name = canonical_info.get("player") if canonical_info else new_player
+
+        # 1. Find which team owned old_player
+        owning_team = None
+        for t_name, roster in state.teams.items():
+            if any(p.get("player") == old_player for p in roster):
+                owning_team = t_name
+                break
+
+        # 2. Swap in draft_history (preserve exact pick index)
+        pick_idx = state.draft_history.index(old_player)
+        state.draft_history[pick_idx] = canonical_name
+
+        # 3. Update drafted_players set
+        state.drafted_players.discard(old_player)
+        state.drafted_players.add(canonical_name)
+
+        # 4. Update team rosters
+        state.remove_from_teams(old_player)
+        if owning_team:
+            new_player_info = canonical_info or {
+                "player": canonical_name,
+                "position": "M",
+                "team": "TBD",
+                "adp": 999
+            }
+            player_data = {
+                'player': new_player_info.get('player'),
+                'position': new_player_info.get('position'),
+                'team': new_player_info.get('team'),
+                'adp': new_player_info.get('adp'),
+                'fpts': new_player_info.get('fpts'),
+                'fpg': new_player_info.get('fpg')
+            }
+            state.teams[owning_team].append(player_data)
+
+        # 5. Recalculate retroactive analysis for all picks
+        state.pick_analysis_history = []
+        analyzer = DraftPickAnalyzer(config=config)
+        updated_feed = analyzer.backfill_retroactive_analysis(state, force=True)
+        state.save()
+
+        return JSONResponse(content={
+            "success": True,
+            "message": f"Successfully swapped {old_player} for {new_player} at Pick #{pick_idx + 1}",
+            "feed": updated_feed
+        })
+    except Exception as e:
+        print(f"Error swapping draft pick: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 def get_team_suggestions_pagination(team_id: str, page: int = 1, page_size: int = 10, exclude_teams: str = "", exclude_positions: str = ""):
@@ -313,7 +482,7 @@ def get_team_suggestions_pagination(team_id: str, page: int = 1, page_size: int 
     drafted_names = set(all_drafted_player_names)
     engine = PlayerRecommendationEngine(config=config, my_team=roster, drafted_players=drafted_names)
     
-    num_teams = len(teams_data) if teams_data else 10
+    num_teams = 9
     current_round = (len(drafted_names) // num_teams) + 1
     
     suggestions = engine.get_recommendations(current_round=current_round, n=100)
@@ -379,11 +548,17 @@ async def read_team(
     grade_lookup = {a["player"]: a for a in analysis_history}
 
     for player in roster:
-        a_data = grade_lookup.get(player.get("player"), {})
-        player["id"] = db_mgr.get_player_id_by_name(player.get("player")) or player.get("player")
+        p_name = player.get("player", "")
+        a_data = grade_lookup.get(p_name, {})
+        inj = config.get_player_injury(p_name)
+        afcon = config.get_player_afcon_status(p_name)
+        player["id"] = db_mgr.get_player_id_by_name(p_name) or p_name
         player["grade"] = a_data.get("grade", "—")
         player["grade_class"] = a_data.get("grade_class", "blue")
         player["pick_number"] = a_data.get("pick_number")
+        player["injury_severity"] = inj.get("severity", "Healthy")
+        player["injury_type"] = inj.get("injury_type", "")
+        player["at_afcon"] = afcon.get("at_afcon", False)
 
     roster_rules = {"G": 1, "D": 5, "M": 5, "F": 4}
     all_drafted_player_names = list(draft_state.get("drafted_players", []))
@@ -481,8 +656,51 @@ async def read_team(
     )
 
     # Weekly Manager Lineup & Auto-Sub Advice
-    weekly_lineup = weekly_engine.get_optimal_lineup(roster)
+    optimal_lineup = weekly_engine.get_optimal_lineup(roster)
+    custom_starters = state.custom_lineups.get(team_name) or state.custom_lineups.get("Team 1")
+    is_custom_lineup = False
+
+    if custom_starters:
+        def _norm_str(s: str) -> str:
+            if not s:
+                return ""
+            import unicodedata
+            nfkd = unicodedata.normalize('NFKD', s)
+            return "".join([c for c in nfkd if not unicodedata.combining(c)]).strip().lower()
+
+        norm_custom_set = {_norm_str(s) for s in custom_starters}
+        all_players = optimal_lineup['starters'] + optimal_lineup['bench']
+        c_starters = [p for p in all_players if _norm_str(p.get('player') or p.get('name', '')) in norm_custom_set]
+        c_bench = [p for p in all_players if _norm_str(p.get('player') or p.get('name', '')) not in norm_custom_set]
+        if len(c_starters) > 0:
+            formation_str = weekly_engine.assign_and_sort_starters(c_starters)
+            c_bench.sort(key=lambda x: -float(x.get('proj_fpts', 0.0) or 0.0))
+            weekly_lineup = {
+                'starters': c_starters,
+                'bench': c_bench,
+                'formation': formation_str,
+                'total_projected_fpts': round(sum(p.get('proj_fpts', 0) for p in c_starters), 2)
+            }
+            is_custom_lineup = True
+        else:
+            weekly_lineup = optimal_lineup
+    else:
+        weekly_lineup = optimal_lineup
+
+    # Build Handcuff Map & Suggested Lineup Upgrades via WeeklyManagerEngine (Single Source of Truth)
+    starter_names_set = {s['player'] for s in weekly_lineup['starters']}
+    all_squad = weekly_lineup['starters'] + weekly_lineup['bench']
+    handcuff_map = weekly_engine.get_handcuff_map(all_squad, starter_names_set)
+    suggested_subs = weekly_engine.get_suggested_lineup_upgrades(weekly_lineup, optimal_lineup)
+
     auto_subs = weekly_engine.get_auto_sub_recommendations(weekly_lineup['starters'], weekly_lineup['bench'])
+    injury_contingencies = weekly_engine.get_injury_contingencies(weekly_lineup['starters'], weekly_lineup['bench'])
+    lineup_alerts = lineup_monitor.check_team_lineup_alerts(team_name, roster, custom_starters=custom_starters)
+    gw_reminder = lineup_monitor.check_gameweek_eve_health(team_name, roster, custom_starters=custom_starters)
+    fantrax_sync_meta = state.fantrax_sync_meta.get(team_name, {})
+
+    all_team_grades = analyzer.evaluate_all_tracked_teams(state)
+    team_grade = all_team_grades.get(team_name) or analyzer.evaluate_team_grade(team_name, state)
 
     return templates.TemplateResponse(
         request=request, name="team.html",
@@ -502,7 +720,15 @@ async def read_team(
             "all_positions": ["G", "D", "M", "F"],
             "active_tab": tab,
             "weekly_lineup": weekly_lineup,
-            "auto_subs": auto_subs
+            "is_custom_lineup": is_custom_lineup,
+            "suggested_subs": suggested_subs,
+            "handcuff_map": handcuff_map,
+            "fantrax_sync_meta": fantrax_sync_meta,
+            "gw_reminder": gw_reminder,
+            "auto_subs": auto_subs,
+            "injury_contingencies": injury_contingencies,
+            "lineup_alerts": lineup_alerts,
+            "team_grade": team_grade
         }
     )
 
@@ -516,14 +742,15 @@ async def draft_player(
     state = DraftState()
     player_details = config.get_player_adp(player_name)
 
-    base_url = request.url_for('read_team', team_id=team_id)
+    default_url = str(request.url_for('read_team', team_id=team_id))
 
     if not player_details:
-        # Player not found in the master list
-        return RedirectResponse(
-            url=f"{base_url}?draft_status=error&drafted_player=Player '{player_name}' not found",
-            status_code=303
-        )
+        target_url = get_redirect_target(request, default_url, {
+            "draft_status": "error",
+            "message": f"Player '{player_name}' not found",
+            "drafted_player": player_name
+        })
+        return RedirectResponse(url=target_url, status_code=303)
 
     # Use the backend logic to add the player
     success = state.add_to_team(player_details, team_id)
@@ -531,6 +758,7 @@ async def draft_player(
     if success:
         pick_num = len(state.drafted_players)
         team_roster = state.teams.get(team_id, [])
+        available_players = [p for p in config.rankings.get("rankings", []) if p.get('player') not in state.drafted_players]
         analysis = analyzer.grade_pick(
             player_name=player_details.get('player'),
             team_id=team_id,
@@ -538,20 +766,24 @@ async def draft_player(
             player_adp=player_details.get('adp'),
             player_pos=player_details.get('position', ''),
             player_team=player_details.get('team', ''),
-            team_roster=team_roster
+            team_roster=team_roster,
+            available_players=available_players
         )
         state.add_pick_analysis(analysis)
 
-        return RedirectResponse(
-            url=f"{base_url}?draft_status=success&drafted_player={player_details.get('player')}",
-            status_code=303
-        )
+        target_url = get_redirect_target(request, default_url, {
+            "draft_status": "success",
+            "drafted_player": player_details.get('player'),
+            "message": f"Drafted {player_details.get('player')} to {team_id}"
+        })
+        return RedirectResponse(url=target_url, status_code=303)
     else:
-        # Player was likely already drafted
-        return RedirectResponse(
-            url=f"{base_url}?draft_status=error&drafted_player={player_details.get('player')} is already drafted",
-            status_code=303
-        )
+        target_url = get_redirect_target(request, default_url, {
+            "draft_status": "error",
+            "drafted_player": player_details.get('player'),
+            "message": f"{player_details.get('player')} is already drafted"
+        })
+        return RedirectResponse(url=target_url, status_code=303)
 
 @app.get("/draft/analysis", response_class=HTMLResponse)
 async def read_draft_analysis(request: Request):
@@ -589,6 +821,9 @@ async def read_draft_analysis(request: Request):
     # Rolling calculation of the worst pick (lowest score)
     worst_pick = min(analysis_history, key=lambda x: x.get("score", 100)) if analysis_history else None
 
+    tracked_team_grades = analyzer.evaluate_all_tracked_teams(state)
+    sorted_tracked_grades = sorted(tracked_team_grades.values(), key=lambda x: x.get("rank", 99))
+
     return templates.TemplateResponse(
         request=request,
         name="analysis.html",
@@ -597,7 +832,8 @@ async def read_draft_analysis(request: Request):
             "best_overall": best_overall,
             "top_steal": top_steal,
             "worst_pick": worst_pick,
-            "tracked_teams": [t for t in teams_data.keys() if t != 'Other']
+            "tracked_teams": [t for t in teams_data.keys() if t != 'Other'],
+            "tracked_team_grades": sorted_tracked_grades
         }
     )
 
@@ -610,7 +846,13 @@ def safe_float(value, default=0.0):
         return default
 
 @app.get("/player/{player_name}", response_class=HTMLResponse)
-async def read_player_profile(request: Request, player_name: str):
+async def read_player_profile(
+    request: Request,
+    player_name: str,
+    draft_status: Optional[str] = None,
+    drafted_player: Optional[str] = None,
+    message: Optional[str] = None
+):
     import urllib.parse, unicodedata, json
     from scipy.stats import percentileofscore
     import numpy as np
@@ -645,7 +887,8 @@ async def read_player_profile(request: Request, player_name: str):
             drafted_by_team = team_id
             break
 
-    analysis_history = analyzer.backfill_retroactive_analysis(state)
+    analyzer = DraftPickAnalyzer(config=config)
+    analysis_history = analyzer.backfill_retroactive_analysis(state, force=True)
     pick_analysis = next((a for a in analysis_history if a.get("player") == player_name_clean), None)
 
     # 3. Understat Data Lookup via SQLite Understat ID
@@ -829,9 +1072,9 @@ async def read_player_profile(request: Request, player_name: str):
         print(f"Error building chart data for {player_name_clean}: {e}")
 
     # 6. Availability Status & Position Label
-    inj_info = full_profile.get("injury") or {}
-    injury_severity = inj_info.get("severity") or config.get_player_injury(player_name_clean).get("severity", "Healthy")
-    injury_notes = inj_info.get("notes") or config.get_player_injury(player_name_clean).get("notes", "")
+    inj_info = full_profile.get("injury") or config.get_player_injury(player_name_clean) or {}
+    injury_severity = inj_info.get("severity") or "Healthy"
+    injury_notes = inj_info.get("injury_type") or inj_info.get("notes") or ""
     at_afcon = bool(inj_info.get("at_afcon")) if "at_afcon" in inj_info else config.get_player_afcon_status(player_name_clean).get("at_afcon", False)
 
     pos_map = {"D": "Defender (D)", "M": "Midfielder (M)", "F": "Forward (F)", "G": "Goalkeeper (G)", "GK": "Goalkeeper (G)"}
@@ -845,16 +1088,24 @@ async def read_player_profile(request: Request, player_name: str):
         target_adp = float(fantrax_info.get("adp", 50) or 50)
         target_fpg = float(fantrax_info.get("fpg", 0) or 0)
 
-        all_available = [
+        def is_injured_out(cand_name: str) -> bool:
+            inj = config.get_player_injury(cand_name)
+            if not inj:
+                return False
+            sev = str(inj.get("severity") or "").strip()
+            return any(k in sev for k in ["Long Term", "Medium Term", "Out", "Doubtful"])
+
+        # Compare across ALL players across the league (not just undrafted free agents)
+        all_league_players = [
             p for p in config.rankings.get("rankings", [])
-            if p.get("player") not in state.drafted_players
-            and p.get("player") != player_name_clean
+            if p.get("player") != player_name_clean
+            and not is_injured_out(p.get("player", ""))
         ]
 
         pos_match = [
-            p for p in all_available
+            p for p in all_league_players
             if player_pos in p.get("position", "").upper().split(",")
-        ] or all_available
+        ] or all_league_players
 
         adp_candidates = [
             p for p in pos_match
@@ -890,22 +1141,79 @@ async def read_player_profile(request: Request, player_name: str):
 
     is_new_team = bool(fantrax_info.get("is_new_signing") or (full_profile and full_profile.get("is_new_transfer")) or (starts == 0 and apps == 0 and adp_val < 150))
 
-    if starts >= 25 and apps > 0 and starts >= 0.85 * apps:
-        rotation_risk_info = {"level": "Low", "badge": "Nailed on when fit", "sub": "100% Expected Value", "color": "emerald"}
-    elif starts >= 25 or mins >= 2200:
+    player_team_upper = (fantrax_info.get("team") or "").upper()
+    is_big_six_club = player_team_upper in {"ARS", "MCI", "CHE", "LIV", "MUN", "TOT"}
+
+    start_rate = (starts / apps) if apps > 0 else 0.0
+
+    if apps >= 5 and start_rate >= 0.85:
+        rotation_risk_info = {"level": "Low", "badge": "Nailed Starter", "sub": "100% Expected Value (100% Start Rate)", "color": "emerald"}
+    elif apps >= 5 and start_rate >= 0.70:
+        rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "95% Expected Value (Regular Starter)", "color": "emerald"}
+    elif (is_big_six_club and (starts >= 26 or mins >= 2300)) or (not is_big_six_club and (starts >= 24 or mins >= 2000)):
         rotation_risk_info = {"level": "Low", "badge": "Nailed Starter", "sub": "100% Expected Value", "color": "emerald"}
-    elif (starts >= 15 and apps > 0 and starts >= 0.75 * apps) or starts >= 22 or mins >= 1800:
-        rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "95% Expected Value", "color": "emerald"}
-    elif is_new_team and starts < 10:
-        rotation_risk_info = {"level": "Medium", "badge": "New Team", "sub": "85%-90% Expected Value", "color": "amber"}
-    elif starts <= 14 and apps > 0 and starts >= 0.75 * apps:
-        rotation_risk_info = {"level": "Medium", "badge": "Small Sample", "sub": "85% Expected Value", "color": "amber"}
-    elif starts >= 15 and apps > 0 and starts < 0.50 * apps:
-        rotation_risk_info = {"level": "High", "badge": "Large Rotation Risk", "sub": "80% Expected Value", "color": "red"}
+    elif (not is_big_six_club and starts >= 20 and apps > 0 and starts >= 0.75 * apps) or (not is_big_six_club and mins >= 1800):
+        rotation_risk_info = {"level": "Low", "badge": "Regular Starter", "sub": "95% Expected Value (-5% Workload Adj.)", "color": "emerald"}
+    elif apps < 5 and apps > 0:
+        rotation_risk_info = {"level": "Medium", "badge": "Small Sample", "sub": "85% Expected Value (<5 Games Played)", "color": "amber"}
+    elif is_new_team and starts < 5:
+        rotation_risk_info = {"level": "Medium", "badge": "New Team", "sub": "85% Expected Value (-15% Integration Adj.)", "color": "amber"}
+    elif is_big_six_club and (starts < 26 or mins < 2300):
+        rotation_risk_info = {"level": "Medium", "badge": "Moderate Rotation Risk", "sub": "88% Expected Value (-12% Rotation Adj.)", "color": "amber"}
     elif starts >= 15 or mins >= 1200:
-        rotation_risk_info = {"level": "Medium", "badge": "Moderate Rotation Risk", "sub": "88% Expected Value", "color": "amber"}
+        rotation_risk_info = {"level": "Medium", "badge": "Moderate Rotation Risk", "sub": "88% Expected Value (-12% Rotation Adj.)", "color": "amber"}
     else:
-        rotation_risk_info = {"level": "High", "badge": "Large Rotation Risk", "sub": "80% Expected Value", "color": "red"}
+        rotation_risk_info = {"level": "High", "badge": "Large Rotation Risk", "sub": "80% Expected Value (-20% Rotation Adj.)", "color": "red"}
+    # 9. Relative Form Badge (reign in "Elite Dominant Form" to strictly require top 15 overall or top 3 position relative rank)
+    fpts_val = safe_float(fantrax_info.get("fpts", 0))
+    fpg_val = safe_float(fantrax_info.get("fpg", 0))
+    starts_val = int(pl_stats.get("starts", 0)) if pl_stats else 0
+    primary_pos = (fantrax_info.get("position") or "M").split(',')[0].strip().upper()
+
+    analyzer = DraftPickAnalyzer(config=config)
+    fpts_rank, _ = analyzer.get_player_relative_rank(player_name_clean, fpts_val)
+
+    pos_rank = 999
+    if config and hasattr(config, 'rankings') and isinstance(config.rankings, dict):
+        rankings = config.rankings.get("rankings", [])
+        same_pos = [p for p in rankings if (p.get('position') or '').split(',')[0].strip().upper() == primary_pos]
+        same_pos_sorted = sorted(same_pos, key=lambda p: safe_float(p.get('fpts') or 0.0), reverse=True)
+        for idx, p in enumerate(same_pos_sorted, start=1):
+            p_name = p.get('player') or p.get('name')
+            if p_name == player_name_clean:
+                pos_rank = idx
+                break
+
+    # Calculate Risk & Flier classifications based on explicit user criteria
+    # Risk: High FP/G (>= 3.8) but low match volume/starts (< 15 starts) because they were out long-term injured last season
+    inj_sev = (injury_severity or "").strip()
+    is_injured_out = any(k in inj_sev for k in ["Long Term", "Medium Term", "Out", "Doubtful", "Injury"])
+    is_risk = (fpg_val >= 3.8 or safe_float(fantrax_info.get("fpg_2425")) >= 3.8) and (starts_val < 15 or apps < 18) and is_injured_out
+
+    # Flier: From another league / new transfer / promoted team who is not established yet
+    promoted_teams = ["IPSWICH", "LEICESTER", "SOUTHAMPTON", "IPS", "LEI", "SOU"]
+    player_team_upper = (fantrax_info.get("team") or "").upper()
+    is_promoted = any(pt in player_team_upper for pt in promoted_teams)
+    
+    is_established_starter = (apps >= 5 and start_rate >= 0.70) or (starts_val >= 15)
+    is_flier = not is_established_starter and (is_new_team or is_promoted or (starts_val == 0 and apps == 0)) and fpts_rank > 15
+
+    effective_starts = starts_val if starts_val >= 15 else (15 if is_established_starter else starts_val)
+
+    if (fpts_rank <= 10 or pos_rank <= 2) and effective_starts >= 12:
+        form_badge = {"label": "Best of the best", "class": "bg-red-500/20 text-red-400 border-red-500/30"}
+    elif (fpts_rank <= 15 or pos_rank <= 4) and effective_starts >= 10:
+        form_badge = {"label": "Elite level player", "class": "bg-amber-500/20 text-amber-300 border-amber-500/30"}
+    elif is_risk:
+        form_badge = {"label": "Rotation Risk", "class": "bg-amber-500/20 text-amber-400 border-amber-500/30"}
+    elif is_flier:
+        form_badge = {"label": "Flier", "class": "bg-purple-500/20 text-purple-300 border-purple-500/30"}
+    elif (fpts_rank <= 50 or pos_rank <= 10) and effective_starts >= 5:
+        form_badge = {"label": "High production player", "class": "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"}
+    elif fpts_rank <= 110:
+        form_badge = {"label": "Solid contributor", "class": "bg-blue-500/20 text-blue-400 border-blue-500/30"}
+    else:
+        form_badge = {"label": "Bench role", "class": "bg-surface-variant text-on-surface-variant"}
 
     return templates.TemplateResponse(
         request=request,
@@ -925,9 +1233,298 @@ async def read_player_profile(request: Request, player_name: str):
             "injury_notes": injury_notes,
             "at_afcon": at_afcon,
             "rotation_risk_info": rotation_risk_info,
+            "form_badge": form_badge,
             "tracked_teams": [t for t in draft_state_dict.get("teams", {}).keys() if t != 'Other'],
+            "draft_status": draft_status,
+            "drafted_player": drafted_player,
+            "message": message
         }
     )
+
+# --- Settings Routes ---
+@app.get("/api/settings")
+async def get_settings_json():
+    settings_file = Path("data/settings.json")
+    settings = {}
+    if settings_file.exists():
+        try:
+            with open(settings_file) as f:
+                settings = json.load(f)
+        except Exception:
+            pass
+    return JSONResponse(settings)
+
+@app.post("/api/settings")
+async def save_settings_api(request: Request):
+    try:
+        data = await request.json()
+        slack_url = str(data.get("slack_webhook_url", "")).strip()
+        macos_enabled = bool(data.get("macos_alerts_enabled", True))
+        fantrax_league_id = str(data.get("fantrax_league_id", "")).strip()
+        fantrax_team_name = str(data.get("fantrax_team_name", "")).strip()
+        auto_sync_enabled = bool(data.get("auto_sync_enabled", True))
+        gameweek_reminder_enabled = bool(data.get("gameweek_reminder_enabled", True))
+    except Exception:
+        form_data = await request.form()
+        slack_url = str(form_data.get("slack_webhook_url", "")).strip()
+        macos_enabled = form_data.get("macos_alerts_enabled") is not None
+        fantrax_league_id = str(form_data.get("fantrax_league_id", "")).strip()
+        fantrax_team_name = str(form_data.get("fantrax_team_name", "")).strip()
+        auto_sync_enabled = form_data.get("auto_sync_enabled") is not None
+        gameweek_reminder_enabled = form_data.get("gameweek_reminder_enabled") is not None
+
+    settings_file = Path("data/settings.json")
+    settings = {
+        "slack_webhook_url": slack_url,
+        "macos_alerts_enabled": macos_enabled,
+        "fantrax_league_id": fantrax_league_id,
+        "fantrax_team_name": fantrax_team_name,
+        "auto_sync_enabled": auto_sync_enabled,
+        "gameweek_reminder_enabled": gameweek_reminder_enabled
+    }
+    with open(settings_file, "w") as f:
+        json.dump(settings, f, indent=2)
+
+    return JSONResponse({"status": "success", "settings": settings})
+
+@app.get("/settings")
+async def get_settings(request: Request, draft_status: Optional[str] = None, save_success: bool = False):
+    state = get_draft_state_dict()
+    drafted_player = state.get("drafted_player")
+    teams_data = state.get("teams", {})
+
+    settings_file = Path("data/settings.json")
+    settings = {}
+    if settings_file.exists():
+        try:
+            with open(settings_file) as f:
+                settings = json.load(f)
+        except Exception:
+            pass
+
+    return templates.TemplateResponse(
+        request=request,
+        name="settings.html",
+        context={
+            "settings": settings,
+            "save_success": save_success,
+            "tracked_teams": [t for t in teams_data.keys() if t != 'Other'],
+            "draft_status": draft_status,
+            "drafted_player": drafted_player
+        }
+    )
+
+@app.post("/settings")
+async def save_settings(request: Request):
+    form_data = await request.form()
+    slack_webhook_url = str(form_data.get("slack_webhook_url", "")).strip()
+    ntfy_topic = str(form_data.get("ntfy_topic", "")).strip()
+    macos_alerts_enabled = form_data.get("macos_alerts_enabled") is not None
+    fantrax_league_id = str(form_data.get("fantrax_league_id", "")).strip()
+    fantrax_team_name = str(form_data.get("fantrax_team_name", "")).strip()
+    auto_sync_enabled = form_data.get("auto_sync_enabled") is not None
+    gameweek_reminder_enabled = form_data.get("gameweek_reminder_enabled") is not None
+
+    settings_file = Path("data/settings.json")
+    settings = {
+        "slack_webhook_url": slack_webhook_url,
+        "ntfy_topic": ntfy_topic,
+        "macos_alerts_enabled": macos_alerts_enabled,
+        "fantrax_league_id": fantrax_league_id,
+        "fantrax_team_name": fantrax_team_name,
+        "auto_sync_enabled": auto_sync_enabled,
+        "gameweek_reminder_enabled": gameweek_reminder_enabled
+    }
+    with open(settings_file, "w") as f:
+        json.dump(settings, f, indent=2)
+
+    referer = request.headers.get("referer", "/settings")
+    if "save_success=true" not in referer:
+        separator = "&" if "?" in referer else "?"
+        redirect_url = f"{referer}{separator}save_success=true"
+    else:
+        redirect_url = referer
+
+    return RedirectResponse(url=redirect_url, status_code=303)
+
+@app.post("/settings/test-alert")
+async def send_test_alert(request: Request):
+    from fantrax_assistant.notifications import NotificationManager
+    notifier = NotificationManager()
+    test_alert = {
+        "starter": "Eberechi Eze",
+        "starter_pos": "M",
+        "starter_team": "ARS",
+        "kickoff_time": "Sun Aug 16, 3:00 PM",
+        "minutes_until_kickoff": 45.0,
+        "severity": "WARNING (Test Scratch)",
+        "reason": "Test Lineup Alert from Fantrax Assistant Settings",
+        "recommended_sub": "Riccardo Calafiori",
+        "alert_text": "[TEST ALERT] Eberechi Eze (ARS) is benched for Sun Aug 16, 3:00 PM kickoff. Recommended Sub: Riccardo Calafiori."
+    }
+    notifier.send_lineup_alert(test_alert)
+    referer = request.headers.get("referer", "/settings")
+    return RedirectResponse(url=referer, status_code=303)
+
+@app.post("/api/settings/test-alert")
+async def send_test_alert_api(request: Request):
+    from fantrax_assistant.notifications import NotificationManager
+    notifier = NotificationManager()
+    test_alert = {
+        "starter": "Eberechi Eze",
+        "starter_pos": "M",
+        "starter_team": "ARS",
+        "kickoff_time": "Sun Aug 16, 3:00 PM",
+        "minutes_until_kickoff": 45.0,
+        "severity": "WARNING (Test Scratch)",
+        "reason": "Test Lineup Alert from Fantrax Assistant Settings",
+        "recommended_sub": "Riccardo Calafiori",
+        "alert_text": "[TEST ALERT] Eberechi Eze (ARS) is benched for Sun Aug 16, 3:00 PM kickoff. Recommended Sub: Riccardo Calafiori."
+    }
+    sent = notifier.send_lineup_alert(test_alert)
+    return JSONResponse({"status": "success", "sent_channels": sent})
+
+@app.post("/api/teams/{team_id}/sync-fantrax")
+async def sync_fantrax_endpoint(team_id: str):
+    from fantrax_assistant.scrapers.fantrax_api import FantraxClient
+    state = DraftState()
+    settings_file = Path("data/settings.json")
+    league_id = ""
+    team_name_or_id = team_id
+    if settings_file.exists():
+        try:
+            with open(settings_file) as f:
+                s = json.load(f)
+                league_id = s.get("fantrax_league_id", "")
+                team_name_or_id = s.get("fantrax_team_name") or team_id
+        except Exception:
+            pass
+
+    client = FantraxClient()
+    result = client.sync_team_roster(league_id or "demo_league", team_name_or_id, state)
+    state.fantrax_sync_meta[team_id] = result
+    state.fantrax_sync_meta["Team 1"] = result
+    if result.get("team_name"):
+        state.fantrax_sync_meta[result["team_name"]] = result
+    state.save()
+    return result
+
+@app.post("/api/teams/{team_id}/lineup/swap")
+async def swap_lineup_player(team_id: str, request: Request):
+    state = DraftState()
+    data = await request.json()
+    starter_name = data.get("starter")
+    bench_name = data.get("bench")
+
+    roster = state.get_team(team_id)
+    weekly_lineup = weekly_engine.get_optimal_lineup(roster)
+    current_starters = state.custom_lineups.get(team_id)
+    if not current_starters:
+        current_starters = [p['player'] for p in weekly_lineup['starters']]
+
+    new_starters = []
+    for s in current_starters:
+        if s == starter_name:
+            new_starters.append(bench_name)
+        else:
+            new_starters.append(s)
+
+    state.custom_lineups[team_id] = new_starters
+    state.save()
+    return {"success": True, "starters": new_starters}
+
+@app.post("/api/teams/{team_id}/lineup/reset")
+async def reset_lineup(team_id: str):
+    state = DraftState()
+    if team_id in state.custom_lineups:
+        del state.custom_lineups[team_id]
+        state.save()
+    return {"success": True}
+
+# --- Waiver Wire & Transaction Routes ---
+@app.get("/waivers")
+async def get_waiver_wire(
+    request: Request,
+    team: Optional[str] = None,
+    position: Optional[str] = "ALL"
+):
+    state = DraftState()
+    teams_data = state.get_all_teams()
+    tracked_teams = [t for t in teams_data.keys() if t != 'Other']
+    selected_team = team if team in teams_data else (state.my_team if state.my_team in teams_data else (tracked_teams[0] if tracked_teams else "Sam"))
+
+    suggestions = waiver_engine.get_pickup_recommendations(
+        team_name=selected_team,
+        state=state,
+        position_filter=position,
+        limit=20
+    )
+
+    transactions = getattr(state, 'transactions_history', [])[::-1]
+
+    return templates.TemplateResponse(
+        request=request,
+        name="waivers.html",
+        context={
+            "selected_team": selected_team,
+            "selected_position": position.upper() if position else "ALL",
+            "suggestions": suggestions,
+            "transactions": transactions,
+            "tracked_teams": tracked_teams,
+            "team_roster": state.get_team(selected_team),
+            "draft_status": None,
+            "drafted_player": None
+        }
+    )
+
+@app.post("/api/transactions/add")
+async def add_player_transaction(request: Request):
+    try:
+        data = await request.json()
+        team_name = data.get("team")
+        player_name = data.get("player")
+        dropped_player_name = data.get("dropped_player")
+        notes = data.get("notes")
+
+        if not team_name or not player_name:
+            return JSONResponse({"status": "error", "message": "Team and player name required"}, status_code=400)
+
+        state = DraftState()
+        player_info = config.get_player_adp(player_name) or {
+            "player": player_name,
+            "position": data.get("position", "M"),
+            "team": data.get("team_code", "TBD"),
+            "fpg": data.get("fpg", 0.0),
+            "fpts": data.get("fpts", 0.0),
+            "adp": 999
+        }
+
+        success = state.add_player_to_team(
+            team_name=team_name,
+            player=player_info,
+            dropped_player_name=dropped_player_name,
+            notes=notes or f"Waiver pickup ({player_info.get('position', 'M')})"
+        )
+
+        return JSONResponse({"status": "success", "message": f"Added {player_name} to {team_name}"})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
+@app.post("/api/transactions/drop")
+async def drop_player_transaction(request: Request):
+    try:
+        data = await request.json()
+        team_name = data.get("team")
+        player_name = data.get("player")
+
+        if not team_name or not player_name:
+            return JSONResponse({"status": "error", "message": "Team and player name required"}, status_code=400)
+
+        state = DraftState()
+        state.drop_player_from_team(team_name=team_name, player_name=player_name, notes="Roster drop")
+        return JSONResponse({"status": "success", "message": f"Dropped {player_name} from {team_name}"})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
 # --- Helper Functions ---
 def paginate(data: list, page: int, page_size: int):
