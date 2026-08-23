@@ -20,6 +20,7 @@ RUN uv sync --no-dev --no-install-project
 COPY src /app/src
 COPY scripts /app/scripts
 COPY data /app/data
+COPY data /app/data_defaults
 
 # Sync the project itself
 RUN uv sync --no-dev
