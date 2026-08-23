@@ -287,3 +287,436 @@ class FantraxClient:
             "starters_count": len(starters),
             "synced_at": datetime.now(timezone.utc).strftime("%b %d, %I:%M %p")
         }
+
+    def fetch_league_info(self, league_id: str) -> Dict[str, Any]:
+        """Fetch general league info including schedule, matchups, and scoring periods."""
+        if not league_id:
+            return {"error": "Missing league_id"}
+
+        cache_file = self.cache_dir / f"league_{league_id}_info.json"
+        url = f"https://www.fantrax.com/fxea/general/getLeagueInfo?leagueId={league_id}"
+
+        try:
+            req = urllib.request.Request(url, headers=self.headers)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                if isinstance(data, dict) and "error" not in data:
+                    with open(cache_file, "w") as f:
+                        json.dump({"timestamp": datetime.now(timezone.utc).isoformat(), "data": data}, f, indent=2)
+                    return data
+                elif cache_file.exists():
+                    try:
+                        with open(cache_file) as f:
+                            cached = json.load(f)
+                            return cached.get("data", {})
+                    except Exception:
+                        pass
+                return data if isinstance(data, dict) else {"error": "Invalid response"}
+        except Exception as e:
+            if cache_file.exists():
+                try:
+                    with open(cache_file) as f:
+                        cached = json.load(f)
+                        return cached.get("data", {})
+                except Exception:
+                    pass
+            return {"error": str(e)}
+
+    def fetch_matchup_scores(self, league_id: str, period: Optional[int] = None) -> Dict[str, Any]:
+        """Fetch live matchup scores and category breakdowns for a specific scoring period."""
+        if not league_id:
+            return {"error": "Missing league_id", "matchups": []}
+
+        p_str = f"&period={period}" if period else ""
+        cache_key = f"p{period}" if period else "current"
+        cache_file = self.cache_dir / f"league_{league_id}_matchup_{cache_key}.json"
+        url = f"https://www.fantrax.com/fxea/general/getMatchupScores?leagueId={league_id}{p_str}"
+
+        try:
+            req = urllib.request.Request(url, headers=self.headers)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                raw = json.loads(resp.read().decode('utf-8'))
+                if isinstance(raw, dict) and "error" not in raw and "matchups" in raw:
+                    with open(cache_file, "w") as f:
+                        json.dump({"timestamp": datetime.now(timezone.utc).isoformat(), "data": raw}, f, indent=2)
+                    raw["cached"] = False
+                    raw["synced_at"] = datetime.now(timezone.utc).strftime("%b %d, %I:%M %p")
+                    return raw
+                elif cache_file.exists():
+                    try:
+                        with open(cache_file) as f:
+                            cached = json.load(f)
+                            data = cached.get("data", {})
+                            if isinstance(data, dict) and "matchups" in data:
+                                data["cached"] = True
+                                data["synced_at"] = (
+                                    datetime.fromisoformat(cached["timestamp"]).strftime("%b %d, %I:%M %p")
+                                    if "timestamp" in cached
+                                    else "Cached"
+                                )
+                                return data
+                    except Exception:
+                        pass
+                return raw if isinstance(raw, dict) else {"matchups": [], "period": period or 1, "cached": False}
+        except Exception as e:
+            if cache_file.exists():
+                try:
+                    with open(cache_file) as f:
+                        cached = json.load(f)
+                        data = cached.get("data", {})
+                        if isinstance(data, dict):
+                            data["cached"] = True
+                            data["cache_time"] = cached.get("timestamp")
+                            data["synced_at"] = (
+                                datetime.fromisoformat(cached["timestamp"]).strftime("%b %d, %I:%M %p")
+                                if "timestamp" in cached
+                                else "Cached"
+                            )
+                            return data
+                except Exception:
+                    pass
+            return {"error": str(e), "matchups": [], "period": period or 1, "cached": False}
+
+    def fetch_period_rosters(self, league_id: str, period: Optional[int] = None) -> Dict[str, Any]:
+        """Fetch all team rosters and active starters for a specific period."""
+        if not league_id:
+            return {"error": "Missing league_id", "teams": {}}
+
+        p_str = f"&period={period}" if period else ""
+        cache_key = f"p{period}" if period else "current"
+        cache_file = self.cache_dir / f"league_{league_id}_rosters_{cache_key}.json"
+        player_db = self.fetch_player_database("EPL")
+
+        try:
+            url_rosters = f"https://www.fantrax.com/fxea/general/getTeamRosters?leagueId={league_id}{p_str}"
+            req_rosters = urllib.request.Request(url_rosters, headers=self.headers)
+            with urllib.request.urlopen(req_rosters, timeout=10) as resp:
+                rosters_raw = json.loads(resp.read().decode('utf-8'))
+
+            league_info = self.fetch_league_info(league_id)
+            team_info_map = league_info.get("teamInfo", {})
+
+            if isinstance(rosters_raw, dict) and "error" not in rosters_raw:
+                with open(cache_file, "w") as f:
+                    json.dump({
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "rosters": rosters_raw,
+                        "teamInfo": team_info_map
+                    }, f, indent=2)
+
+            return self._parse_fantrax_roster_response(rosters_raw, team_info_map, player_db)
+        except Exception as e:
+            if cache_file.exists():
+                try:
+                    with open(cache_file) as f:
+                        cached = json.load(f)
+                        rosters_data = cached.get("rosters") or cached.get("data", {})
+                        team_info_map = cached.get("teamInfo", {})
+                        parsed = self._parse_fantrax_roster_response(rosters_data, team_info_map, player_db)
+                        parsed["cached"] = True
+                        parsed["cache_time"] = cached.get("timestamp")
+                        return parsed
+                except Exception:
+                    pass
+            return {"error": str(e), "teams": {}, "cached": False}
+
+    def get_live_matchup(
+        self,
+        league_id: str,
+        team_name_or_id: str = "",
+        period: Optional[int] = None,
+        matchup_idx: Optional[int] = None,
+        config: Optional[Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Assemble comprehensive live matchup tracking payload for a team or specific matchup.
+        Includes live score comparison, statistical category edges, side-by-side active starters,
+        and fixture progress.
+        """
+        if not league_id:
+            return {"error": "No Fantrax League ID configured.", "has_data": False}
+
+        league_info = self.fetch_league_info(league_id)
+        scoring_periods = league_info.get("scoringPeriods", [])
+
+        # 1. Determine active period if not explicitly requested
+        target_period = period
+        if target_period is None:
+            now_iso = datetime.now(timezone.utc).isoformat()
+            for sp in scoring_periods:
+                s_date = sp.get("startDate", "")
+                e_date = sp.get("endDate", "")
+                if s_date and e_date and s_date <= now_iso <= e_date:
+                    target_period = sp.get("number")
+                    break
+            if target_period is None:
+                target_period = 1
+
+        matchup_scores_data = self.fetch_matchup_scores(league_id, period=target_period)
+        all_matchups = matchup_scores_data.get("matchups", [])
+        period_rosters_data = self.fetch_period_rosters(league_id, period=target_period)
+        teams_rosters = period_rosters_data.get("teams", {})
+
+        # Load fixture schedule from data/fixtures.json
+        fixtures_map = {}
+        fixtures_path = Path(__file__).resolve().parent.parent.parent.parent / "data" / "fixtures.json"
+        if fixtures_path.exists():
+            try:
+                with open(fixtures_path) as f:
+                    fixtures_map = json.load(f)
+            except Exception:
+                pass
+
+        # 2. Identify the target matchup
+        selected_matchup = None
+        selected_matchup_idx = 0
+        target_clean = str(team_name_or_id).strip().lower()
+
+        if matchup_idx is not None and 0 <= matchup_idx < len(all_matchups):
+            selected_matchup = all_matchups[matchup_idx]
+            selected_matchup_idx = matchup_idx
+        elif target_clean:
+            for idx, m in enumerate(all_matchups):
+                home_t = m.get("home", {})
+                away_t = m.get("away", {})
+                h_name = str(home_t.get("teamName", "")).lower()
+                h_id = str(home_t.get("teamId", "")).lower()
+                a_name = str(away_t.get("teamName", "")).lower()
+                a_id = str(away_t.get("teamId", "")).lower()
+
+                if target_clean in [h_name, h_id] or target_clean in [a_name, a_id] or (target_clean and (target_clean in h_name or target_clean in a_name)):
+                    selected_matchup = m
+                    selected_matchup_idx = idx
+                    break
+
+        if not selected_matchup and all_matchups:
+            selected_matchup = all_matchups[0]
+            selected_matchup_idx = 0
+
+        # Build list of all available scoring periods for selector
+        periods_list = []
+        for sp in scoring_periods:
+            p_num = sp.get("number", 1)
+            periods_list.append({
+                "period": p_num,
+                "startDate": sp.get("startDate", ""),
+                "endDate": sp.get("endDate", ""),
+                "is_current": p_num == target_period
+            })
+        if not periods_list:
+            periods_list = [{"period": i, "is_current": i == target_period} for i in range(1, 39)]
+
+        # Build list of matchups in this period for selector dropdown
+        matchups_overview = []
+        for idx, m in enumerate(all_matchups):
+            h = m.get("home", {})
+            a = m.get("away", {})
+            matchups_overview.append({
+                "index": idx,
+                "home_name": h.get("teamName", "Home"),
+                "home_id": h.get("teamId", ""),
+                "home_score": float(h.get("score", 0.0) or 0.0),
+                "home_gp": h.get("gamesPlayed", 0),
+                "away_name": a.get("teamName", "Away"),
+                "away_id": a.get("teamId", ""),
+                "away_score": float(a.get("score", 0.0) or 0.0),
+                "away_gp": a.get("gamesPlayed", 0),
+                "is_selected": idx == selected_matchup_idx
+            })
+
+        if not selected_matchup:
+            return {
+                "has_data": False,
+                "league_id": league_id,
+                "current_period": target_period,
+                "periods": periods_list,
+                "matchups_overview": matchups_overview,
+                "error": "No matchup found for this period."
+            }
+
+        # 3. Parse selected matchup data
+        home_meta = selected_matchup.get("home", {})
+        away_meta = selected_matchup.get("away", {})
+        home_id = str(home_meta.get("teamId", ""))
+        home_name = home_meta.get("teamName", "Home Team")
+        home_score = float(home_meta.get("score", 0.0) or 0.0)
+        home_gp = int(home_meta.get("gamesPlayed", 0) or 0)
+
+        away_id = str(away_meta.get("teamId", ""))
+        away_name = away_meta.get("teamName", "Away Team")
+        away_score = float(away_meta.get("score", 0.0) or 0.0)
+        away_gp = int(away_meta.get("gamesPlayed", 0) or 0)
+
+        score_diff = round(home_score - away_score, 2)
+        is_user_home = bool(target_clean and (target_clean == home_id.lower() or target_clean in home_name.lower()))
+        is_user_away = bool(target_clean and (target_clean == away_id.lower() or target_clean in away_name.lower()))
+
+        # 4. Parse Categories Comparison
+        raw_categories = selected_matchup.get("categories", [])
+        categories = []
+        home_cats_won = 0
+        away_cats_won = 0
+        cats_tied = 0
+
+        for cat in raw_categories:
+            c_name = cat.get("name", "")
+            c_short = cat.get("shortName", "")
+            c_group = cat.get("group", "")
+            h_cat = cat.get("home", {})
+            a_cat = cat.get("away", {})
+
+            h_val = float(h_cat.get("value", 0.0) or 0.0)
+            h_pts = float(h_cat.get("points", 0.0) or 0.0)
+            h_disp = str(h_cat.get("display", f"{h_val:g}"))
+
+            a_val = float(a_cat.get("value", 0.0) or 0.0)
+            a_pts = float(a_cat.get("points", 0.0) or 0.0)
+            a_disp = str(a_cat.get("display", f"{a_val:g}"))
+
+            pts_diff = round(h_pts - a_pts, 2)
+            if pts_diff > 0:
+                leader = "home"
+                home_cats_won += 1
+            elif pts_diff < 0:
+                leader = "away"
+                away_cats_won += 1
+            else:
+                leader = "tie"
+                cats_tied += 1
+
+            categories.append({
+                "name": c_name,
+                "shortName": c_short,
+                "group": c_group,
+                "home_val": h_val,
+                "home_pts": h_pts,
+                "home_display": h_disp,
+                "away_val": a_val,
+                "away_pts": a_pts,
+                "away_display": a_disp,
+                "pts_diff": pts_diff,
+                "leader": leader
+            })
+
+        # 5. Enrich Home and Away Rosters with player metadata & fixture progress
+        def enrich_team_roster(team_id_str: str, team_name_str: str) -> Dict[str, Any]:
+            team_data = teams_rosters.get(team_id_str) or teams_rosters.get(team_name_str, {})
+            p_details = team_data.get("player_details", {})
+            starters_list = team_data.get("starters", [])
+            bench_list = team_data.get("bench", [])
+
+            def enrich_player_item(p_name: str, is_starter: bool) -> Dict[str, Any]:
+                details = p_details.get(p_name, {})
+                pos = details.get("position", "M")
+                team_code = details.get("team", "")
+
+                # Lookup injury/fpg from config if available
+                fpg = 0.0
+                injury_sev = "Healthy"
+                injury_type = ""
+                if config:
+                    adp_info = config.get_player_adp(p_name)
+                    if adp_info:
+                        fpg = float(adp_info.get("fpg", 0.0) or 0.0)
+                        if not team_code:
+                            team_code = adp_info.get("team", "")
+                        if not pos or pos == "M":
+                            pos = adp_info.get("position", pos)
+                    inj = config.get_player_injury(p_name)
+                    if inj:
+                        injury_sev = inj.get("severity", "Healthy")
+                        injury_type = inj.get("injury_type") or inj.get("notes", "")
+
+                fix = fixtures_map.get(team_code, {})
+                return {
+                    "name": p_name,
+                    "id": details.get("id", ""),
+                    "position": pos,
+                    "primary_pos": pos.split(",")[0].strip().upper() if pos else "M",
+                    "team": team_code,
+                    "is_starter": is_starter,
+                    "fpg": fpg,
+                    "injury_severity": injury_sev,
+                    "injury_type": injury_type,
+                    "fixture": {
+                        "opponent": fix.get("opponent", "TBD"),
+                        "is_home": fix.get("is_home", True),
+                        "display_time": fix.get("display_time", "TBD"),
+                        "kickoff_time": fix.get("kickoff_time", ""),
+                        "started": fix.get("started", False),
+                        "finished": fix.get("finished", False),
+                        "fdr": fix.get("fdr", 3)
+                    }
+                }
+
+            enriched_starters = [enrich_player_item(p, True) for p in starters_list]
+            enriched_bench = [enrich_player_item(p, False) for p in bench_list]
+
+            pos_order = {'G': 0, 'D': 1, 'M': 2, 'F': 3}
+            enriched_starters.sort(key=lambda x: (pos_order.get(x['primary_pos'][0], 4), -x['fpg']))
+            enriched_bench.sort(key=lambda x: (pos_order.get(x['primary_pos'][0], 4), -x['fpg']))
+
+            # In-play vs played counters
+            played_count = sum(1 for p in enriched_starters if p['fixture']['finished'])
+            in_play_count = sum(1 for p in enriched_starters if p['fixture']['started'] and not p['fixture']['finished'])
+            upcoming_count = sum(1 for p in enriched_starters if not p['fixture']['started'])
+
+            return {
+                "starters": enriched_starters,
+                "bench": enriched_bench,
+                "starters_count": len(enriched_starters),
+                "bench_count": len(enriched_bench),
+                "played_count": played_count,
+                "in_play_count": in_play_count,
+                "upcoming_count": upcoming_count
+            }
+
+        home_roster_enriched = enrich_team_roster(home_id, home_name)
+        away_roster_enriched = enrich_team_roster(away_id, away_name)
+
+        # Matchup status calculation
+        is_live = False
+        is_finished = False
+        if home_gp >= 11 and away_gp >= 11:
+            is_finished = True
+        elif home_gp > 0 or away_gp > 0 or home_roster_enriched["in_play_count"] > 0 or away_roster_enriched["in_play_count"] > 0:
+            is_live = True
+
+        status_text = "FINAL" if is_finished else ("LIVE IN-PROGRESS" if is_live else "UPCOMING")
+        status_color = "emerald" if is_live else ("slate" if is_finished else "blue")
+
+        return {
+            "has_data": True,
+            "league_id": league_id,
+            "current_period": target_period,
+            "periods": periods_list,
+            "matchups_overview": matchups_overview,
+            "selected_matchup_index": selected_matchup_idx,
+            "status_text": status_text,
+            "status_color": status_color,
+            "is_live": is_live,
+            "is_finished": is_finished,
+            "is_user_home": is_user_home,
+            "is_user_away": is_user_away,
+            "synced_at": matchup_scores_data.get("synced_at") or datetime.now(timezone.utc).strftime("%b %d, %I:%M %p"),
+            "cached": matchup_scores_data.get("cached", False),
+            "home": {
+                "id": home_id,
+                "name": home_name,
+                "score": home_score,
+                "games_played": home_gp,
+                "cats_won": home_cats_won,
+                "roster": home_roster_enriched
+            },
+            "away": {
+                "id": away_id,
+                "name": away_name,
+                "score": away_score,
+                "games_played": away_gp,
+                "cats_won": away_cats_won,
+                "roster": away_roster_enriched
+            },
+            "score_diff": score_diff,
+            "categories": categories,
+            "cats_tied": cats_tied
+        }

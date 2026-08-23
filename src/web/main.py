@@ -1532,6 +1532,127 @@ async def drop_player_transaction(request: Request):
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
+# --- Live Matchup Tracking Routes ---
+@app.get("/matchup", response_class=HTMLResponse)
+async def read_live_matchup(
+    request: Request,
+    period: Optional[int] = None,
+    team: Optional[str] = None,
+    matchup_idx: Optional[int] = None
+):
+    from fantrax_assistant.scrapers.fantrax_api import FantraxClient
+    state = DraftState()
+    teams_data = state.get_all_teams()
+    tracked_teams = [t for t in teams_data.keys() if t != 'Other']
+
+    settings_file = Path("data/settings.json")
+    league_id = ""
+    configured_team_name = ""
+    if settings_file.exists():
+        try:
+            with open(settings_file) as f:
+                s = json.load(f)
+                league_id = s.get("fantrax_league_id", "")
+                configured_team_name = s.get("fantrax_team_name") or s.get("fantrax_team_id") or ""
+        except Exception:
+            pass
+
+    target_team = team or configured_team_name or state.my_team or (tracked_teams[0] if tracked_teams else "")
+    client = FantraxClient()
+    matchup_data = client.get_live_matchup(
+        league_id=league_id,
+        team_name_or_id=target_team,
+        period=period,
+        matchup_idx=matchup_idx,
+        config=config
+    )
+
+    return templates.TemplateResponse(
+        request=request,
+        name="matchup.html",
+        context={
+            "matchup": matchup_data,
+            "tracked_teams": tracked_teams,
+            "all_teams": list(teams_data.keys()),
+            "fantrax_configured": bool(league_id),
+            "fantrax_league_id": league_id,
+            "configured_team_name": configured_team_name,
+            "target_team": target_team,
+            "selected_period": period,
+            "selected_matchup_idx": matchup_idx
+        }
+    )
+
+@app.get("/api/matchup")
+async def api_live_matchup(
+    period: Optional[int] = None,
+    team: Optional[str] = None,
+    matchup_idx: Optional[int] = None
+):
+    from fantrax_assistant.scrapers.fantrax_api import FantraxClient
+    state = DraftState()
+    settings_file = Path("data/settings.json")
+    league_id = ""
+    configured_team_name = ""
+    if settings_file.exists():
+        try:
+            with open(settings_file) as f:
+                s = json.load(f)
+                league_id = s.get("fantrax_league_id", "")
+                configured_team_name = s.get("fantrax_team_name") or s.get("fantrax_team_id") or ""
+        except Exception:
+            pass
+
+    target_team = team or configured_team_name or state.my_team or ""
+    client = FantraxClient()
+    matchup_data = client.get_live_matchup(
+        league_id=league_id,
+        team_name_or_id=target_team,
+        period=period,
+        matchup_idx=matchup_idx,
+        config=config
+    )
+    return JSONResponse(matchup_data)
+
+@app.post("/api/matchup/sync")
+async def api_live_matchup_sync(request: Request):
+    from fantrax_assistant.scrapers.fantrax_api import FantraxClient
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    period = data.get("period")
+    team = data.get("team")
+    matchup_idx = data.get("matchup_idx")
+
+    state = DraftState()
+    settings_file = Path("data/settings.json")
+    league_id = ""
+    configured_team_name = ""
+    if settings_file.exists():
+        try:
+            with open(settings_file) as f:
+                s = json.load(f)
+                league_id = s.get("fantrax_league_id", "")
+                configured_team_name = s.get("fantrax_team_name") or s.get("fantrax_team_id") or ""
+        except Exception:
+            pass
+
+    target_team = team or configured_team_name or state.my_team or ""
+    client = FantraxClient()
+    if league_id:
+        client.fetch_matchup_scores(league_id, period=period)
+        client.fetch_period_rosters(league_id, period=period)
+
+    matchup_data = client.get_live_matchup(
+        league_id=league_id,
+        team_name_or_id=target_team,
+        period=period,
+        matchup_idx=matchup_idx,
+        config=config
+    )
+    return JSONResponse(matchup_data)
+
 # --- Helper Functions ---
 def paginate(data: list, page: int, page_size: int):
     total_items = len(data)
