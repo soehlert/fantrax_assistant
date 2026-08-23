@@ -1,6 +1,13 @@
 data/*
 !data/league_config.json
 
+# Internal documentation & agent directives
+GEMINI.md
+*.gemini.md
+LEARNINGS.gemini.md
+docs/backlog.md
+players.db
+
 
 *.egg
 *.egg-info
