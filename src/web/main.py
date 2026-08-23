@@ -695,6 +695,7 @@ async def read_team(
 
     auto_subs = weekly_engine.get_auto_sub_recommendations(weekly_lineup['starters'], weekly_lineup['bench'])
     injury_contingencies = weekly_engine.get_injury_contingencies(weekly_lineup['starters'], weekly_lineup['bench'])
+    lineup_monitor.draft_state = state
     lineup_alerts = lineup_monitor.check_team_lineup_alerts(team_name, roster, custom_starters=custom_starters)
     gw_reminder = lineup_monitor.check_gameweek_eve_health(team_name, roster, custom_starters=custom_starters)
     fantrax_sync_meta = state.fantrax_sync_meta.get(team_name, {})
@@ -1261,6 +1262,7 @@ async def save_settings_api(request: Request):
         slack_url = str(data.get("slack_webhook_url", "")).strip()
         macos_enabled = bool(data.get("macos_alerts_enabled", True))
         fantrax_league_id = str(data.get("fantrax_league_id", "")).strip()
+        fantrax_team_id = str(data.get("fantrax_team_id", "")).strip()
         fantrax_team_name = str(data.get("fantrax_team_name", "")).strip()
         auto_sync_enabled = bool(data.get("auto_sync_enabled", True))
         gameweek_reminder_enabled = bool(data.get("gameweek_reminder_enabled", True))
@@ -1269,6 +1271,7 @@ async def save_settings_api(request: Request):
         slack_url = str(form_data.get("slack_webhook_url", "")).strip()
         macos_enabled = form_data.get("macos_alerts_enabled") is not None
         fantrax_league_id = str(form_data.get("fantrax_league_id", "")).strip()
+        fantrax_team_id = str(form_data.get("fantrax_team_id", "")).strip()
         fantrax_team_name = str(form_data.get("fantrax_team_name", "")).strip()
         auto_sync_enabled = form_data.get("auto_sync_enabled") is not None
         gameweek_reminder_enabled = form_data.get("gameweek_reminder_enabled") is not None
@@ -1278,6 +1281,7 @@ async def save_settings_api(request: Request):
         "slack_webhook_url": slack_url,
         "macos_alerts_enabled": macos_enabled,
         "fantrax_league_id": fantrax_league_id,
+        "fantrax_team_id": fantrax_team_id,
         "fantrax_team_name": fantrax_team_name,
         "auto_sync_enabled": auto_sync_enabled,
         "gameweek_reminder_enabled": gameweek_reminder_enabled
@@ -1321,6 +1325,7 @@ async def save_settings(request: Request):
     ntfy_topic = str(form_data.get("ntfy_topic", "")).strip()
     macos_alerts_enabled = form_data.get("macos_alerts_enabled") is not None
     fantrax_league_id = str(form_data.get("fantrax_league_id", "")).strip()
+    fantrax_team_id = str(form_data.get("fantrax_team_id", "")).strip()
     fantrax_team_name = str(form_data.get("fantrax_team_name", "")).strip()
     auto_sync_enabled = form_data.get("auto_sync_enabled") is not None
     gameweek_reminder_enabled = form_data.get("gameweek_reminder_enabled") is not None
@@ -1331,6 +1336,7 @@ async def save_settings(request: Request):
         "ntfy_topic": ntfy_topic,
         "macos_alerts_enabled": macos_alerts_enabled,
         "fantrax_league_id": fantrax_league_id,
+        "fantrax_team_id": fantrax_team_id,
         "fantrax_team_name": fantrax_team_name,
         "auto_sync_enabled": auto_sync_enabled,
         "gameweek_reminder_enabled": gameweek_reminder_enabled

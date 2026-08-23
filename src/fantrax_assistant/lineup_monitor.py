@@ -4,7 +4,9 @@ Monitors official Premier League team sheets 60 minutes before kickoff and 5 min
 before kickoff (warmup injury watch), alerting the manager if any starter in their Ideal XI is benched or scratched.
 """
 
+import json
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, List, Any, Optional
 from .weekly import WeeklyManagerEngine
 from .config import DraftConfig
@@ -13,10 +15,67 @@ from .notifications import NotificationManager
 class LineupMonitor:
     """Monitors starting lineup confirmations and generates emergency auto-sub alerts."""
 
-    def __init__(self, config: Optional[DraftConfig] = None):
+    def __init__(
+        self,
+        config: Optional[DraftConfig] = None,
+        draft_state: Optional[Any] = None,
+        fantrax_client: Optional[Any] = None,
+        settings_path: Optional[Path] = None
+    ):
         self.config = config
+        self.draft_state = draft_state
         self.weekly_engine = WeeklyManagerEngine(config=config)
         self.notifier = NotificationManager()
+        self.fantrax_client = fantrax_client
+        self.settings_path = settings_path or (Path(__file__).resolve().parent.parent.parent / "data" / "settings.json")
+
+    def _auto_sync_fantrax_if_enabled(self, team_id: str, auto_sync: bool = True) -> Optional[List[str]]:
+        """Sync latest team roster and active starters from Fantrax if auto_sync is enabled."""
+        if not auto_sync:
+            return None
+
+        league_id = ""
+        team_target = team_id
+        auto_sync_enabled = True
+
+        if self.settings_path.exists():
+            try:
+                with open(self.settings_path) as f:
+                    s = json.load(f)
+                    auto_sync_enabled = s.get("auto_sync_enabled", True)
+                    league_id = s.get("fantrax_league_id", "")
+                    team_target = s.get("fantrax_team_id") or s.get("fantrax_team_name") or team_id
+            except Exception:
+                pass
+
+        if not auto_sync_enabled or not league_id:
+            return None
+
+        if not self.fantrax_client:
+            from .scrapers.fantrax_api import FantraxClient
+            self.fantrax_client = FantraxClient()
+
+        if not self.draft_state:
+            from .draft_state import DraftState
+            self.draft_state = DraftState()
+
+        try:
+            sync_result = self.fantrax_client.sync_team_roster(league_id, team_target, self.draft_state)
+            if sync_result.get("success"):
+                self.draft_state.fantrax_sync_meta[team_id] = sync_result
+                if team_target != team_id:
+                    self.draft_state.fantrax_sync_meta[team_target] = sync_result
+                self.draft_state.save()
+
+                synced_starters = (
+                    self.draft_state.custom_lineups.get(team_id)
+                    or self.draft_state.custom_lineups.get(team_target)
+                )
+                return synced_starters
+        except Exception:
+            pass
+
+        return None
 
     def check_team_lineup_alerts(
         self,
@@ -24,7 +83,8 @@ class LineupMonitor:
         roster: List[Dict[str, Any]],
         fixtures_override: Optional[Dict[str, Any]] = None,
         now_dt: Optional[datetime] = None,
-        custom_starters: Optional[List[str]] = None
+        custom_starters: Optional[List[str]] = None,
+        auto_sync: bool = True
     ) -> List[Dict[str, Any]]:
         """
         Check team's active Starting XI against official match lineup confirmations.
@@ -33,6 +93,14 @@ class LineupMonitor:
         """
         if not roster:
             return []
+
+        # Auto-sync starting lineup from Fantrax before running lineup alert checks
+        if custom_starters is None and auto_sync:
+            synced_starters = self._auto_sync_fantrax_if_enabled(team_id, auto_sync=auto_sync)
+            if synced_starters:
+                custom_starters = synced_starters
+            elif self.draft_state and team_id in self.draft_state.custom_lineups:
+                custom_starters = self.draft_state.custom_lineups.get(team_id)
 
         # Get Ideal Starting XI and Bench
         lineup_data = self.weekly_engine.get_optimal_lineup(roster)
@@ -141,7 +209,8 @@ class LineupMonitor:
         team_id: str,
         roster: List[Dict[str, Any]],
         custom_starters: Optional[List[str]] = None,
-        now_dt: Optional[datetime] = None
+        now_dt: Optional[datetime] = None,
+        auto_sync: bool = True
     ) -> Optional[Dict[str, Any]]:
         """
         Runs 24 hours before the gameweek's first match.
@@ -153,6 +222,14 @@ class LineupMonitor:
         """
         if not roster:
             return None
+
+        # Auto-sync starting lineup from Fantrax before running Gameweek Eve health check
+        if custom_starters is None and auto_sync:
+            synced_starters = self._auto_sync_fantrax_if_enabled(team_id, auto_sync=auto_sync)
+            if synced_starters:
+                custom_starters = synced_starters
+            elif self.draft_state and team_id in self.draft_state.custom_lineups:
+                custom_starters = self.draft_state.custom_lineups.get(team_id)
 
         lineup_data = self.weekly_engine.get_optimal_lineup(roster)
         starters = lineup_data.get('starters', [])
