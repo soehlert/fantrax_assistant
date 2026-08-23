@@ -14,7 +14,7 @@ def seed_database():
     understat = Understat()
 
     # 1. Ingest Fantrax Rankings (Master player list)
-    rankings = config.rankings.get("rankings", [])
+    rankings = (config.rankings or {}).get("rankings", [])
     print(f"Ingesting {len(rankings)} players from Fantrax ADP rankings...")
 
     # Explicit Understat ID mapping overrides for edge case names

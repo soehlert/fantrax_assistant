@@ -12,21 +12,26 @@ class DraftConfig:
 
     def __init__(self, data_dir: str | Path = 'data'):
         self.data_dir = Path(data_dir)
-        self.stats: Optional[dict] = None
-        self.injuries: Optional[dict] = None
-        self.rankings: Optional[dict] = None
-        self.league_config: Optional[dict] = None
-        self.afcon: Optional[dict] = None
+        self.stats: dict = {"players": []}
+        self.injuries: dict = {"injuries": []}
+        self.rankings: dict = {"rankings": []}
+        self.league_config: dict = {}
+        self.afcon: dict = {"players": []}
+        self.set_pieces: dict = {}
+        self._adp_map: dict = {}
+        self._injury_map: dict = {}
+        self._stats_map: dict = {}
 
     def load_all_data(self) -> bool:
         """Load all data files."""
         print("Loading data files...")
 
-        self.stats = self._load_json('current_stats.json')
-        self.injuries = self._load_json('injuries.json')
-        self.rankings = self._load_json('adp_rankings.json')
-        self.league_config = self._load_json('league_config.json')
-        self.afcon = self._load_json('afcon_callups.json', quiet=True)
+        self.stats = self._load_json('current_stats.json') or {"players": []}
+        self.injuries = self._load_json('injuries.json') or {"injuries": []}
+        self.rankings = self._load_json('adp_rankings.json') or {"rankings": []}
+        self.league_config = self._load_json('league_config.json') or {}
+        self.afcon = self._load_json('afcon_callups.json', quiet=True) or {"players": []}
+        self.set_pieces = self._load_json('set_pieces.json', quiet=True) or {}
 
         # Validate critical data
         if not self.league_config:

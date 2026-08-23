@@ -1,25 +1,40 @@
 import json
-from typing import Dict, Optional, List
-
+from typing import Dict, Optional, List, Any
+import requests
 import pandas as pd
 import redis
-from understatapi import UnderstatClient
-
-
 from scipy.stats import percentileofscore
 
+UNDERSTAT_BASE_URL = "https://understat.com"
+AJAX_HEADERS = {
+    "X-Requested-With": "XMLHttpRequest",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
+
+
 class Understat:
+    """Direct, native Understat client without legacy Selenium dependencies."""
+
     def __init__(self):
-        self._client = UnderstatClient()
+        self._session = requests.Session()
         self._redis = redis.Redis(host='localhost', port=6380, db=0, socket_timeout=1)
         self._memory_cache: Dict[str, List[Dict]] = {}
 
-    def get_player_data(self, player_id: str) -> Dict:
-        return self._client.player(player=player_id).get_shot_data()
+    def _request_ajax(self, endpoint: str) -> Dict[str, Any]:
+        url = f"{UNDERSTAT_BASE_URL}/{endpoint}"
+        resp = self._session.get(url, headers=AJAX_HEADERS, timeout=15)
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_player_data(self, player_id: str) -> List[Dict]:
+        """Fetch shot-level data for a player."""
+        data = self._request_ajax(f"getPlayerData/{player_id}")
+        return data.get("shots", [])
 
     def get_all_players_data(
-        self, league: str, season: str
+        self, league: str = "EPL", season: str = "2024"
     ) -> List[Dict]:
+        """Fetch all player stats for a league and season."""
         cache_key = f"understat:league:{league}:{season}"
 
         # 1. Try Redis cache if running
@@ -34,17 +49,18 @@ class Understat:
         if cache_key in self._memory_cache:
             return self._memory_cache[cache_key]
 
-        # 3. Fetch from Understat API
-        data = self._client.league(league=league).get_player_data(season=season)
-        self._memory_cache[cache_key] = data
+        # 3. Fetch directly from Understat AJAX API
+        data_dict = self._request_ajax(f"getLeagueData/{league}/{season}")
+        players = data_dict.get("players", [])
+        self._memory_cache[cache_key] = players
 
         # 4. Save to Redis if available
         try:
-            self._redis.set(cache_key, json.dumps(data), ex=86400)  # Cache for 24 hours
+            self._redis.set(cache_key, json.dumps(players), ex=86400)  # Cache for 24 hours
         except Exception:
             pass
 
-        return data
+        return players
 
     def get_player_data_by_name(
         self, player_name: str, league: str, season: str, player_position: Optional[str] = None
@@ -116,4 +132,3 @@ class Understat:
                 percentiles[col] = 0.0
             
         return percentiles
-

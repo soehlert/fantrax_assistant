@@ -72,9 +72,19 @@ def fetch_fpl_current_stats():
     except Exception as e:
         print(f"   ⚠️ Could not fetch live FPL API stats: {e}")
 
-def ensure_optional_json_files():
-    print("\n📁 2. Ensuring all optional data JSON files exist...")
-    
+def ensure_all_data_files():
+    print("\n📁 2. Ensuring all data JSON files exist in volume...")
+    import shutil
+
+    # If running inside Docker with an empty mounted volume, copy baseline templates from data_defaults
+    defaults_dir = root_dir / "data_defaults"
+    if defaults_dir.exists():
+        for src_file in defaults_dir.glob("*.json"):
+            dest_file = DATA_DIR / src_file.name
+            if not dest_file.exists():
+                shutil.copy2(src_file, dest_file)
+                print(f"   ✓ Initialized {dest_file.name} from defaults.")
+
     # 1. afcon_callups.json
     afcon_file = DATA_DIR / 'afcon_callups.json'
     if not afcon_file.exists():
@@ -110,7 +120,7 @@ def run_db_seeder():
 
 if __name__ == "__main__":
     print("🚀 Starting Automated Setup & Data Ingestion Pipeline...\n")
+    ensure_all_data_files()
     fetch_fpl_current_stats()
-    ensure_optional_json_files()
     run_db_seeder()
     print("\n🎉 Setup Complete! All data files & SQLite DB are up-to-date with 0 warnings.")
