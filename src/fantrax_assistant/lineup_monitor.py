@@ -171,7 +171,7 @@ class LineupMonitor:
                 if not recommended_sub and bench:
                     # Fallback to top valid bench sub
                     valid_subs = [
-                        b['player'] for b in bench
+                        (b.get('player') or b.get('name')) for b in bench
                         if self.weekly_engine.is_legal_roster_sub(starters, s, b)
                     ]
                     recommended_sub = valid_subs[0] if valid_subs else "No Legal Bench Sub Available"

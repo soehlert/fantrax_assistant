@@ -152,6 +152,7 @@ class FantraxClient:
 
                     elif "rosterItems" in tdata or "items" in tdata or "players" in tdata:
                         items = tdata.get("rosterItems") or tdata.get("items") or tdata.get("players", [])
+                        player_details = {}
                         for item in items:
                             pid = item.get("id") if isinstance(item, dict) else str(item)
                             p_meta = player_db.get(pid, {}) if pid else {}
@@ -160,9 +161,19 @@ class FantraxClient:
                             if not p_name:
                                 continue
 
+                            p_pos = str(item.get("position") or p_meta.get("position") or "M").upper() if isinstance(item, dict) else "M"
+                            p_team = str(item.get("team") or p_meta.get("team") or "PL").upper() if isinstance(item, dict) else "PL"
                             status = str(item.get("status", "")).upper() if isinstance(item, dict) else ""
                             slot = str(item.get("slot", "")).upper() if isinstance(item, dict) else ""
                             roster.append(p_name)
+                            player_details[p_name] = {
+                                "id": pid,
+                                "name": p_name,
+                                "position": p_pos,
+                                "team": p_team,
+                                "status": status,
+                                "slot": slot
+                            }
                             if status in ["ACTIVE", "START", "STARTER"] or (slot and slot not in ["B", "BENCH", "RES", "RESERVE", "IR"]):
                                 starters.append(p_name)
                             else:
@@ -173,7 +184,8 @@ class FantraxClient:
                         "team_name": tname,
                         "starters": [s for s in starters if s],
                         "bench": [b for b in bench if b],
-                        "roster": [r for r in roster if r]
+                        "roster": [r for r in roster if r],
+                        "player_details": player_details if "player_details" in locals() else {}
                     }
                     teams[actual_team_id] = teams[tname]
 

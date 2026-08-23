@@ -39,6 +39,7 @@ def build_roster_from_fantrax_team(matched_team: dict, config: DraftConfig) -> l
     starters = matched_team.get("starters", [])
     bench = matched_team.get("bench", [])
     all_names = starters + bench
+    player_details = matched_team.get("player_details", {})
 
     rich_roster = []
     seen = set()
@@ -46,17 +47,22 @@ def build_roster_from_fantrax_team(matched_team: dict, config: DraftConfig) -> l
         if not name or name in seen:
             continue
         seen.add(name)
+        p_detail = player_details.get(name, {})
         adp_info = config.get_player_adp(name) or {}
-        pos = (adp_info.get("position") or "M").split(",")[0].strip().upper()
-        team_code = adp_info.get("team") or "PL"
+
+        pos = p_detail.get("position") or (adp_info.get("position") or "M").split(",")[0].strip().upper()
+        team_code = p_detail.get("team") or adp_info.get("team") or "PL"
         fpg = float(adp_info.get("fpg", 0.0) or 0.0)
+
+        elig = [x.strip().upper() for x in str(pos).split(",") if x.strip().upper() in ["G", "D", "M", "F"]] or ["M"]
 
         rich_roster.append({
             "player": name,
             "name": name,
             "position": pos,
-            "assigned_pos": pos,
-            "primary_pos": pos,
+            "assigned_pos": elig[0],
+            "primary_pos": elig[0],
+            "eligible_positions": elig,
             "team": team_code,
             "fpg": fpg
         })
@@ -237,7 +243,17 @@ def main():
         print("🚨 Step 3: Simulating 45-Minute Pre-Kickoff Benched Starter Alert...")
 
         starters_list = active_custom_starters or [p["player"] for p in roster_to_use[:11]]
-        scratch_target = args.scratch_player or (starters_list[0] if starters_list else roster_to_use[0]["player"])
+
+        def _is_gk(p_name: str) -> bool:
+            p_dict = next((x for x in roster_to_use if x.get("player") == p_name or x.get("name") == p_name), None)
+            if not p_dict:
+                return False
+            pos = p_dict.get("assigned_pos") or p_dict.get("primary_pos") or p_dict.get("position", "")
+            return "G" in [x.strip().upper() for x in str(pos).split(",")]
+
+        # Filter out Goalkeeper: Never pick GK for default scratch simulation since backup GK is rarely rostered
+        outfield_starters = [p for p in starters_list if not _is_gk(p)]
+        scratch_target = args.scratch_player or (outfield_starters[0] if outfield_starters else starters_list[0])
 
         # Find target in roster
         target_player_dict = None
@@ -247,15 +263,26 @@ def main():
                 break
 
         if not target_player_dict:
-            target_player_dict = roster_to_use[0]
+            target_player_dict = next((p for p in roster_to_use if not _is_gk(p.get("player") or p.get("name"))), roster_to_use[0])
             scratch_target = target_player_dict.get("player") or target_player_dict.get("name")
 
-        # Set 45-minute countdown and scratch override
+        # Set all bench players and other starters to kick off after the scratched player
+        for p in roster_to_use:
+            p["fixture"] = {
+                "kickoff_time": (now + timedelta(hours=2)).isoformat(),
+                "display_time": "Today, 4:15 PM",
+                "opponent": "OPP",
+                "is_home": True,
+                "fdr": 2,
+                "is_benched_override": False
+            }
+
+        # Set 45-minute countdown and scratch override for target starter
         target_player_dict["fixture"]["kickoff_time"] = (now + timedelta(minutes=45)).isoformat()
         target_player_dict["fixture"]["display_time"] = "Today, 3:00 PM"
         target_player_dict["fixture"]["is_benched_override"] = True
 
-        print(f"   Simulated Scenario: Your actual starter '{scratch_target}' ({target_player_dict.get('team')}) is benched 45 minutes before kickoff.")
+        print(f"   Simulated Scenario: Your outfield starter '{scratch_target}' ({target_player_dict.get('team')}, {target_player_dict.get('position')}) is benched 45 mins before kickoff.")
         sim_alerts = monitor.check_team_lineup_alerts(
             target_identifier,
             roster_to_use,

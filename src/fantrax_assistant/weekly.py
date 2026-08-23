@@ -348,47 +348,44 @@ class WeeklyManagerEngine:
         Verifies that replacing starter_to_remove with sub_to_add leaves a legal Fantrax roster formation
         (1 G, 3-5 D, 3-5 M, 1-4 F, total 11 starters).
         """
-        proposed_11 = [p for p in current_starters if p['player'] != starter_to_remove['player']] + [sub_to_add]
+        def _get_player_elig(p_item: Dict[str, Any]) -> List[str]:
+            if p_item.get('eligible_positions'):
+                return [x for x in p_item['eligible_positions'] if x in ['G', 'D', 'M', 'F']]
+            raw = p_item.get('assigned_pos') or p_item.get('primary_pos') or p_item.get('position', 'M')
+            return [x.strip().upper() for x in str(raw).split(',') if x.strip().upper() in ['G', 'D', 'M', 'F']] or ['M']
+
+        p_rem_name = starter_to_remove.get('player') or starter_to_remove.get('name')
+        proposed_11 = [p for p in current_starters if (p.get('player') or p.get('name')) != p_rem_name] + [sub_to_add]
         if len(proposed_11) != 11:
             return False
 
         # Goalkeeper constraint: must have exactly 1 G
-        g_count = sum(1 for p in proposed_11 if 'G' in p.get('eligible_positions', []) or p.get('assigned_pos') == 'G')
-        if g_count != 1:
+        g_candidates = [p for p in proposed_11 if 'G' in _get_player_elig(p) or p.get('assigned_pos') == 'G']
+        if len(g_candidates) != 1:
             return False
 
-        outfield = [p for p in proposed_11 if 'G' not in p.get('eligible_positions', []) and p.get('assigned_pos') != 'G']
+        outfield = [p for p in proposed_11 if p != g_candidates[0]]
         if len(outfield) != 10:
             return False
 
-        valid_formations = [(3, 3, 4), (3, 4, 3), (3, 5, 2), (4, 3, 3), (4, 4, 2), (4, 5, 1), (5, 3, 2), (5, 4, 1)]
+        valid_formations = [(3, 5, 2), (4, 4, 2), (4, 3, 3), (3, 4, 3), (4, 5, 1), (5, 3, 2), (5, 4, 1), (3, 3, 4)]
 
         for (target_d, target_m, target_f) in valid_formations:
-            needed = {"D": target_d, "M": target_m, "F": target_f}
-            current_counts = {"D": 0, "M": 0, "F": 0}
-            assigned_count = 0
+            slots = ['D'] * target_d + ['M'] * target_m + ['F'] * target_f
 
-            remaining = []
-            for p in outfield:
-                elig = [x for x in p.get('eligible_positions', ['M']) if x in needed]
-                if len(elig) == 1:
-                    pos = elig[0]
-                    if current_counts[pos] < needed[pos]:
-                        current_counts[pos] += 1
-                        assigned_count += 1
-                    else:
-                        remaining.append(p)
-                else:
-                    remaining.append(p)
+            def backtrack(idx: int, used_slots: set) -> bool:
+                if idx == len(outfield):
+                    return True
+                p_elig = _get_player_elig(outfield[idx])
+                for s_idx, s_pos in enumerate(slots):
+                    if s_idx not in used_slots and s_pos in p_elig:
+                        used_slots.add(s_idx)
+                        if backtrack(idx + 1, used_slots):
+                            return True
+                        used_slots.remove(s_idx)
+                return False
 
-            for p in remaining:
-                elig = [x for x in p.get('eligible_positions', ['M']) if x in needed and current_counts[x] < needed[x]]
-                if elig:
-                    best_pos = max(elig, key=lambda pos: (needed[pos] - current_counts[pos]))
-                    current_counts[best_pos] += 1
-                    assigned_count += 1
-
-            if assigned_count == 10:
+            if backtrack(0, set()):
                 return True
 
         return False
