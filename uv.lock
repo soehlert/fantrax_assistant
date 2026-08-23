@@ -244,7 +244,6 @@ dependencies = [
     { name = "setuptools" },
     { name = "soccerdata" },
     { name = "typer" },
-    { name = "understatapi" },
     { name = "uvicorn" },
 ]
 
@@ -266,7 +265,6 @@ requires-dist = [
     { name = "setuptools", specifier = ">=80.9.0" },
     { name = "soccerdata", specifier = ">=1.8.2" },
     { name = "typer", specifier = ">=0.20.1" },
-    { name = "understatapi", specifier = ">=0.1.3" },
     { name = "uvicorn", specifier = ">=0.30.1" },
 ]
 
@@ -1169,19 +1167,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/5e/a7/c202b344c5ca7daf3
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/b0/003792df09decd6849a5e39c28b513c06e84436a54440380862b5aeff25d/tzdata-2025.3-py2.py3-none-any.whl", hash = "sha256:06a47e5700f3081aab02b2e513160914ff0694bce9947d6b76ebd6bf57cfc5d1", size = 348521, upload-time = "2025-12-13T17:45:33.889Z" },
 ]
-
-[[package]]
-name = "understatapi"
-version = "0.7.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "certifi" },
-    { name = "charset-normalizer" },
-    { name = "idna" },
-    { name = "requests" },
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/84/15/3b5e73ca4d1c8fe82fe696e8a50a5ab88a3c9d1d6102bb944c85a2aba718/understatapi-0.7.0.tar.gz", hash = "sha256:693927165333cf23ade4d14403354a9997eb3c0b19440c736c7ad5f4000054b3", size = 538106, upload-time = "2025-12-18T10:01:17.159Z" }
 
 [[package]]
 name = "undetected-chromedriver"
