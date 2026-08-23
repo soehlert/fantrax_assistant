@@ -3,6 +3,15 @@ from typing import Dict, Optional, List
 
 import pandas as pd
 import redis
+
+# Compatibility patch for understatapi with Selenium 4.x+
+try:
+    from selenium.webdriver.chrome.options import Options as ChromeOptions
+    if not hasattr(ChromeOptions, "set_headless"):
+        ChromeOptions.set_headless = lambda self, headless=True: self.add_argument("--headless") if headless else None
+except Exception:
+    pass
+
 from understatapi import UnderstatClient
 
 
